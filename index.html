@@ -1907,7 +1907,10 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   <div id="user-info" style="display:flex;align-items:center;gap:8px;margin-left:auto;padding-right:16px;font-size:12px;color:rgba(255,255,255,0.8);">
     <span id="user-display" style="display:none;align-items:center;gap:6px;">
       <span id="user-avatar" style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;letter-spacing:0.02em;overflow:hidden;"></span>
-      <span id="user-name" style="font-weight:600;white-space:nowrap;"></span>
+      <span style="display:flex;flex-direction:column;align-items:flex-start;gap:1px;">
+        <span id="user-name" style="font-weight:600;white-space:nowrap;"></span>
+        <span id="user-role-badge" style="display:none;font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;background:rgba(131,172,22,0.85);color:#fff;padding:1px 6px;border-radius:3px;line-height:1.4;">Approver</span>
+      </span>
     </span>
   </div>
 </header>
@@ -2648,7 +2651,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '1.4.0.0010';
+const APP_VERSION = '1.4.2.0012';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -3941,14 +3944,10 @@ const ARCGIS_CONFIG = {
 };
 
 // ── ACCESS CONTROL ────────────────────────────────────────────────────
-// ArcGIS Online usernames authorized to change a project's status
-// from "Idea" to any other status. All other status changes are
-// allowed for everyone. Add usernames (case-insensitive) as needed.
-const IDEA_PROMOTE_USERS = [
-  'pjohnson',
-  // Add more usernames as needed:
-  // 'another_user',
-];
+// ArcGIS Online group whose members are authorized to change a project's
+// status from "Idea" to any other status. All other status changes are
+// allowed for everyone. Manage membership via ArcGIS Online.
+const IDEA_PROMOTE_GROUP_ID = '2bd32af20dd745d6bdf3807446761973';
 
 // ══════════════════════════════════════════════════════════════════════
 //  OAUTH 2.0 AUTHENTICATION (ArcGIS Online Implicit Grant)
@@ -4046,11 +4045,13 @@ async function ensureAgolToken() {
  * the token has expired or been revoked — clear it and re-auth.
  */
 
-let _agolUsername = null;  // ArcGIS Online username of the logged-in user
+let _agolUsername = null;       // ArcGIS Online username of the logged-in user
+let _canPromoteIdeas = false;  // Whether the user is authorized to promote Ideas
 
 /**
  * Fetch the current user's profile from ArcGIS Online.
  * Populates the header with their name and initials.
+ * Also checks group membership for access control.
  */
 async function fetchAgolUserInfo(token) {
   try {
@@ -4085,6 +4086,25 @@ async function fetchAgolUserInfo(token) {
 
     document.getElementById('user-name').textContent = displayName;
     document.getElementById('user-display').style.display = 'flex';
+
+    // Check group membership for Idea promotion access control
+    if (IDEA_PROMOTE_GROUP_ID && username) {
+      try {
+        const groupUrl = ARCGIS_CONFIG.portalUrl + '/sharing/rest/community/users/' +
+          encodeURIComponent(username) + '?f=json&token=' + encodeURIComponent(token);
+        const gResp = await fetch(groupUrl);
+        const gData = await gResp.json();
+        if (gData.groups && Array.isArray(gData.groups)) {
+          _canPromoteIdeas = gData.groups.some(g => g.id === IDEA_PROMOTE_GROUP_ID);
+          if (_canPromoteIdeas) {
+            const badge = document.getElementById('user-role-badge');
+            if (badge) badge.style.display = 'inline-block';
+          }
+        }
+      } catch (gErr) {
+        console.warn('Could not check group membership:', gErr);
+      }
+    }
   } catch (err) {
     console.warn('Failed to fetch user info:', err);
   }
@@ -4768,14 +4788,12 @@ async function handleFormSubmit(andDownload) {
   const fields    = isProject ? collectProjectFields() : collectTaskFields();
   if (!fields) return;
 
-  // ── Access control: only authorized users can promote Ideas ──
+  // ── Access control: only group members can promote Ideas ──
   if (isProject && isEdit) {
     const origProject = PROJECTS.find(p => p.id === formEditId);
     if (origProject && origProject.status === 'Idea' && fields.status !== 'Idea') {
-      const currentUser = (_agolUsername || '').toLowerCase();
-      const allowed = IDEA_PROMOTE_USERS.some(u => u.toLowerCase() === currentUser);
-      if (!allowed) {
-        alert('Permission denied: Only authorized users can change a project\'s status from "Idea" to another status.\n\nContact your administrator if you need this access.');
+      if (!_canPromoteIdeas) {
+        alert('Permission denied: Only authorized users can change a project\'s status from "Idea" to another status.\n\nYou must be a member of the designated ArcGIS Online group to perform this action. Contact your administrator for access.');
         return;
       }
     }
