@@ -283,6 +283,17 @@ body {
   border-bottom: 1px solid var(--gray-light);
 }
 
+.sidebar-group-header {
+  padding: 10px 16px 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--white);
+  background: var(--navy);
+  border-bottom: 1px solid var(--border);
+}
+
 .sidebar-label {
   font-size: 10px;
   font-weight: 700;
@@ -1907,147 +1918,33 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
       </div>
     </div>
 
-    <div class="sidebar-section">
-      <div class="sidebar-label">Project Status</div>
-      <div class="filter-group" id="status-filters"><button class="filter-btn active" onclick="setFilter('status', null)">
-    <span>All</span><span class="badge">387</span>
-  </button><button class="filter-btn " onclick="setFilter('status', 'Complete')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#3B82F6"></span>Complete</span>
-      <span class="badge">192</span>
-    </button><button class="filter-btn " onclick="setFilter('status', 'Canceled')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#9CA3AF"></span>Canceled</span>
-      <span class="badge">100</span>
-    </button><button class="filter-btn " onclick="setFilter('status', 'Active')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#22C55E"></span>Active</span>
-      <span class="badge">48</span>
-    </button><button class="filter-btn " onclick="setFilter('status', 'On Hold')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#EAB308"></span>On Hold</span>
-      <span class="badge">14</span>
-    </button><button class="filter-btn " onclick="setFilter('status', 'Scheduled')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#9E0059"></span>Scheduled</span>
-      <span class="badge">5</span>
-    </button><button class="filter-btn " onclick="setFilter('status', 'Future')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#F97316"></span>Future</span>
-      <span class="badge">25</span>
-    </button><button class="filter-btn " onclick="setFilter('status', 'Idea')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#FFDB22"></span>Idea</span>
-      <span class="badge">3</span>
-    </button></div>
-    </div>
-
-    <div class="sidebar-section">
-      <div class="sidebar-label">Priority</div>
-      <div class="filter-group" id="priority-filters"><button class="filter-btn active" onclick="setFilter('priority', null)">
-    <span>All</span><span class="badge">387</span>
-  </button><button class="filter-btn " onclick="setFilter('priority', 'Unset')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#E5D086"></span>Unset</span>
-      <span class="badge">11</span>
-    </button><button class="filter-btn " onclick="setFilter('priority', 'Medium')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#83AC16"></span>Medium</span>
-      <span class="badge">218</span>
-    </button><button class="filter-btn " onclick="setFilter('priority', 'High')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#0088FF"></span>High</span>
-      <span class="badge">82</span>
-    </button><button class="filter-btn " onclick="setFilter('priority', 'Low')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#0088FF"></span>Low</span>
-      <span class="badge">76</span>
-    </button></div>
-    </div>
-
-    <div class="sidebar-section">
-      <div class="sidebar-label">Category</div>
-      <div class="filter-group" id="category-filters"><button class="filter-btn active" onclick="setFilter('category', null)">
-    <span>All</span><span class="badge">351</span>
-  </button><button class="filter-btn " onclick="setFilter('category', 'Spatial Data Services &amp; GIS Product Development')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#83AC16"></span>Spatial Data Services &amp; GIS Product Development</span>
-      <span class="badge">122</span>
-    </button><button class="filter-btn " onclick="setFilter('category', 'Data Analysis, Reporting &amp; Insights')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#002669"></span>Data Analysis, Reporting &amp; Insights</span>
-      <span class="badge">57</span>
-    </button><button class="filter-btn " onclick="setFilter('category', 'AI Enablement, Automation &amp; Machine Intelligence')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#9E0059"></span>AI Enablement, Automation &amp; Machine Intelligence</span>
-      <span class="badge">42</span>
-    </button><button class="filter-btn " onclick="setFilter('category', 'Data Processing, Integration &amp; Engineering')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#C24200"></span>Data Processing, Integration &amp; Engineering</span>
-      <span class="badge">37</span>
-    </button><button class="filter-btn " onclick="setFilter('category', 'Data Governance, Compliance &amp; Policy')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#E5D086"></span>Data Governance, Compliance &amp; Policy</span>
-      <span class="badge">33</span>
-    </button><button class="filter-btn " onclick="setFilter('category', 'Training, Enablement &amp; Community')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#C24200"></span>Training, Enablement &amp; Community</span>
-      <span class="badge">23</span>
-    </button><button class="filter-btn " onclick="setFilter('category', 'Operational Support &amp; Sustainment Activities')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#E5D086"></span>Operational Support &amp; Sustainment Activities</span>
-      <span class="badge">20</span>
-    </button><button class="filter-btn " onclick="setFilter('category', 'Enterprise Administration &amp; Platform Management')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#E5D086"></span>Enterprise Administration &amp; Platform Management</span>
-      <span class="badge">17</span>
-    </button></div>
-    </div>
+    <div class="sidebar-group-header">Task Filters</div>
 
     <div class="sidebar-section" id="task-status-section" style="display: block;">
       <div class="sidebar-label">Task Status</div>
-      <div class="filter-group" id="task-status-filters"><button class="filter-btn active" onclick="setFilter('taskStatus', null)">
-    <span>All</span><span class="badge">1939</span>
-  </button><button class="filter-btn " onclick="setFilter('taskStatus', 'Complete')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#3B82F6"></span>Complete</span>
-      <span class="badge">1535</span>
-    </button><button class="filter-btn " onclick="setFilter('taskStatus', 'On Hold')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#EAB308"></span>On Hold</span>
-      <span class="badge">13</span>
-    </button><button class="filter-btn " onclick="setFilter('taskStatus', 'Canceled')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#9CA3AF"></span>Canceled</span>
-      <span class="badge">177</span>
-    </button><button class="filter-btn " onclick="setFilter('taskStatus', 'In Progress')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#22C55E"></span>In Progress</span>
-      <span class="badge">49</span>
-    </button><button class="filter-btn " onclick="setFilter('taskStatus', 'Pending')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#F97316"></span>Pending</span>
-      <span class="badge">143</span>
-    </button><button class="filter-btn " onclick="setFilter('taskStatus', 'Waiting for Response')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#A855F7"></span>Waiting for Response</span>
-      <span class="badge">7</span>
-    </button><button class="filter-btn " onclick="setFilter('taskStatus', 'Unknown')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#C24200"></span>Unknown</span>
-      <span class="badge">15</span>
-    </button></div>
+      <div class="filter-group" id="task-status-filters"></div>
     </div>
 
     <div class="sidebar-section">
       <div class="sidebar-label">Team Member</div>
-      <div class="filter-group" id="member-filters"><button class="filter-btn active" onclick="setFilter('member', null)">
-    <span>All</span><span class="badge">1875</span>
-  </button><button class="filter-btn " onclick="setFilter('member', 'Jessica Fraver')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#C24200"></span>Jessica Fraver</span>
-      <span class="badge">379</span>
-    </button><button class="filter-btn " onclick="setFilter('member', 'Andrew Sutton')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#9E0059"></span>Andrew Sutton</span>
-      <span class="badge">339</span>
-    </button><button class="filter-btn " onclick="setFilter('member', 'Vladimir Berg')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#9E0059"></span>Vladimir Berg</span>
-      <span class="badge">240</span>
-    </button><button class="filter-btn " onclick="setFilter('member', 'James McGinnis')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#0088FF"></span>James McGinnis</span>
-      <span class="badge">229</span>
-    </button><button class="filter-btn " onclick="setFilter('member', 'Joey Ahumada')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#9E0059"></span>Joey Ahumada</span>
-      <span class="badge">172</span>
-    </button><button class="filter-btn " onclick="setFilter('member', 'Saidakmal Yosinov')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#C24200"></span>Saidakmal Yosinov</span>
-      <span class="badge">144</span>
-    </button><button class="filter-btn " onclick="setFilter('member', 'Jean Paul Nduwayo Ntore')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#002669"></span>Jean Paul Nduwayo Ntore</span>
-      <span class="badge">141</span>
-    </button><button class="filter-btn " onclick="setFilter('member', 'Liz Wilshin')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#83AC16"></span>Liz Wilshin</span>
-      <span class="badge">102</span>
-    </button><button class="filter-btn " onclick="setFilter('member', 'Kate Carter')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#0088FF"></span>Kate Carter</span>
-      <span class="badge">68</span>
-    </button><button class="filter-btn " onclick="setFilter('member', 'Peter Johnson')">
-      <span style="display:flex;align-items:center;"><span class="status-dot" style="background:#002669"></span>Peter Johnson</span>
-      <span class="badge">61</span>
-    </button></div>
+      <div class="filter-group" id="member-filters"></div>
+    </div>
+
+    <div class="sidebar-group-header">Project Filters</div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Project Status</div>
+      <div class="filter-group" id="status-filters"></div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Priority</div>
+      <div class="filter-group" id="priority-filters"></div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Category</div>
+      <div class="filter-group" id="category-filters"></div>
     </div>
   </aside>
 
@@ -2741,7 +2638,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '1.1.1';
+const APP_VERSION = '1.2.0.0004';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -2861,6 +2758,10 @@ function renderFilterGroup(id, items, filterType) {
 const WEEKLY_STATUSES = ['On Hold', 'In Progress', 'Waiting for Response'];
 
 function toggleWeeklyFilter() {
+  // Auto-switch to tasks tab if not already there
+  if (currentTab !== 'tasks') {
+    switchTab('tasks');
+  }
   const btn = document.getElementById('weekly-filter-btn');
   const isActive = btn.classList.contains('weekly-active');
   if (isActive) {
@@ -2918,7 +2819,7 @@ function switchTab(tab) {
   const addBtn = document.getElementById('btn-add-new');
   if (tab === 'tasks') { addBtn.style.display='flex'; addBtn.textContent='＋ New Task'; }
   else { addBtn.style.display='none'; }
-  document.getElementById('weekly-filter-btn').style.display = tab === 'tasks' ? 'flex' : 'none';
+  document.getElementById('weekly-filter-btn').style.display = 'flex';
   const ideaCount = PROJECTS.filter(p => p.status === 'Idea').length;
   const reviewBtn = document.getElementById('btn-review-ideas');
   if (reviewBtn) {
