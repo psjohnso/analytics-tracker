@@ -1918,33 +1918,37 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
       </div>
     </div>
 
-    <div class="sidebar-group-header">Task Filters</div>
+    <div id="sidebar-task-filters">
+      <div class="sidebar-group-header" id="task-filters-header">Task Filters</div>
 
-    <div class="sidebar-section" id="task-status-section" style="display: block;">
-      <div class="sidebar-label">Task Status</div>
-      <div class="filter-group" id="task-status-filters"></div>
+      <div class="sidebar-section" id="task-status-section" style="display: block;">
+        <div class="sidebar-label">Task Status</div>
+        <div class="filter-group" id="task-status-filters"></div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Team Member</div>
+        <div class="filter-group" id="member-filters"></div>
+      </div>
     </div>
 
-    <div class="sidebar-section">
-      <div class="sidebar-label">Team Member</div>
-      <div class="filter-group" id="member-filters"></div>
-    </div>
+    <div id="sidebar-project-filters">
+      <div class="sidebar-group-header" id="project-filters-header">Project Filters</div>
 
-    <div class="sidebar-group-header">Project Filters</div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Project Status</div>
+        <div class="filter-group" id="status-filters"></div>
+      </div>
 
-    <div class="sidebar-section">
-      <div class="sidebar-label">Project Status</div>
-      <div class="filter-group" id="status-filters"></div>
-    </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Priority</div>
+        <div class="filter-group" id="priority-filters"></div>
+      </div>
 
-    <div class="sidebar-section">
-      <div class="sidebar-label">Priority</div>
-      <div class="filter-group" id="priority-filters"></div>
-    </div>
-
-    <div class="sidebar-section">
-      <div class="sidebar-label">Category</div>
-      <div class="filter-group" id="category-filters"></div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Category</div>
+        <div class="filter-group" id="category-filters"></div>
+      </div>
     </div>
   </aside>
 
@@ -2638,7 +2642,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '1.2.0.0004';
+const APP_VERSION = '1.3.0.0005';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -2712,6 +2716,22 @@ function init() {
 }
 
 // ─── SIDEBAR FILTERS ──────────────────────────────────────────────────
+
+function reorderSidebarFilters(tab) {
+  const sidebar = document.querySelector('.sidebar');
+  const taskGroup = document.getElementById('sidebar-task-filters');
+  const projectGroup = document.getElementById('sidebar-project-filters');
+  if (!sidebar || !taskGroup || !projectGroup) return;
+
+  if (tab === 'tasks') {
+    // Task filters on top
+    sidebar.insertBefore(taskGroup, projectGroup);
+  } else {
+    // Project filters on top for Overview, Projects, Resources, Forecast
+    sidebar.insertBefore(projectGroup, taskGroup);
+  }
+}
+
 function buildSidebarFilters() {
   const statuses = {};
   PROJECTS.forEach(p => { statuses[p.status || 'Unknown'] = (statuses[p.status || 'Unknown'] || 0) + 1; });
@@ -2832,6 +2852,7 @@ function switchTab(tab) {
     document.getElementById('btn-add-new').style.display = 'none';
   }
   const isTask = tab === 'tasks';
+  reorderSidebarFilters(tab);
   document.getElementById('task-status-section').style.display = isTask ? 'block' : 'none';
   if (isTask) { activeFilters.status = []; buildSidebarFilters(); }
   else {
@@ -4746,6 +4767,9 @@ function confirmDeleteTask(taskIdx) {
   // Display version
   const versionEl = document.getElementById('app-version');
   if (versionEl) versionEl.textContent = 'v' + APP_VERSION;
+
+  // Set initial sidebar filter order (projects on top for overview)
+  reorderSidebarFilters(currentTab);
 
   // Step 1: Ensure we have a valid OAuth token.
   // If no token, the user will be redirected to ArcGIS Online login
