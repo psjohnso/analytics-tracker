@@ -2648,7 +2648,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '1.3.0.0009';
+const APP_VERSION = '1.4.0.0010';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -3940,6 +3940,16 @@ const ARCGIS_CONFIG = {
   tasksUrl:    'https://services3.arcgis.com/9coHY2fvuFjG9HQX/ArcGIS/rest/services/tasks/FeatureServer/0',
 };
 
+// ── ACCESS CONTROL ────────────────────────────────────────────────────
+// ArcGIS Online usernames authorized to change a project's status
+// from "Idea" to any other status. All other status changes are
+// allowed for everyone. Add usernames (case-insensitive) as needed.
+const IDEA_PROMOTE_USERS = [
+  'pjohnson',
+  // Add more usernames as needed:
+  // 'another_user',
+];
+
 // ══════════════════════════════════════════════════════════════════════
 //  OAUTH 2.0 AUTHENTICATION (ArcGIS Online Implicit Grant)
 // ══════════════════════════════════════════════════════════════════════
@@ -4036,6 +4046,8 @@ async function ensureAgolToken() {
  * the token has expired or been revoked — clear it and re-auth.
  */
 
+let _agolUsername = null;  // ArcGIS Online username of the logged-in user
+
 /**
  * Fetch the current user's profile from ArcGIS Online.
  * Populates the header with their name and initials.
@@ -4051,6 +4063,7 @@ async function fetchAgolUserInfo(token) {
     }
     const fullName = data.fullName || data.username || '';
     const username = data.username || '';
+    _agolUsername = username;  // Store for permission checks
     const displayName = fullName || username;
     if (!displayName) return;
 
@@ -4754,6 +4767,19 @@ async function handleFormSubmit(andDownload) {
   const isEdit    = formMode.indexOf('edit')    >= 0;
   const fields    = isProject ? collectProjectFields() : collectTaskFields();
   if (!fields) return;
+
+  // ── Access control: only authorized users can promote Ideas ──
+  if (isProject && isEdit) {
+    const origProject = PROJECTS.find(p => p.id === formEditId);
+    if (origProject && origProject.status === 'Idea' && fields.status !== 'Idea') {
+      const currentUser = (_agolUsername || '').toLowerCase();
+      const allowed = IDEA_PROMOTE_USERS.some(u => u.toLowerCase() === currentUser);
+      if (!allowed) {
+        alert('Permission denied: Only authorized users can change a project\'s status from "Idea" to another status.\n\nContact your administrator if you need this access.');
+        return;
+      }
+    }
+  }
 
   if (isEdit) {
     if (isProject) await DataStore.updateProject(formEditId, fields);
