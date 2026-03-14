@@ -2074,8 +2074,8 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
         <button id="btn-submit-idea" onclick="openIdeaForm()" style="display:flex;align-items:center;gap:5px;padding:7px 14px;background:#FFDB22;color:#92400E;border:none;border-radius:6px;font-size:12px;font-weight:800;font-family:Lato,sans-serif;cursor:pointer;letter-spacing:0.03em;transition:background 0.15s;" onmouseover="this.style.background='#F0CC00'" onmouseout="this.style.background='#FFDB22'">
           💡 Submit Idea
         </button>
-        <button id="btn-save-file" onclick="saveAllData()" title="Sync data with ArcGIS Online" class="">
-          ☁️ Sync
+        <button id="btn-save-file" onclick="saveAllData()" title="Refresh data from ArcGIS Online" class="">
+          🔄 Refresh
         </button>
       </div>
     </nav>
@@ -2741,7 +2741,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -3962,26 +3962,13 @@ async function saveAllData() {
     taskFeatures.forEach(function(f) { TASKS.push(agolTaskToLocal(f)); });
 
     hideLoadingOverlay();
-    markSynced('Synced: ' + PROJECTS.length + ' projects, ' + TASKS.length + ' tasks');
+    markSynced('Refreshed: ' + PROJECTS.length + ' projects, ' + TASKS.length + ' tasks');
     render();
   } catch (err) {
     hideLoadingOverlay();
-    console.error('Sync failed:', err);
-    alert('Sync failed: ' + err.message);
+    console.error('Refresh failed:', err);
+    alert('Refresh failed: ' + err.message);
   }
-}
-
-// Keep old name working (called from allocation editor download button)
-function downloadUpdatedHTML() {
-  applyEditorChanges();
-  // Resources data stays local - download as backup
-  const blob = new Blob([JSON.stringify(RESOURCES_DATA, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'resources_data_backup.json';
-  a.click();
-  URL.revokeObjectURL(a.href);
-  saveAllData(); // Also refresh from ArcGIS Online
 }
 
 // ── Unsaved-changes tracking ──────────────────────────────────────────
@@ -4008,8 +3995,8 @@ function markSynced(msg) {
   const btn = document.getElementById('btn-save-file');
   if (btn) {
     btn.style.background = '#83AC16';
-    btn.title = msg || 'Synced with ArcGIS Online';
-    setTimeout(() => { btn.style.background = ''; btn.title = 'Sync data with ArcGIS Online'; }, 2000);
+    btn.title = msg || 'Data refreshed from ArcGIS Online';
+    setTimeout(() => { btn.style.background = ''; btn.title = 'Refresh data from ArcGIS Online'; }, 2000);
   }
 }
 
@@ -5711,7 +5698,6 @@ function showToast(msg) {
       <div style="display:flex;gap:8px;">
         <button class="btn-ae-cancel" onclick="closeAllocEditor()">Discard</button>
         <button class="btn-ae-apply" onclick="applyEditorChanges()">✓ Apply Changes</button>
-        <button class="btn-ae-download" onclick="downloadUpdatedHTML()">⬇ Download Updated File</button>
       </div>
     </div>
   </div>
@@ -5732,7 +5718,6 @@ function showToast(msg) {
       <div class="fm-footer-spacer"></div>
       <button class="btn-fm-cancel" onclick="closeFormModal()">Cancel</button>
       <button class="btn-fm-save" id="fm-save-btn" onclick="handleFormSubmit()">Save Changes</button>
-      <button class="btn-fm-save-dl" id="fm-save-dl-btn" onclick="handleFormSubmit(true)">💾 Save &amp; Download</button>
     </div>
   </div>
 </div>
