@@ -1984,7 +1984,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
     <!-- TOOLBAR -->
     <div class="toolbar">
       <span class="result-count" id="result-count">1936 tasks</span>
-      <button id="btn-add-new" onclick="openFormModal('new-'+currentTab.slice(0,-1))" style="display: flex;">＋ New Task</button>
+      <button id="btn-add-new" onclick="openFormModal('new-'+currentTab.slice(0,-1))" style="display: none;">＋ New Task</button>
       <button id="btn-review-ideas" onclick="openIdeaReview()" style="display:none; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; border: 1.5px solid #FFDB22; background: transparent; cursor: pointer; font-family: Lato, sans-serif; font-size: 12px; font-weight: 700; color: #92400E; letter-spacing: 0.04em; transition: background 0.15s, color 0.15s;" onmouseover="this.style.background='#FFFBEB'" onmouseout="this.style.background='transparent'">
         💡 Review Ideas <span id="idea-count-badge" style="background:#FFDB22;color:#92400E;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:2px;"></span>
       </button>
@@ -2642,7 +2642,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '1.2.3.0007';
+const APP_VERSION = '1.2.4.0008';
 
 let PROJECTS = [];
 let TASKS = [];
