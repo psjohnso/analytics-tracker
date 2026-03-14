@@ -2664,7 +2664,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.5.2.0017';
+const APP_VERSION = '0.5.3.0018';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -3537,7 +3537,7 @@ function renderResources(area) {
 
   // ── Project allocation table ──────────────────────────────────
   const tableRows = allocs
-    .filter(a => a.fracs.some(f=>f>0) && (a.status === 'In Progress' || a.status === 'On Hold'))
+    .filter(a => a.fracs.some(f=>f>0) && (a.status === 'Active' || a.status === 'On Hold'))
     .sort((a,b) => b.hours.reduce((s,v)=>s+v,0) - a.hours.reduce((s,v)=>s+v,0))
     .map(a => {
       const totalHrs = a.hours.reduce((s,v)=>s+v,0);
@@ -3689,7 +3689,7 @@ function openAllocEditor(name) {
   }
 
   // Filter to only projects in the main PROJECTS list, deduplicate, then keep
-  // only In Progress / On Hold rows (same logic as the main Resources view).
+  // only Active / On Hold rows (same logic as the main Resources view).
   const projTitleSet2 = new Set(PROJECTS.map(proj => proj.title));
   function canonicalAllocTitle2(raw) {
     if (projTitleSet2.has(raw)) return raw;
