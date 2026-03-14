@@ -1900,19 +1900,19 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   </div>
   <div class="header-stats" id="header-stats">
     <div class="hstat">
-      <div class="hstat-num" id="stat-active">48</div>
+      <div class="hstat-num" id="stat-active">—</div>
       <div class="hstat-label">Active</div>
     </div>
     <div class="hstat">
-      <div class="hstat-num" id="stat-tasks-open">199</div>
+      <div class="hstat-num" id="stat-tasks-open">—</div>
       <div class="hstat-label">Open Tasks</div>
     </div>
     <div class="hstat">
-      <div class="hstat-num" id="stat-complete">192</div>
+      <div class="hstat-num" id="stat-complete">—</div>
       <div class="hstat-label">Complete</div>
     </div>
     <div class="hstat">
-      <div class="hstat-num" id="stat-total">387</div>
+      <div class="hstat-num" id="stat-total">—</div>
       <div class="hstat-label">Total Projects</div>
     </div>
   </div>
@@ -2664,7 +2664,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '1.5.0.0014';
+const APP_VERSION = '1.5.1.0015';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -2724,15 +2724,6 @@ const PRIORITY_ORDER = { High: 0, Medium: 1, Low: 2 };
 
 // ─── INIT ──────────────────────────────────────────────────────────────
 function init() {
-  // Header stats
-  const active = PROJECTS.filter(p => p.status === 'Active').length;
-  const complete = PROJECTS.filter(p => p.status === 'Complete').length;
-  const openTasks = TASKS.filter(t => ['In Progress','Pending','Waiting for Response'].includes(t.status)).length;
-  document.getElementById('stat-active').textContent = active;
-  document.getElementById('stat-tasks-open').textContent = openTasks;
-  document.getElementById('stat-complete').textContent = complete;
-  document.getElementById('stat-total').textContent = PROJECTS.length;
-
   buildSidebarFilters();
   render();
 }
@@ -2944,6 +2935,15 @@ function sortData(data, key, dir) {
 function render() {
   const sort = document.getElementById('sort-select').value;
   const area = document.getElementById('content-area');
+
+  // ── Header stats (recalculated on every render) ───────────────────
+  const active = PROJECTS.filter(p => p.status === 'Active').length;
+  const complete = PROJECTS.filter(p => p.status === 'Complete').length;
+  const openTasks = TASKS.filter(t => ['In Progress','Pending','Waiting for Response'].includes(t.status)).length;
+  document.getElementById('stat-active').textContent = active;
+  document.getElementById('stat-tasks-open').textContent = openTasks;
+  document.getElementById('stat-complete').textContent = complete;
+  document.getElementById('stat-total').textContent = PROJECTS.length;
 
   document.getElementById('proj-tab-count').textContent = filterProjects().length;
   document.getElementById('task-tab-count').textContent = filterTasks().length;
