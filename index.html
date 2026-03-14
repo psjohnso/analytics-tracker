@@ -2642,7 +2642,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '1.2.2.0006';
+const APP_VERSION = '1.2.3.0007';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -4601,7 +4601,9 @@ function buildProjectForm(p) {
 
 function buildTaskForm(t) {
   const v = function(k) { return t ? (t[k] || '') : ''; };
-  const projTitles = PROJECTS.map(function(p) { return p.title; }).sort();
+  const projTitles = PROJECTS.filter(function(p) {
+    return p.status !== 'Canceled' && p.status !== 'Complete' && p.status !== 'Idea';
+  }).map(function(p) { return p.title; }).sort();
   return '<div class="fm-section-label">Basic Info</div>' +
     '<div class="fm-grid">' +
       fmField('Title', fmInput('fm-title-val', v('title'), 'Task title…'), true, true) +
