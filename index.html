@@ -2642,7 +2642,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '1.3.0.0005';
+const APP_VERSION = '1.2.2.0006';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -4453,7 +4453,7 @@ let formEditId = null;  // id (project) or idx (task) of record being edited
 // hardcoded list, so adding a new assignee / category / tool in the
 // source spreadsheet will automatically appear without a code change.
 function mergeEnums(preferred, fromData) {
-  const extras = fromData.filter(v => v && !preferred.includes(v)).sort();
+  const extras = [...new Set(fromData)].filter(v => v && !preferred.includes(v)).sort();
   return [...preferred, ...extras];
 }
 function getEnums() {
