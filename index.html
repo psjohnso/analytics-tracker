@@ -1271,6 +1271,18 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   cursor:pointer; letter-spacing:0.03em; display:none; align-items:center; gap:6px; }
 #btn-add-new:hover { background:#1a3a7c; }
 
+/* ── READ-ONLY MODE (signed out) ──────────────────── */
+.read-only-mode #btn-add-new,
+.read-only-mode #btn-submit-idea,
+.read-only-mode #btn-save-file,
+.read-only-mode #btn-review-ideas,
+.read-only-mode .modal-edit-btn,
+.read-only-mode .modal-del-btn,
+.read-only-mode #unsaved-dot,
+.read-only-mode #weekly-filter-btn {
+  display: none !important;
+}
+
 /* ── SAVE BUTTON + UNSAVED INDICATOR ───────────────── */
 #btn-save-file {
   background: #83AC16; color: #fff; border: none;
@@ -1904,7 +1916,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
       <div class="hstat-label">Total Projects</div>
     </div>
   </div>
-  <div id="user-info" style="display:flex;align-items:center;gap:8px;margin-left:auto;padding-right:16px;font-size:12px;color:rgba(255,255,255,0.8);">
+  <div id="user-info" style="display:flex;align-items:center;gap:10px;margin-left:auto;padding-right:16px;font-size:12px;color:rgba(255,255,255,0.8);">
     <span id="user-display" style="display:none;align-items:center;gap:6px;">
       <span id="user-avatar" style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;letter-spacing:0.02em;overflow:hidden;"></span>
       <span style="display:flex;flex-direction:column;align-items:flex-start;gap:1px;">
@@ -1912,6 +1924,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
         <span id="user-role-badge" style="display:none;font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;background:rgba(131,172,22,0.85);color:#fff;padding:1px 6px;border-radius:3px;line-height:1.4;">Approver</span>
       </span>
     </span>
+    <button id="auth-toggle-btn" onclick="toggleAuth()" style="padding:5px 14px;border-radius:5px;border:1.5px solid rgba(255,255,255,0.5);background:transparent;color:rgba(255,255,255,0.9);font-size:11px;font-weight:700;font-family:Lato,sans-serif;cursor:pointer;letter-spacing:0.03em;transition:background 0.15s,border-color 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.15)';this.style.borderColor='rgba(255,255,255,0.8)'" onmouseout="this.style.background='transparent';this.style.borderColor='rgba(255,255,255,0.5)'">Sign In</button>
   </div>
 </header>
 
@@ -2651,7 +2664,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '1.4.3.0013';
+const APP_VERSION = '1.5.0.0014';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -4020,6 +4033,52 @@ function clearAgolToken() {
   sessionStorage.removeItem('agol_token_expires');
 }
 
+// ── LOGIN / LOGOUT STATE MANAGEMENT ──────────────────────────────────
+let _isLoggedIn = false;
+
+function toggleAuth() {
+  if (_isLoggedIn) {
+    // Log out: clear token and switch to read-only
+    clearAgolToken();
+    _isLoggedIn = false;
+    _agolUsername = null;
+    _canPromoteIdeas = false;
+    applyAuthState();
+  } else {
+    // Log in: redirect to ArcGIS Online OAuth
+    window.location.href = agolAuthorizeUrl();
+  }
+}
+
+/**
+ * Show or hide edit controls based on login state.
+ */
+function applyAuthState() {
+  const btn = document.getElementById('auth-toggle-btn');
+  const userDisplay = document.getElementById('user-display');
+  const roleBadge = document.getElementById('user-role-badge');
+
+  // Selectors for all editable controls
+  const editSelectors = [
+    '#btn-add-new',
+    '#btn-submit-idea',
+    '#btn-save-file',
+    '#btn-review-ideas',
+  ];
+
+  if (_isLoggedIn) {
+    // Signed in — show user info, enable editing
+    btn.textContent = 'Sign Out';
+    document.body.classList.remove('read-only-mode');
+  } else {
+    // Signed out — hide user info, disable editing
+    btn.textContent = 'Sign In';
+    if (userDisplay) userDisplay.style.display = 'none';
+    if (roleBadge) roleBadge.style.display = 'none';
+    document.body.classList.add('read-only-mode');
+  }
+}
+
 /**
  * Ensure we have a valid ArcGIS Online access token.
  * If no token is available, redirects the user to the ArcGIS login page.
@@ -4710,6 +4769,7 @@ function buildTaskForm(t) {
 }
 
 function openFormModal(mode, id) {
+  if (!_isLoggedIn) { alert('You must be signed in to make changes.'); return; }
   refreshEnums(); // Rebuild enum lists from live data so new values are always present
   formMode   = mode;
   formEditId = (id !== undefined) ? id : null;
@@ -4833,6 +4893,7 @@ async function handleFormSubmit(andDownload) {
 }
 
 async function handleFormDelete() {
+  if (!_isLoggedIn) { alert('You must be signed in to delete records.'); return; }
   const isProject = formMode.indexOf('project') >= 0;
   const label     = isProject ? 'project' : 'task';
   if (!confirm('Delete this ' + label + '? This cannot be undone.')) return;
@@ -4870,6 +4931,10 @@ function confirmDeleteTask(taskIdx) {
   // and this function will not continue past this point.
   const token = await ensureAgolToken();
   if (!token) return; // redirect to login is in progress
+
+  // Mark as logged in and update UI
+  _isLoggedIn = true;
+  applyAuthState();
 
   // Fetch and display the logged-in user's name (non-blocking)
   fetchAgolUserInfo(token);
@@ -5406,6 +5471,7 @@ function buildForecastPage() {
 // ─── IDEA SUBMISSION ──────────────────────────────────────────────────
 
 function openIdeaForm() {
+  if (!_isLoggedIn) { alert('You must be signed in to submit ideas.'); return; }
   refreshEnums();
   const body = document.getElementById('idea-modal-body');
   body.innerHTML = `
