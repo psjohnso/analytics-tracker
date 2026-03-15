@@ -2664,7 +2664,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.6.7.0026';
+const APP_VERSION = '0.6.8.0027';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -3728,6 +3728,7 @@ function openAllocEditor(name) {
     draftByName[proj.title] = { project: proj.title, status: proj.status, fracs: new Array(N2).fill(0) };
   });
   editorDraft[name] = Object.values(draftByName);
+  editorDraft[name].sort(function(a, b) { return a.project.localeCompare(b.project); });
 
   document.getElementById('editor-person-title').textContent = name;
   document.getElementById('editor-person-role').textContent =
@@ -3800,6 +3801,7 @@ function aeRenderGrid() {
     return;
   }
 
+  var numRows = allocs.length;
   allocs.forEach(function(a, ai) {
     const statusCol = STATUS_COLOR(a.status) || '#9CA3AF';
     const chipBg = statusCol + '22';
@@ -3819,7 +3821,8 @@ function aeRenderGrid() {
     }
     row += '</td>';
 
-    for (const wi of wIdxs) {
+    for (var ci = 0; ci < wIdxs.length; ci++) {
+      const wi = wIdxs[ci];
       const pct    = Math.round((a.fracs[wi] || 0) * 100);
       const isCur  = wi === window.currentWeekIdx;
       const hasVal = pct > 0;
@@ -3831,8 +3834,11 @@ function aeRenderGrid() {
         rangeClass = (afterStart && beforeEnd) ? ' ae-in-range' : ' ae-out-range';
       }
       let cls = 'ae-pct-input' + (hasVal ? ' has-val' : '') + (isCur ? ' cur-wk' : '');
+      // tabindex: column-major order so Tab goes down a column, then to next column
+      var tabIdx = ci * numRows + ai + 1;
       row += '<td class="ae-wk-td' + (isCur ? ' ae-cur' : '') + rangeClass + '">' +
         '<input type="number" min="0" max="100" value="' + pct + '" class="' + cls + '" ' +
+        'tabindex="' + tabIdx + '" ' +
         'data-ai="' + ai + '" data-wi="' + wi + '" ' +
         'onchange="aeCellChange(' + ai + ',' + wi + ',this)" onfocus="this.select()">' +
         '</td>';
