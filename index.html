@@ -2817,7 +2817,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.8.4.0000';
+const APP_VERSION = '0.8.4.0001';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -3209,7 +3209,7 @@ function projectCard(p) {
   const initials = (p.contact || '?').split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
   const endDate = p.status === 'Complete' && p.actual_end ? p.actual_end : (p.end || '—');
   return `
-  <div class="project-card" onclick="openProject(${p.id || 0})">
+  <div class="project-card" onclick="openProject(${p.objectId})">
     <div class="project-card-accent" style="background:var(--navy)"></div>
     <div class="project-card-body">
       <div class="project-card-header">
@@ -3255,7 +3255,7 @@ function renderProjectList(data) {
   const th = (label, key) => `<div class="th-sortable" onclick="setProjListSort('${key}')" style="cursor:pointer;user-select:none;">${label}<span style="opacity:${projListSortKey===key?'1':'0.35'};font-size:10px;">${arrow(key)}</span></div>`;
   const rows = data.map(p => {
     const statusColor = STATUS_COLOR(p.status) || '#9CA3AF';
-    return `<div class="task-row" onclick="openProject(${p.id || 0})">
+    return `<div class="task-row" onclick="openProject(${p.objectId})">
       <div class="task-title-cell">${esc(p.title)}</div>
       <div class="task-cell"><span class="status-pill" style="background:${statusColor}22;color:${statusColor};"><span style="width:5px;height:5px;border-radius:50%;background:${statusColor};display:inline-block;"></span>${p.status||'—'}</span></div>
       <div class="task-cell"><span class="priority-badge priority-${p.priority||'null'}">${p.priority||'—'}</span></div>
@@ -3745,9 +3745,9 @@ function renderResources(area) {
         <td>
           <div style="display:flex;align-items:center;gap:8px;">
             <span style="width:10px;height:10px;border-radius:2px;background:${col};flex-shrink:0;"></span>
-            ${a.analytics_id
+            ${a.analytics_id != null
               ? `<span style="font-weight:600;color:var(--navy);cursor:pointer;text-decoration:underline;text-underline-offset:2px;text-decoration-color:rgba(0,38,105,0.3);"
-                  onclick="openProject(${a.analytics_id})"
+                  onclick="openProject(${(PROJECTS.find(x => x.id == a.analytics_id)||{}).objectId || 0})"
                   onmouseenter="this.style.color='#C24200'"
                   onmouseleave="this.style.color='var(--navy)'"
                   title="View project details">${esc(a.project)}</span>`
@@ -4965,7 +4965,7 @@ function showAgolError(err) {
 const DataStore = {
   // ── Projects ──────────────────────────────────────────────────────
   getAllProjects() { return PROJECTS; },
-  getProject(id)  { return PROJECTS.find(function(p) { return p.id == id; }) || null; },
+  getProject(id)  { return PROJECTS.find(function(p) { return p.objectId == id; }) || null; },
 
   async createProject(fields) {
     try {
@@ -4987,7 +4987,8 @@ const DataStore = {
       alert('Failed to create project in ArcGIS Online: ' + err.message);
       if (!fields.id) fields.id = Math.max(0, ...PROJECTS.map(function(p) { return p.id; })) + 1;
       const pid = (fields.title || '').replace(/\s+/g, '').slice(0, 40) + Date.now();
-      const proj = Object.assign({ pid: pid }, fields);
+      const tempOid = 'temp_' + Date.now();
+      const proj = Object.assign({ pid: pid, objectId: tempOid }, fields);
       PROJECTS.push(proj);
       markDirty();
       return proj;
@@ -4995,7 +4996,7 @@ const DataStore = {
   },
 
   async updateProject(id, fields) {
-    const i = PROJECTS.findIndex(function(p) { return p.id == id; });
+    const i = PROJECTS.findIndex(function(p) { return p.objectId == id; });
     if (i < 0) return null;
     const oldTitle = PROJECTS[i].title;
     const newTitle = fields.title;
@@ -5035,7 +5036,7 @@ const DataStore = {
   },
 
   async deleteProject(id) {
-    const i = PROJECTS.findIndex(function(p) { return p.id == id; });
+    const i = PROJECTS.findIndex(function(p) { return p.objectId == id; });
     if (i < 0) return false;
     const objectId = PROJECTS[i].objectId;
     PROJECTS.splice(i, 1);
@@ -5707,7 +5708,7 @@ async function handleFormSubmit(andDownload) {
 
   // ── Access control: only group members can promote Ideas ──
   if (isProject && isEdit) {
-    const origProject = PROJECTS.find(p => p.id === formEditId);
+    const origProject = PROJECTS.find(p => p.objectId === formEditId);
     if (origProject && origProject.status === 'Idea' && fields.status !== 'Idea') {
       if (!_canPromoteIdeas) {
         alert('Permission denied: Only authorized users can change a project\'s status from "Idea" to another status.\n\nYou must be a member of the designated ArcGIS Online group to perform this action. Contact your administrator for access.');
@@ -5722,7 +5723,7 @@ async function handleFormSubmit(andDownload) {
   } else {
     const created = isProject ? await DataStore.createProject(fields) : await DataStore.createTask(fields);
     // After create: open the new record's detail view
-    formEditId = isProject ? created.id : created.idx;
+    formEditId = isProject ? created.objectId : created.idx;
   }
 
   closeFormModal();
@@ -5733,7 +5734,7 @@ async function handleFormSubmit(andDownload) {
   // opening the form — e.g. a status or search filter — can cause the
   // just-edited record to vanish if the edit changed the filtered field.)
   if (isEdit) {
-    activeFilters = { status: [], priority: [], category: [], member: [], taskStatus: [], search: '' };
+    activeFilters = { status: [], priority: [], category: [], member: [], taskStatus: [], partnerDept: [], itdTeam: [], search: '' };
     const si = document.getElementById('search-input');
     if (si) si.value = '';
     buildSidebarFilters();
@@ -5810,7 +5811,7 @@ function confirmDeleteTask(taskIdx) {
 
 // ─── PROJECT DETAIL PAGE ──────────────────────────────────────────────
 function renderProjectDetail(id) {
-  const p = PROJECTS.find(x => x.id == id);
+  const p = PROJECTS.find(x => x.objectId == id);
   if (!p) return '<div class="empty-state">Project not found.</div>';
   const relTasks = TASKS.filter(t => t.project_id === p.id);
   const statusColor = STATUS_COLOR(p.status) || '#9CA3AF';
@@ -5841,8 +5842,8 @@ function renderProjectDetail(id) {
   return `<div class="detail-page">
     <div class="detail-hero" style="background:linear-gradient(135deg, var(--navy) 0%, #003580 55%, ${statusColor}cc 100%);">
       <div class="detail-hero-actions">
-        <button class="modal-edit-btn" onclick="openFormModal('edit-project',${p.id})">✏ Edit</button>
-        <button class="modal-del-btn" onclick="confirmDeleteProject(${p.id})">🗑 Delete</button>
+        <button class="modal-edit-btn" onclick="openFormModal('edit-project',${p.objectId})">✏ Edit</button>
+        <button class="modal-del-btn" onclick="confirmDeleteProject(${p.objectId})">🗑 Delete</button>
       </div>
       <button class="detail-back-btn" onclick="goBackFromDetail()">← Back to Projects</button>
       <div class="detail-hero-title">${esc(p.title)}</div>
@@ -5925,7 +5926,7 @@ function renderTaskDetail(idx) {
         <div class="detail-meta-grid">
           <div class="detail-meta-item"><label>Assignee</label><p>${esc(t.assignee||'—')}</p></div>
           <div class="detail-meta-item"><label>Project</label>
-            <p>${proj ? `<span onclick="openProject(${proj.id})" style="color:var(--navy);cursor:pointer;text-decoration:underline;">${esc(proj.title)}</span>` : esc(t.project||'—')}</p>
+            <p>${proj ? `<span onclick="openProject(${proj.objectId})" style="color:var(--navy);cursor:pointer;text-decoration:underline;">${esc(proj.title)}</span>` : esc(t.project||'—')}</p>
           </div>
           <div class="detail-meta-item"><label>Category</label><p>${esc(t.category||'—')}</p></div>
           <div class="detail-meta-item"><label>Tool</label><p>${esc(t.tool||'—')}</p></div>
@@ -5943,7 +5944,7 @@ function renderTaskDetail(idx) {
 
       ${proj ? `<div class="detail-section">
         <div class="detail-section-label">Parent Project</div>
-        <div onclick="openProject(${proj.id})" style="cursor:pointer;border:1px solid var(--border);border-radius:8px;padding:16px 20px;background:var(--white);display:flex;align-items:center;gap:16px;transition:background 0.15s;" onmouseenter="this.style.background='#F0F4FF'" onmouseleave="this.style.background='var(--white)'">
+        <div onclick="openProject(${proj.objectId})" style="cursor:pointer;border:1px solid var(--border);border-radius:8px;padding:16px 20px;background:var(--white);display:flex;align-items:center;gap:16px;transition:background 0.15s;" onmouseenter="this.style.background='#F0F4FF'" onmouseleave="this.style.background='var(--white)'">
           <div style="width:40px;height:40px;border-radius:8px;background:var(--navy);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
             <span style="color:#fff;font-size:10px;font-weight:800;">${proj.title.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</span>
           </div>
@@ -6506,18 +6507,18 @@ function renderIdeaReview() {
                style="background:${a.bg};color:${a.color};border-color:${a.border};"
                onmouseover="this.style.background='${a.color}';this.style.color='#fff';"
                onmouseout="this.style.background='${a.bg}';this.style.color='${a.color}';"
-               onclick="promoteIdea(${p.id}, '${a.status}')">
+               onclick="promoteIdea(${p.objectId}, '${a.status}')">
               ${a.label}
             </button>`
           ).join('');
 
           const submittedDate = p.start || p.created || '—';
 
-          return `<div class="idea-card" id="idea-card-${p.id}">
+          return `<div class="idea-card" id="idea-card-${p.objectId}">
             <div class="idea-card-top">
               <div class="idea-lightbulb">💡</div>
               <div style="flex:1;min-width:0;">
-                <div class="idea-card-title" onclick="openProjectFromReview(${p.id})">${esc(p.title)}</div>
+                <div class="idea-card-title" onclick="openProjectFromReview(${p.objectId})">${esc(p.title)}</div>
                 <div class="idea-card-meta">
                   ${p.contact ? `<span>👤 ${esc(p.contact)}</span>` : ''}
                   ${p.partner_dept ? `<span>🏢 ${esc(p.partner_dept)}</span>` : ''}
@@ -6537,7 +6538,7 @@ function renderIdeaReview() {
             <div class="idea-card-actions">
               <span class="idea-card-actions-label">Move to →</span>
               ${btns}
-              <button class="idea-edit-btn" onclick="openFormModal('edit-project', ${p.id})">✏ Edit</button>
+              <button class="idea-edit-btn" onclick="openFormModal('edit-project', ${p.objectId})">✏ Edit</button>
             </div>
           </div>`;
         }).join('')}
