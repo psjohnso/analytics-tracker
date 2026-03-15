@@ -1294,6 +1294,16 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 }
 #btn-save-file:hover { background: #6a8f10; }
 #btn-save-file:active { transform: scale(0.97); }
+#btn-help {
+  background: #4A90D9; color: #fff; border: none;
+  padding: 7px 16px; border-radius: 8px;
+  font-family: 'Lato', sans-serif; font-size: 12px; font-weight: 700;
+  cursor: pointer; letter-spacing: 0.03em; text-decoration: none;
+  display: flex; align-items: center; gap: 6px;
+  transition: background 0.15s, transform 0.1s;
+}
+#btn-help:hover { background: #3A7BC8; }
+#btn-help:active { transform: scale(0.97); }
 #btn-save-file.dirty { animation: savePulse 2s ease-in-out infinite; }
 @keyframes savePulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(131,172,22,0.5); }
@@ -2041,9 +2051,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
         <button id="btn-save-file" onclick="saveAllData()" title="Refresh data from ArcGIS Online" class="">
           🔄 Refresh
         </button>
-        <a href="guide.html" target="_blank" title="User Guide & Help" style="display:flex;align-items:center;gap:5px;padding:7px 14px;background:rgba(255,255,255,0.15);border:none;border-radius:6px;font-size:12px;font-weight:800;font-family:Lato,sans-serif;color:#fff;text-decoration:none;cursor:pointer;letter-spacing:0.03em;transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
-          ❓ Help
-        </a>
+        <a href="guide.html" target="_blank" id="btn-help" title="User Guide & Help">About / Help</a>
       </div>
     </nav>
 
@@ -2708,7 +2716,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.7.5.0035';
+const APP_VERSION = '0.7.6.0036';
 
 let PROJECTS = [];
 let TASKS = [];
