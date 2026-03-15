@@ -2705,7 +2705,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.7.1.0031';
+const APP_VERSION = '0.7.2.0032';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -4695,11 +4695,11 @@ async function loadResourcesData() {
     }
   });
 
-  // Compute proj_cap from formula: (40 - absence_hours) × proj_pct
-  // Absences are the single source of truth for time off.
+  // Compute proj_cap from formula: (40 - absence_hours) × 75% productivity × proj_pct
+  // The 0.75 factor accounts for non-project-work time (meetings, email, breaks, etc.)
   Object.values(people).forEach(function(p) {
     for (var i = 0; i < N; i++) {
-      p.proj_cap[i] = (40 - (p.absences[i] || 0)) * p.proj_pct;
+      p.proj_cap[i] = (40 - (p.absences[i] || 0)) * 0.75 * p.proj_pct;
     }
   });
 
@@ -6477,8 +6477,8 @@ async function absValueChanged(input) {
   var oldHrs = p.absences[wi] || 0;
   p.absences[wi] = hrs;
 
-  // Recalculate proj_cap for this week (formula: (40 - absences) × proj_pct)
-  p.proj_cap[wi] = (40 - hrs) * p.proj_pct;
+  // Recalculate proj_cap for this week: (40 - absences) × 75% productivity × proj_pct
+  p.proj_cap[wi] = (40 - hrs) * 0.75 * p.proj_pct;
 
   // Recalculate hours and utilization for this week
   p.allocations.forEach(function(a) {
