@@ -2664,7 +2664,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.6.4.0023';
+const APP_VERSION = '0.6.5.0024';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -3879,41 +3879,74 @@ function applyEditorChanges() {
   const N    = RESOURCES_DATA.weeks.length;
   const weeks = RESOURCES_DATA.weeks;
 
+  // Build a map of canonicalized→original allocation names so we can match properly
+  const projTitleSet3 = new Set(PROJECTS.map(proj => proj.title));
+  function canonTitle(raw) {
+    if (projTitleSet3.has(raw)) return raw;
+    const stripped = raw.replace(/\s*-\s*[A-Z][A-Za-z .]+$/, '').trim();
+    return projTitleSet3.has(stripped) ? stripped : raw;
+  }
+  // Map canonical name → array of original allocation objects
+  const origByCanon = {};
+  p.allocations.forEach(function(a) {
+    var cn = canonTitle(a.project);
+    if (!origByCanon[cn]) origByCanon[cn] = [];
+    origByCanon[cn].push(a);
+  });
+
   // Collect changed allocation weeks for REST write-back
-  const editsToSave = []; // { name, project, project_status, project_type, analytics_id, week_date, fraction, hours }
+  const editsToSave = [];
 
   editorDraft[name].forEach(function(da) {
-    let orig = p.allocations.find(function(a) { return a.project === da.project; });
-    if (!orig) {
-      const proj = PROJECTS.find(function(x) { return x.title === da.project; });
-      orig = {
-        project:      da.project,
-        status:       proj ? proj.status : da.status,
-        type:         '',
-        fracs:        new Array(N).fill(0),
-        hours:        new Array(N).fill(0),
-        analytics_id: proj ? proj.id : null,
-      };
-      p.allocations.push(orig);
-    }
-    // Track changes before overwriting
+    var origArr = origByCanon[da.project] || [];
+
+    // Compute the original merged fracs (same merge logic as openAllocEditor)
+    var mergedOrigFracs = new Array(N).fill(0);
+    origArr.forEach(function(a) {
+      for (var i = 0; i < N; i++) mergedOrigFracs[i] += (a.fracs[i] || 0);
+    });
+
+    // Detect which weeks actually changed
     for (var i = 0; i < N; i++) {
-      if (da.fracs[i] !== orig.fracs[i]) {
-        var newHrs = da.fracs[i] * (p.proj_cap[i] || 0);
+      var oldFrac = Math.round(mergedOrigFracs[i] * 10000) / 10000;
+      var newFrac = Math.round((da.fracs[i] || 0) * 10000) / 10000;
+      if (newFrac !== oldFrac) {
+        var newHrs = newFrac * (p.proj_cap[i] || 0);
         editsToSave.push({
           name:           name,
           project:        da.project,
-          project_status: orig.status || da.status,
-          project_type:   orig.type || '',
-          analytics_id:   orig.analytics_id,
+          project_status: da.status || '',
+          project_type:   origArr.length > 0 ? (origArr[0].type || '') : '',
+          analytics_id:   origArr.length > 0 ? origArr[0].analytics_id : null,
           week_date:      weeks[i],
-          fraction:       da.fracs[i],
+          fraction:       newFrac,
           hours:          Math.round(newHrs * 100) / 100,
         });
       }
     }
-    orig.fracs = da.fracs.slice();
-    orig.hours = orig.fracs.map(function(f, i) { return f * (p.proj_cap[i] || 0); });
+
+    // Update local data: write back to the first matching original allocation
+    // (or create a new one if none exists)
+    if (origArr.length > 0) {
+      // Update the first allocation, zero out any others (de-duplicate)
+      origArr[0].fracs = da.fracs.slice();
+      origArr[0].hours = da.fracs.map(function(f, i) { return f * (p.proj_cap[i] || 0); });
+      for (var j = 1; j < origArr.length; j++) {
+        origArr[j].fracs = new Array(N).fill(0);
+        origArr[j].hours = new Array(N).fill(0);
+      }
+    } else {
+      // Brand new allocation
+      var proj = PROJECTS.find(function(x) { return x.title === da.project; });
+      p.allocations.push({
+        project:      da.project,
+        status:       proj ? proj.status : da.status,
+        type:         '',
+        fracs:        da.fracs.slice(),
+        hours:        da.fracs.map(function(f, i) { return f * (p.proj_cap[i] || 0); }),
+        analytics_id: proj ? proj.id : null,
+      });
+    }
   });
 
   // Recompute weekly_allocated and utilization (as 0.0–1.0 ratio, NOT percentage)
@@ -3927,33 +3960,60 @@ function applyEditorChanges() {
   render();
 
   // Save changed allocations to REST service (non-blocking)
-  if (editsToSave.length > 0 && _isLoggedIn) {
+  console.log('[Allocations] Detected', editsToSave.length, 'changed week(s):', editsToSave);
+  if (editsToSave.length > 0) {
     saveAllocationsToRest(editsToSave);
+  } else {
+    console.log('[Allocations] No changes to save');
   }
 }
 
 /**
  * Write allocation changes to the ArcGIS Online allocations REST service.
- * For each changed week, we delete any existing record for that person+project+week
- * and add a new one with the updated values. Zero-fraction records are deleted only.
+ * Strategy: for each changed person+project+week, find and delete the existing
+ * record (if any), then add a new one with updated values. If fraction is 0,
+ * only delete (sparse storage).
  */
 async function saveAllocationsToRest(edits) {
   try {
+    console.log('[Allocations] Starting REST save for', edits.length, 'edits');
     const token = await ensureAgolToken();
-    if (!token) return;
+    if (!token) {
+      console.error('[Allocations] No token available');
+      return;
+    }
 
-    // Query existing records for this person to find ObjectIDs to update/delete
+    // Query ALL existing allocation records for this person
     const personName = edits[0].name;
+    console.log('[Allocations] Querying existing records for:', personName);
     const existing = await agolQuery(ARCGIS_CONFIG.allocationsUrl,
       "name='" + personName.replace(/'/g, "''") + "'");
+    console.log('[Allocations] Found', existing.length, 'existing records');
 
-    // Build lookup: "project|week_date" → ObjectId
-    const existingMap = {};
+    // Log first record to verify field names
+    if (existing.length > 0) {
+      console.log('[Allocations] Sample existing record:', JSON.stringify(existing[0].attributes));
+    }
+
+    // Build lookup: "project|week_date" → { oid, rawProject }
+    // We need to match by canonicalized name since edits use canonical names
+    const projTitleSet4 = new Set(PROJECTS.map(proj => proj.title));
+    function canonTitle2(raw) {
+      if (projTitleSet4.has(raw)) return raw;
+      var stripped = raw.replace(/\s*-\s*[A-Z][A-Za-z .]+$/, '').trim();
+      return projTitleSet4.has(stripped) ? stripped : raw;
+    }
+
+    var existingMap = {}; // "canonicalProject|week_date" → OID
     existing.forEach(function(f) {
       var a = f.attributes;
+      var oid = a.ObjectId || a.OBJECTID || a.objectid || a.FID;
       var wk = epochToDateStr(a.week_date);
-      var key = a.project + '|' + wk;
-      existingMap[key] = f.attributes.ObjectId || f.attributes.OBJECTID || f.attributes.objectid;
+      var canon = canonTitle2(a.project || '');
+      var key = canon + '|' + wk;
+      // If multiple records match same canonical+week, store all OIDs
+      if (!existingMap[key]) existingMap[key] = [];
+      existingMap[key].push(oid);
     });
 
     var deletes = [];
@@ -3961,11 +4021,13 @@ async function saveAllocationsToRest(edits) {
 
     edits.forEach(function(e) {
       var key = e.project + '|' + e.week_date;
-      var existingOid = existingMap[key];
+      var existingOids = existingMap[key] || [];
 
-      if (existingOid) {
-        deletes.push(existingOid);
-      }
+      // Delete all matching existing records for this project+week
+      existingOids.forEach(function(oid) {
+        if (oid !== undefined && oid !== null) deletes.push(oid);
+      });
+
       // Only add back if fraction > 0 (sparse storage)
       if (e.fraction > 0) {
         adds.push({
@@ -3983,17 +4045,48 @@ async function saveAllocationsToRest(edits) {
       }
     });
 
+    console.log('[Allocations] Deleting', deletes.length, 'OIDs:', deletes);
+    console.log('[Allocations] Adding', adds.length, 'records');
+    if (adds.length > 0) console.log('[Allocations] Sample add payload:', JSON.stringify(adds[0]));
+
+    if (deletes.length === 0 && adds.length === 0) {
+      console.log('[Allocations] Nothing to send');
+      return;
+    }
+
+    // Send edits
     var editPayload = {};
     if (deletes.length > 0) editPayload.deletes = deletes;
     if (adds.length > 0)    editPayload.adds = adds;
 
-    if (deletes.length > 0 || adds.length > 0) {
-      var result = await agolApplyEdits(ARCGIS_CONFIG.allocationsUrl, editPayload);
-      console.log('[Allocations] Saved', adds.length, 'adds,', deletes.length, 'deletes', result);
+    var result = await agolApplyEdits(ARCGIS_CONFIG.allocationsUrl, editPayload);
+    console.log('[Allocations] applyEdits response:', JSON.stringify(result));
+
+    // Check for per-record errors
+    var errors = [];
+    if (result.addResults) {
+      result.addResults.forEach(function(r, i) {
+        if (!r.success) errors.push('Add #' + i + ': ' + (r.error ? r.error.description : 'unknown'));
+      });
+    }
+    if (result.deleteResults) {
+      result.deleteResults.forEach(function(r, i) {
+        if (!r.success) errors.push('Delete #' + i + ': ' + (r.error ? r.error.description : 'unknown'));
+      });
+    }
+
+    if (errors.length > 0) {
+      console.error('[Allocations] Partial failures:', errors);
+      alert('Some allocation changes failed to save:\n' + errors.join('\n'));
+    } else {
+      var msg = 'Saved ' + adds.length + ' allocation(s)';
+      if (deletes.length > 0) msg += ', removed ' + deletes.length + ' old record(s)';
+      console.log('[Allocations] ✓', msg);
+      markSynced(msg);
     }
   } catch (err) {
     console.error('[Allocations] Save failed:', err);
-    alert('Allocation changes were applied locally but failed to save to ArcGIS Online: ' + err.message);
+    alert('Allocation save failed: ' + err.message + '\n\nCheck the browser console (F12) for details.');
   }
 }
 
