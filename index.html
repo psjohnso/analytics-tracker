@@ -2664,7 +2664,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.6.2.0021';
+const APP_VERSION = '0.6.3.0022';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -3434,8 +3434,10 @@ function renderResources(area) {
   });
   const allocs = Object.values(allocsByName).filter(a => a.status === 'Active' || a.status === 'On Hold');
 
-  // KPI: current week
+  // KPI: current week (uses dataWeekIdx = latest week with data for KPI numbers)
   const cwIdx = dataWeekIdx;
+  // Visual highlight: actual calendar week
+  const calWeekIdx = currentWeekIdx;
   const cwCap = p.proj_cap[cwIdx] || 0;
   const cwAlloc = p.weekly_allocated[cwIdx] || 0;
   const cwUtil = cwCap > 0 ? (cwAlloc/cwCap*100) : 0;
@@ -3499,7 +3501,7 @@ function renderResources(area) {
     bars += `<circle cx="${(x+barW/2).toFixed(1)}" cy="${capY.toFixed(1)}" r="3" fill="#002669"/>`;
 
     // Current week indicator
-    if (wi === cwIdx) {
+    if (wi === calWeekIdx) {
       bars += `<rect x="${x.toFixed(1)}" y="0" width="${barW}" height="${chartH-padB}" fill="#002669" opacity="0.05" rx="2"/>`;
     }
 
@@ -3553,15 +3555,15 @@ function renderResources(area) {
       const col = projColorMap[a.project];
       const statusCol = STATUS_COLOR(a.status) || '#9CA3AF';
       // Sparkline: 8 weeks around current
-      const spStart = Math.max(0, cwIdx-3);
+      const spStart = Math.max(0, calWeekIdx-3);
       const spWeeks = a.fracs.slice(spStart, spStart+8);
       const spMax = Math.max(...spWeeks, 0.01);
       const sparks = spWeeks.map((f, i) => {
         const h = Math.round((f/spMax)*20);
-        const isNow = (spStart+i) === cwIdx;
+        const isNow = (spStart+i) === calWeekIdx;
         return `<div class="spark-bar" style="height:${h}px;background:${isNow?col:col+'88'};"></div>`;
       }).join('');
-      const cwFrac = (a.fracs[cwIdx]||0)*100;
+      const cwFrac = (a.fracs[calWeekIdx]||0)*100;
       return `<tr>
         <td>
           <div style="display:flex;align-items:center;gap:8px;">
@@ -3783,7 +3785,7 @@ function aeRenderGrid() {
   let thead = '<tr>';
   thead += '<th class="ae-proj-th">Project</th>';
   for (const wi of wIdxs) {
-    const isCur = wi === dataWeekIdx;
+    const isCur = wi === window.currentWeekIdx;
     thead += '<th class="ae-wk-th' + (isCur ? ' ae-cur' : '') + '">' +
       aeMonLabel(wi) + '<br><span style="font-size:9px;opacity:.7;">W' + (wi+1) + '</span></th>';
   }
@@ -3819,7 +3821,7 @@ function aeRenderGrid() {
 
     for (const wi of wIdxs) {
       const pct    = Math.round((a.fracs[wi] || 0) * 100);
-      const isCur  = wi === dataWeekIdx;
+      const isCur  = wi === window.currentWeekIdx;
       const hasVal = pct > 0;
       const wDate  = weeks[wi];
       let rangeClass = '';
@@ -3844,7 +3846,7 @@ function aeRenderGrid() {
   for (const wi of wIdxs) {
     const total = allocs.reduce(function(s, a) { return s + Math.round((a.fracs[wi] || 0) * 100); }, 0);
     const cls   = total === 0 ? 'zero' : total > 100 ? 'over' : 'ok';
-    const isCur = wi === dataWeekIdx;
+    const isCur = wi === window.currentWeekIdx;
     totRow += '<td class="ae-wk-td' + (isCur ? ' ae-cur' : '') + '" id="ae-tot-' + wi + '">' +
       '<span class="ae-tot-chip ' + cls + '">' + total + '%</span></td>';
   }
@@ -3856,7 +3858,7 @@ function aeCellChange(ai, wi, input) {
   const pct = Math.min(100, Math.max(0, parseFloat(input.value) || 0));
   input.value = pct;
   editorDraft[editorPerson][ai].fracs[wi] = pct / 100;
-  const isCur = wi === dataWeekIdx;
+  const isCur = wi === window.currentWeekIdx;
   input.className = 'ae-pct-input' + (pct > 0 ? ' has-val' : '') + (isCur ? ' cur-wk' : '');
   aeTotRefresh(wi);
 }
@@ -3867,7 +3869,7 @@ function aeTotRefresh(wi) {
   const cell   = document.getElementById('ae-tot-' + wi);
   if (!cell) return;
   const cls  = total === 0 ? 'zero' : total > 100 ? 'over' : 'ok';
-  const isCur = wi === dataWeekIdx;
+  const isCur = wi === window.currentWeekIdx;
   cell.innerHTML = '<span class="ae-tot-chip ' + cls + '">' + total + '%</span>';
 }
 
