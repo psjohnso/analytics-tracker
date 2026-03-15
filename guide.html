@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analytics Project Tracker — User Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #002669;
+  --gold: #FFDB22;
+  --text: #1F2937;
+  --text-muted: #6B7280;
+  --border: #E5E7EB;
+  --bg: #F9FAFB;
+  --card-bg: #FFFFFF;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Lato', sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+
+/* Header */
+.guide-header {
+  background: var(--navy); color: #fff; padding: 20px 32px;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.guide-header h1 { font-size: 20px; font-weight: 900; letter-spacing: 0.02em; }
+.guide-header .subtitle { font-size: 13px; opacity: 0.75; font-weight: 400; }
+.back-btn {
+  padding: 8px 16px; background: var(--gold); color: #92400E; border: none; border-radius: 6px;
+  font-size: 13px; font-weight: 800; cursor: pointer; text-decoration: none; font-family: 'Lato', sans-serif;
+}
+.back-btn:hover { background: #F0CC00; }
+
+/* Layout */
+.guide-layout { display: flex; max-width: 1200px; margin: 0 auto; min-height: calc(100vh - 64px); }
+
+/* Sidebar TOC */
+.guide-nav {
+  width: 260px; flex-shrink: 0; background: var(--card-bg); border-right: 1px solid var(--border);
+  padding: 24px 0; position: sticky; top: 64px; height: calc(100vh - 64px); overflow-y: auto;
+}
+.guide-nav a {
+  display: block; padding: 8px 24px; font-size: 13px; color: var(--text-muted); text-decoration: none;
+  border-left: 3px solid transparent; transition: all 0.15s;
+}
+.guide-nav a:hover { color: var(--navy); background: #F0F4FF; }
+.guide-nav a.active { color: var(--navy); font-weight: 700; border-left-color: var(--navy); background: #EEF2FF; }
+.guide-nav .nav-section { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--navy); padding: 16px 24px 6px; }
+
+/* Content */
+.guide-content { flex: 1; padding: 32px 48px 80px; max-width: 820px; }
+
+h2 { font-size: 26px; font-weight: 900; color: var(--navy); margin: 48px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+h2:first-child { margin-top: 0; }
+h3 { font-size: 18px; font-weight: 800; color: var(--navy); margin: 32px 0 10px; }
+h4 { font-size: 15px; font-weight: 700; color: #374151; margin: 24px 0 8px; }
+p { margin-bottom: 14px; font-size: 15px; }
+ul, ol { margin: 0 0 16px 24px; }
+li { margin-bottom: 6px; font-size: 15px; }
+li strong { color: var(--navy); }
+
+/* Formula callouts */
+.formula {
+  background: #EEF2FF; border: 1px solid #C7D2FE; border-radius: 10px; padding: 16px 24px;
+  text-align: center; font-size: 17px; font-weight: 800; color: var(--navy); margin: 20px 0;
+  letter-spacing: 0.01em;
+}
+
+/* Tables */
+.guide-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+.guide-table th { background: var(--navy); color: #fff; padding: 10px 14px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; }
+.guide-table td { padding: 10px 14px; border-bottom: 1px solid #F3F4F6; }
+.guide-table tr:nth-child(even) td { background: #F9FAFB; }
+.guide-table tr:last-child td { border-bottom: none; }
+
+/* Tip / Note boxes */
+.tip-box {
+  background: #FFFBEB; border-left: 4px solid #F59E0B; border-radius: 0 8px 8px 0;
+  padding: 14px 18px; margin: 16px 0; font-size: 14px;
+}
+.tip-box strong { color: #92400E; }
+
+.note-box {
+  background: #EEF2FF; border-left: 4px solid var(--navy); border-radius: 0 8px 8px 0;
+  padding: 14px 18px; margin: 16px 0; font-size: 14px;
+}
+.note-box strong { color: var(--navy); }
+
+/* Color badges inline */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; }
+.badge-green { background: #D1FAE5; color: #065F46; }
+.badge-amber { background: #FEF3C7; color: #92400E; }
+.badge-red { background: #FEE2E2; color: #DC2626; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .guide-nav { display: none; }
+  .guide-content { padding: 24px 20px 60px; }
+  .guide-header { padding: 16px 20px; }
+}
+</style>
+</head>
+<body>
+
+<header class="guide-header">
+  <div>
+    <h1>Analytics Project Tracker <span class="subtitle">User Guide</span></h1>
+  </div>
+  <a href="index.html" class="back-btn">← Back to Tracker</a>
+</header>
+
+<div class="guide-layout">
+
+<nav class="guide-nav" id="guide-nav">
+  <div class="nav-section">Guide</div>
+  <a href="#getting-started">Getting Started</a>
+  <a href="#navigation">Navigating the App</a>
+  <a href="#overview-tab">Overview Tab</a>
+  <a href="#projects-tab">Projects Tab</a>
+  <a href="#tasks-tab">Tasks Tab</a>
+  <a href="#resources-tab">Resources Tab</a>
+  <a href="#forecast-tab">Forecast Tab</a>
+  <a href="#settings-tab">Settings Tab</a>
+  <div class="nav-section">Reference</div>
+  <a href="#capacity-math">Capacity & Utilization Math</a>
+  <a href="#data-architecture">Data Architecture</a>
+  <a href="#access-control">Access Control</a>
+</nav>
+
+<main class="guide-content">
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2 id="getting-started">Getting Started</h2>
+
+<h3>Logging In</h3>
+<p>The Analytics Project Tracker uses ArcGIS Online OAuth 2.0 authentication. When you first open the application, you'll be redirected to the City of Tucson ArcGIS Online portal to sign in with your organizational credentials.</p>
+<p>After successful authentication, your name appears in the upper-right corner. Your session lasts 120 minutes, after which you'll be prompted to re-authenticate.</p>
+
+<h3>User Roles</h3>
+<ul>
+  <li><strong>Standard User:</strong> Can view all tabs (Overview, Projects, Tasks, Resources, Forecast), create and edit projects and tasks, edit allocation percentages, and submit project ideas.</li>
+  <li><strong>Admin:</strong> Members of the designated Team Leads group gain access to the Settings tab and can promote project ideas to active status. An <span class="badge badge-green">Admin</span> badge appears next to your name.</li>
+</ul>
+
+<h3>Browser Requirements</h3>
+<p>The application runs entirely in the browser as a single HTML page. It works with modern versions of Chrome, Edge, Firefox, and Safari. No software installation is required.</p>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2 id="navigation">Navigating the Application</h2>
+
+<h3>Tab Bar</h3>
+<p>The top navigation bar provides access to the main sections:</p>
+<ul>
+  <li><strong>Overview:</strong> Dashboard with KPI summary cards showing project counts by status, active tasks, and team allocation overview.</li>
+  <li><strong>Projects:</strong> Full list of analytics projects with filtering, sorting, and detail views. Supports grid and list layouts.</li>
+  <li><strong>Tasks:</strong> Individual task management with status tracking, due dates, and assignee information.</li>
+  <li><strong>Resources:</strong> Team capacity planning with per-person allocation charts, utilization metrics, and an interactive allocation editor.</li>
+  <li><strong>📊 Forecast:</strong> Forward-looking capacity projection showing team availability and utilization trends.</li>
+  <li><strong>⚙️ Settings:</strong> (Admin only) Team member management and absence/time-off editing.</li>
+</ul>
+
+<h3>Sidebar Filters</h3>
+<p>The left sidebar provides filtering options that change based on the active tab. Filter by project status, priority, category, or team member. Active filters appear as highlighted chips — click to toggle. The content area updates immediately.</p>
+
+<h3>View Toggle</h3>
+<p>On the Projects and Tasks tabs, switch between <strong>Grid</strong> (card-based) and <strong>List</strong> (table-based) views using the toggle buttons in the toolbar. Grid is the default.</p>
+
+<h3>Toolbar Actions</h3>
+<ul>
+  <li><strong>🔄 Refresh:</strong> Reloads all data from ArcGIS Online, including projects, tasks, and resource allocations.</li>
+  <li><strong>💡 Submit Idea:</strong> Opens a simplified form for submitting new project ideas. Ideas enter with "Idea" status and must be promoted by an Admin.</li>
+  <li><strong>📋 Weekly Review:</strong> Filters tasks to show only those with activity in the current week.</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2 id="overview-tab">Overview Tab</h2>
+<p>The Overview tab provides a high-level dashboard of the team's current workload. It displays summary KPI cards showing the number of projects by status (Active, On Hold, Complete, etc.), task counts, and overall team utilization. This tab hides the sidebar and view toggle to provide a clean dashboard layout.</p>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2 id="projects-tab">Projects Tab</h2>
+
+<h3>Viewing Projects</h3>
+<p>Projects can be viewed in grid (card) or list (table) format. Each project shows its title, status, priority, category, assigned contact, start/end dates, and completion percentage. Click a project card or row to open its detail page with all fields, associated tasks, team members, and a timeline view.</p>
+
+<h3>Creating and Editing Projects</h3>
+<p>To create a new project, an Admin must promote a submitted idea. Standard users can submit ideas through the "💡 Submit Idea" button. Once promoted, projects can be edited by clicking into the detail view and modifying fields. Changes save directly to the ArcGIS Online projects feature service.</p>
+
+<h3>Project Statuses</h3>
+<p>Projects follow this lifecycle:</p>
+<p><strong>Idea → Active → On Hold / Complete / Canceled</strong></p>
+<p>The "Future" status is also available for planned work not yet started.</p>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2 id="tasks-tab">Tasks Tab</h2>
+<p>Tasks are individual work items associated with projects. Each task has a title, status, assignee, due date, and parent project reference.</p>
+
+<h3>Creating Tasks</h3>
+<p>Click the <strong>"＋ New Task"</strong> button in the toolbar. Select the parent project, assign a team member, set a due date, and provide a description.</p>
+
+<h3>Task Statuses</h3>
+<p>Tasks use their own status set: <strong>Not Started, In Progress, Complete, Deferred,</strong> and <strong>Canceled</strong>.</p>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2 id="resources-tab">Resources Tab</h2>
+<p>The Resources tab is the team capacity planning hub. It shows how each team member's time is allocated across projects and whether they are over- or under-utilized.</p>
+
+<h3>Team Member Cards</h3>
+<p>The top section, labeled <strong>"Current Week Project Allocations,"</strong> displays a card for each team member showing their name, role, and current week utilization percentage. The utilization badge is color-coded:</p>
+<ul>
+  <li><span class="badge badge-green">Green</span> — Under 70% utilized (has capacity)</li>
+  <li><span class="badge badge-amber">Amber</span> — 70–90% utilized (getting busy)</li>
+  <li><span class="badge badge-red">Red</span> — Over 90% utilized (at or over capacity)</li>
+</ul>
+<p>Click a card to view that person's detailed allocation below.</p>
+
+<h3>Allocation Chart</h3>
+<p>A 20-week stacked bar chart shows allocation data, with each project in a different color. The capacity line (dark dots) shows the person's maximum project hours per week. A subtle highlight marks the current calendar week. Use the left/right arrows to scroll through the year.</p>
+
+<h3>KPI Row</h3>
+<p>Below the person's name, KPI cards show: current week utilization %, project capacity hours, allocated hours, number of active projects, and year-to-date total allocated hours.</p>
+
+<h3>Allocation Table</h3>
+<p>A table lists each project the selected person is allocated to, showing project status, a sparkline of recent allocation, and current week allocation percentage and hours.</p>
+
+<h3>Editing Allocations</h3>
+<p>Click <strong>"✏️ Edit Allocations"</strong> to open the allocation editor popup. This shows a grid of projects (rows) by weeks (columns). Enter allocation percentages (0–100%) for each project and week.</p>
+<div class="tip-box">
+  <strong>Tip:</strong> Projects are sorted alphabetically. Pressing <strong>Tab</strong> moves down the column (same week, next project) rather than across a row, making it easy to fill in one week at a time.
+</div>
+<p>The total row at the bottom shows combined allocation — totals over 100% are highlighted in red. Click <strong>"✓ Apply Changes"</strong> to save. Changes are written to the ArcGIS Online allocations service and the view updates immediately.</p>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2 id="forecast-tab">Forecast Tab</h2>
+<p>The Forecast tab projects team capacity into the future based on current allocation patterns. It shows how loaded each person is over a configurable window (default 13 weeks from the current week).</p>
+<p>The forecast uses a <strong>"snapshot" approach</strong>: it takes each person's most recent allocation percentages and extends them forward, accounting for project end dates. When a project ends, its allocation is freed up, revealing future availability.</p>
+<p>A team-level utilization heatmap shows how the overall team is loaded week by week, helping identify periods of over- or under-capacity.</p>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2 id="settings-tab">Settings Tab (Admin Only)</h2>
+<p>The Settings tab is only visible to members of the Team Leads group in ArcGIS Online. It provides team management capabilities.</p>
+
+<h3>Team Members Table</h3>
+<p>Lists all team members with their name, role, team, skill, and project allocation percentage. From each row you can:</p>
+<ul>
+  <li><strong>✏️ Edit:</strong> Update the person's role, team, skill, and project time percentage. Changes save directly to the team_members REST service.</li>
+  <li><strong>📅 Absences:</strong> Opens an inline absence editor showing 8 weeks at a time, centered on the current week. Enter hours off per week (0–40). Changes auto-save to the absences REST service. A read-only "Proj Capacity" row shows the impact on available project hours.</li>
+  <li><strong>🗑 Delete:</strong> Removes the team member from the roster (with confirmation). Allocation and absence history is preserved in the database.</li>
+</ul>
+
+<h3>Adding Team Members</h3>
+<p>Click <strong>"＋ Add Member"</strong> to open a form for adding a new team member. Enter their full name, role, team, skill area, and the percentage of their work week allocated to project work.</p>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2 id="capacity-math">Capacity & Utilization: Assumptions and Math</h2>
+<p>This section explains how the application calculates project capacity, allocated hours, and utilization. Understanding these calculations is important for interpreting the data on the Resources and Forecast tabs.</p>
+
+<h3>Core Assumptions</h3>
+<table class="guide-table">
+  <tr><th>Assumption</th><th>Value / Explanation</th></tr>
+  <tr><td><strong>Base Work Week</strong></td><td>40 hours per employee</td></tr>
+  <tr><td><strong>Productivity Factor</strong></td><td><strong>75%</strong> — Only 75% of available work hours are assumed to be productive project time. The remaining 25% accounts for meetings, email, administrative tasks, context-switching, and breaks. This is based on workplace productivity research showing the average knowledge worker is productively focused for roughly 6 of 8 hours per day.</td></tr>
+  <tr><td><strong>Project Time %</strong></td><td>Each team member has a configurable percentage of their productive time dedicated to project work (e.g., 63% for a Lead Data Analyst). The remainder goes to operational duties, support, and overhead not tracked as projects.</td></tr>
+  <tr><td><strong>Absences</strong></td><td>Hours off per week (vacation, sick, holidays) are entered in the Settings tab. These reduce the base 40-hour week before the productivity factor is applied.</td></tr>
+</table>
+
+<h3>The Capacity Formula</h3>
+<p>For each person, for each week:</p>
+<div class="formula">Project Capacity = (40 − Absence Hours) × 0.75 × Project Time %</div>
+
+<h4>Worked Example — No Absences</h4>
+<p>James McGinnis has a project time allocation of 63% and no absences this week:</p>
+<table class="guide-table">
+  <tr><th>Step</th><th>Calculation</th></tr>
+  <tr><td>Base work week</td><td>40 hours</td></tr>
+  <tr><td>Subtract absences</td><td>40 − 0 = 40 hours available</td></tr>
+  <tr><td>Apply 75% productivity</td><td>40 × 0.75 = 30 productive hours</td></tr>
+  <tr><td>Apply 63% project time</td><td>30 × 0.63 = <strong>18.9 project hours</strong></td></tr>
+</table>
+
+<h4>Worked Example — With 1 Day Off</h4>
+<p>If James takes 8 hours (1 day) off:</p>
+<table class="guide-table">
+  <tr><th>Step</th><th>Calculation</th></tr>
+  <tr><td>Base work week</td><td>40 hours</td></tr>
+  <tr><td>Subtract absences</td><td>40 − 8 = 32 hours available</td></tr>
+  <tr><td>Apply 75% productivity</td><td>32 × 0.75 = 24 productive hours</td></tr>
+  <tr><td>Apply 63% project time</td><td>24 × 0.63 = <strong>15.12 project hours</strong></td></tr>
+</table>
+
+<h3>Allocated Hours</h3>
+<p>When a team member is allocated a percentage to a project for a given week:</p>
+<div class="formula">Allocated Hours = Allocation % × Project Capacity</div>
+<p>For example, if James is allocated 50% to a project with 18.9 hours capacity: 0.50 × 18.9 = <strong>9.45 hours</strong>. The total allocated hours for a person is the sum across all their project allocations for that week.</p>
+
+<h3>Utilization</h3>
+<p>Utilization measures how much of a person's available project capacity is actually allocated:</p>
+<div class="formula">Utilization = Total Allocated Hours ÷ Project Capacity</div>
+<p>Utilization is displayed as a percentage. 100% means fully allocated. Over 100% indicates overallocation. The color coding is:</p>
+<ul>
+  <li><span class="badge badge-green">Green</span> — Under 70%</li>
+  <li><span class="badge badge-amber">Amber</span> — 70–90%</li>
+  <li><span class="badge badge-red">Red</span> — Over 90%</li>
+</ul>
+
+<div class="note-box">
+  <strong>Note:</strong> Both <em>weekly_allocated</em> and <em>utilization</em> are always computed client-side from the actual allocation data. This means they are always in sync with the latest edits, even before a page refresh.
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2 id="data-architecture">Data Architecture</h2>
+<p>All data is stored in ArcGIS Online as hosted feature services. The application queries these services via the ArcGIS REST API using the authenticated user's OAuth token.</p>
+
+<h3>Feature Services</h3>
+<table class="guide-table">
+  <tr><th>Service</th><th>Purpose</th><th>Key Fields</th></tr>
+  <tr><td><strong>projects</strong></td><td>Analytics project records with metadata, dates, status, and assignments</td><td>title, status, priority, category, contact, start, end</td></tr>
+  <tr><td><strong>tasks</strong></td><td>Individual work items linked to projects</td><td>title, status, assignee, due_date, project_id</td></tr>
+  <tr><td><strong>team_members</strong></td><td>Team roster with roles and capacity settings</td><td>name, role, team, skill, proj_pct</td></tr>
+  <tr><td><strong>absences</strong></td><td>Per-person, per-week time off records</td><td>name, week_date, absence_hours</td></tr>
+  <tr><td><strong>allocations</strong></td><td>Per-person, per-project, per-week allocation records</td><td>name, project, week_date, fraction, hours</td></tr>
+</table>
+
+<div class="note-box">
+  <strong>Note:</strong> A <em>weekly_capacity</em> service also exists but is no longer queried by the application. All capacity values are computed dynamically from absences and team member settings.
+</div>
+
+<h3>Week Structure</h3>
+<p>The application uses a 52-week calendar year (2026) where each week starts on Sunday. Week dates are stored as Date Only fields in <code>YYYY-MM-DD</code> format. The week of January 4, 2026 is Week 1.</p>
+
+<h3>Data Flow</h3>
+<p>On page load, the application queries projects, tasks, team_members, absences, and allocations in parallel. The data is reconstructed into an in-memory structure used for all rendering. When changes are made (editing allocations, updating absences, managing team members), the application writes back to the appropriate REST service and updates local data immediately for a responsive UI.</p>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2 id="access-control">Access Control & Permissions</h2>
+
+<h3>Authentication</h3>
+<p>All users must authenticate through ArcGIS Online OAuth 2.0 (Implicit Grant flow, 120-minute token lifetime). Expired tokens trigger automatic re-authentication.</p>
+
+<h3>Group-Based Permissions</h3>
+<p>Administrative privileges (Settings tab access, Idea promotion) are controlled by membership in a designated ArcGIS Online group (Team Leads). This is managed entirely through ArcGIS Online group membership — no application-level user management is needed.</p>
+
+<h3>Feature Service Permissions</h3>
+<p>Read and write access to the underlying feature services is controlled through ArcGIS Online sharing settings. The following services must have editing enabled: projects, tasks, team_members, absences, and allocations.</p>
+
+<h3>Permission Summary</h3>
+<table class="guide-table">
+  <tr><th>Action</th><th>Standard User</th><th>Admin</th></tr>
+  <tr><td>View all tabs (except Settings)</td><td>✅ Yes</td><td>✅ Yes</td></tr>
+  <tr><td>View Settings tab</td><td>❌ No</td><td>✅ Yes</td></tr>
+  <tr><td>Create / edit projects and tasks</td><td>✅ Yes</td><td>✅ Yes</td></tr>
+  <tr><td>Submit project ideas</td><td>✅ Yes</td><td>✅ Yes</td></tr>
+  <tr><td>Promote ideas to active projects</td><td>❌ No</td><td>✅ Yes</td></tr>
+  <tr><td>Edit allocations</td><td>✅ Yes</td><td>✅ Yes</td></tr>
+  <tr><td>Manage team members</td><td>❌ No</td><td>✅ Yes</td></tr>
+  <tr><td>Edit absences / time off</td><td>❌ No</td><td>✅ Yes</td></tr>
+</table>
+
+</main>
+</div>
+
+<script>
+// Highlight active nav link on scroll
+const sections = document.querySelectorAll('h2[id]');
+const navLinks = document.querySelectorAll('.guide-nav a');
+window.addEventListener('scroll', function() {
+  let current = '';
+  sections.forEach(function(section) {
+    if (window.scrollY >= section.offsetTop - 100) current = section.id;
+  });
+  navLinks.forEach(function(link) {
+    link.classList.toggle('active', link.getAttribute('href') === '#' + current);
+  });
+});
+</script>
+</body>
+</html>
