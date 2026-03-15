@@ -2716,7 +2716,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.7.7.0037';
+const APP_VERSION = '0.7.8.0038';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -4745,6 +4745,17 @@ async function loadResourcesData() {
     if (people[nm]) {
       people[nm].allocations.push(alloc);
     }
+  });
+
+  // Recompute allocation hours from fractions and local proj_cap.
+  // The stored hours in the REST service may have been computed with an older
+  // capacity formula, so we always recalculate from fractions to stay in sync.
+  Object.values(people).forEach(function(p) {
+    p.allocations.forEach(function(a) {
+      for (var i = 0; i < N; i++) {
+        a.hours[i] = (a.fracs[i] || 0) * p.proj_cap[i];
+      }
+    });
   });
 
   // Compute weekly_allocated and utilization from actual allocation data.
