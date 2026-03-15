@@ -1255,6 +1255,10 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .fm-search-option:last-child { border-bottom:none; }
 .fm-search-option:hover, .fm-search-option.highlighted { background:#EEF2FF; color:var(--navy); }
 .fm-search-option .fm-search-match { font-weight:800; color:var(--navy); text-decoration:underline; }
+.fm-search-option-name { display:block; font-weight:600; }
+.fm-search-option-desc { display:block; font-size:11px; color:var(--text-muted); margin-top:2px; line-height:1.4; }
+.fm-search-option:hover .fm-search-option-desc,
+.fm-search-option.highlighted .fm-search-option-desc { color:#4B5563; }
 .fm-hint { font-size:11px; color:var(--text-muted); margin-top:2px; }
 .fm-footer { padding:16px 24px; border-top:1px solid #E5E7EB;
   display:flex; align-items:center; gap:10px; background:#FAFAFA;
@@ -2732,7 +2736,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.8.0.0040';
+const APP_VERSION = '0.8.1.0041';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -5074,8 +5078,10 @@ function getEnums() {
      'Documentation & Knowledge Management',
      'Enterprise Administration & Platform Management',
      'Infrastructure Modernization & Platform Migration',
+     'Interdepartmental Consulting & Support',
      'Multi-Application Workflow Development',
      'Operational Support & Sustainment Activities',
+     'Public Engagement & Open Data',
      'Spatial Data Services & GIS Product Development',
      'Strategic Planning & Architecture',
      'Training, Enablement & Community'],
@@ -5121,6 +5127,25 @@ function refreshEnums() {
   FM_TASK_TOOLS      = e.taskTools;
 }
 
+// Short descriptions for each project category — shown in the searchable dropdown
+const CATEGORY_DESCRIPTIONS = {
+  'AI Enablement, Automation & Machine Intelligence': 'Leveraging AI, machine learning, or automation to improve city operations and decision-making.',
+  'Application Update & Enhancement': 'Maintenance, upgrades, and feature additions to existing applications and tools.',
+  'Data Analysis, Reporting & Insights': 'Analyzing city data to produce reports, dashboards, visualizations, or actionable insights.',
+  'Data Governance, Compliance & Policy': 'Standards, policies, and procedures for data quality, security, access, and compliance.',
+  'Data Processing, Integration & Engineering': 'Data pipelines, ETL processes, database design, and integrations between city systems.',
+  'Documentation & Knowledge Management': 'Technical documentation, SOPs, knowledge bases, and institutional knowledge resources.',
+  'Enterprise Administration & Platform Management': 'Administering shared platforms, licenses, user accounts, and enterprise software systems.',
+  'Infrastructure Modernization & Platform Migration': 'Upgrading, replacing, or migrating legacy systems to modern architectures and cloud services.',
+  'Interdepartmental Consulting & Support': 'Providing data, GIS, or analytics expertise to other city departments for their initiatives.',
+  'Multi-Application Workflow Development': 'Integrated workflows and cross-system processes spanning multiple tools or platforms.',
+  'Operational Support & Sustainment Activities': 'Ongoing maintenance, monitoring, troubleshooting, and support for production systems.',
+  'Public Engagement & Open Data': 'Publishing city data, building community-facing tools, story maps, and open data portals.',
+  'Spatial Data Services & GIS Product Development': 'Building and maintaining GIS maps, spatial datasets, web mapping apps, and location services.',
+  'Strategic Planning & Architecture': 'Long-range planning, technology roadmaps, solution architecture, and strategic initiatives.',
+  'Training, Enablement & Community': 'Training programs, workshops, user enablement, and fostering user communities.',
+};
+
 function fmSelect(id, options, value, placeholder, required) {
   const req = required ? ' class="fm-select err" ' : ' class="fm-select" ';
   // Ensure the current value is always available even if not in the options list
@@ -5154,10 +5179,15 @@ function fmField(label, inputHtml, required, span2, hint) {
 }
 
 // Searchable dropdown: renders a text input with a filterable dropdown list
-function fmSearchableSelect(id, options, value, placeholder) {
+// descriptions is an optional map of { optionValue: 'short description' }
+function fmSearchableSelect(id, options, value, placeholder, descriptions) {
   const opts = (value && !options.includes(value)) ? [...options, value] : options;
   let optionsHtml = opts.map(function(o) {
-    return '<div class="fm-search-option" data-value="' + esc(o) + '">' + esc(o) + '</div>';
+    var desc = (descriptions && descriptions[o]) ? descriptions[o] : '';
+    var descAttr = desc ? ' data-desc="' + esc(desc) + '"' : '';
+    var descHtml = desc ? '<span class="fm-search-option-desc">' + esc(desc) + '</span>' : '';
+    return '<div class="fm-search-option" data-value="' + esc(o) + '"' + descAttr + '>' +
+      '<span class="fm-search-option-name">' + esc(o) + '</span>' + descHtml + '</div>';
   }).join('');
   return '<div class="fm-search-select" id="' + id + '-wrap">' +
     '<input type="text" id="' + id + '" class="fm-input" value="' + (value ? esc(value) : '') + '" ' +
@@ -5180,23 +5210,30 @@ function initSearchableSelect(id) {
   function showDropdown() { dropdown.classList.add('open'); }
   function hideDropdown() { dropdown.classList.remove('open'); highlighted = -1; }
 
+  function highlightText(text, query) {
+    if (!query) return esc(text);
+    var lower = text.toLowerCase();
+    var idx = lower.indexOf(query);
+    if (idx < 0) return esc(text);
+    return esc(text.substring(0, idx)) +
+      '<span class="fm-search-match">' + esc(text.substring(idx, idx + query.length)) + '</span>' +
+      esc(text.substring(idx + query.length));
+  }
+
   function filterOptions() {
     const q = input.value.toLowerCase().trim();
     let visibleCount = 0;
     allOptions.forEach(function(opt) {
-      const val = opt.getAttribute('data-value').toLowerCase();
-      if (!q || val.indexOf(q) >= 0) {
+      const val = opt.getAttribute('data-value');
+      const desc = opt.getAttribute('data-desc') || '';
+      const matchesName = !q || val.toLowerCase().indexOf(q) >= 0;
+      const matchesDesc = !q || desc.toLowerCase().indexOf(q) >= 0;
+      if (matchesName || matchesDesc) {
         opt.style.display = '';
-        // Highlight matching text
-        if (q) {
-          const raw = opt.getAttribute('data-value');
-          const idx = val.indexOf(q);
-          opt.innerHTML = esc(raw.substring(0, idx)) +
-            '<span class="fm-search-match">' + esc(raw.substring(idx, idx + q.length)) + '</span>' +
-            esc(raw.substring(idx + q.length));
-        } else {
-          opt.innerHTML = esc(opt.getAttribute('data-value'));
-        }
+        // Rebuild inner HTML with highlighting
+        var nameHtml = '<span class="fm-search-option-name">' + highlightText(val, q) + '</span>';
+        var descHtml = desc ? '<span class="fm-search-option-desc">' + highlightText(desc, q) + '</span>' : '';
+        opt.innerHTML = nameHtml + descHtml;
         visibleCount++;
       } else {
         opt.style.display = 'none';
@@ -5277,7 +5314,7 @@ function buildProjectForm(p) {
     '</div>' +
     '<div class="fm-section-label">Classification</div>' +
     '<div class="fm-grid">' +
-      fmField('Category', fmSelect('fm-category', FM_PROJ_CATEGORIES, v('category'), 'Select category…'), false, true) +
+      fmField('Category', fmSearchableSelect('fm-category', FM_PROJ_CATEGORIES, v('category'), 'Type to search categories…', CATEGORY_DESCRIPTIONS), false, true) +
       fmField('Partner Department', fmInput('fm-partner-dept', v('partner_dept'), 'Department name…')) +
       fmField('ITD Team', fmInput('fm-itd-team', v('itd_team'), 'e.g. GIS/Data Analytics')) +
     '</div>' +
@@ -5313,7 +5350,7 @@ function buildTaskForm(t) {
     '<div class="fm-grid">' +
       fmField('Project', fmSelect('fm-project', projTitles, v('project'), 'Select project…'), false, true) +
       fmField('Tool / Technology', fmSelect('fm-tool', FM_TASK_TOOLS, v('tool'), 'Select tool…')) +
-      fmField('Category', fmSearchableSelect('fm-category', FM_PROJ_CATEGORIES, v('category'), 'Type to search categories…')) +
+      fmField('Category', fmSearchableSelect('fm-category', FM_PROJ_CATEGORIES, v('category'), 'Type to search categories…', CATEGORY_DESCRIPTIONS)) +
     '</div>' +
     '<div class="fm-section-label">Timeline</div>' +
     '<div class="fm-grid">' +
@@ -5338,10 +5375,8 @@ function openFormModal(mode, id) {
   document.getElementById('fm-save-btn').textContent     = isEdit ? 'Save Changes' : 'Create';
   document.getElementById('fm-body').innerHTML           = isProject ? buildProjectForm(record) : buildTaskForm(record);
   document.getElementById('form-modal-backdrop').classList.add('open');
-  // Initialize searchable dropdowns in task form
-  if (!isProject) {
-    initSearchableSelect('fm-category');
-  }
+  // Initialize searchable dropdowns (category field uses searchable select in both forms)
+  initSearchableSelect('fm-category');
 }
 
 function closeFormModal() {
