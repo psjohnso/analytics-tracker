@@ -232,9 +232,73 @@ li strong { color: var(--navy); }
 
 <!-- ═══════════════════════════════════════════════════ -->
 <h2 id="forecast-tab">Forecast Tab</h2>
-<p>The Forecast tab projects team capacity into the future based on current allocation patterns. It shows how loaded each person is over a configurable window (default 13 weeks from the current week).</p>
-<p>The forecast uses a <strong>"snapshot" approach</strong>: it takes each person's most recent allocation percentages and extends them forward, accounting for project end dates. When a project ends, its allocation is freed up, revealing future availability.</p>
-<p>A team-level utilization heatmap shows how the overall team is loaded week by week, helping identify periods of over- or under-capacity.</p>
+<p>The Forecast tab projects team capacity into the future based on current allocation patterns. It shows how loaded each person is over a configurable window (default 13 weeks from the current week), helping managers identify periods of over- or under-capacity and plan resource assignments accordingly.</p>
+
+<h3>What the Forecast Shows</h3>
+<p>The Forecast tab has three main sections:</p>
+<ul>
+  <li><strong>Summary Cards:</strong> One card per team member, sorted by most available. Each card shows the person's average free hours per week over the forecast window, their average utilization percentage, and a sparkline of weekly utilization.</li>
+  <li><strong>Team Load Chart:</strong> An area chart showing the entire team's combined allocated hours vs. combined capacity over the forecast window. This reveals when the team as a whole is approaching capacity limits.</li>
+  <li><strong>Utilization Heatmap:</strong> A detailed grid showing each person's utilization (or available hours) per week, color-coded from green (low utilization) through amber to red (at or over capacity). This makes it easy to spot who has capacity and when.</li>
+</ul>
+
+<h3>How Future Availability is Calculated</h3>
+<p>The forecast uses a <strong>"snapshot" approach</strong> to project current workloads into the future. Here's how it works step by step:</p>
+
+<h4>Step 1 — Past/Present Weeks: Actual Data</h4>
+<p>For all weeks up to and including the current week, the forecast uses <strong>actual entered allocation hours</strong> — no estimation. These are the real values from the allocations service, so past data is always accurate.</p>
+
+<h4>Step 2 — Find the Snapshot Week</h4>
+<p>For each person, the system walks backward from the current week to find the <strong>most recent week where any allocations were entered</strong> (i.e., total allocation fractions across all projects are greater than zero). This becomes the person's "snapshot week."</p>
+<p>For example, if James has allocation data entered through March 8, then March 8 is his snapshot week — even if the current calendar week is March 15.</p>
+<div class="note-box">
+  <strong>Why a snapshot?</strong> This approach preserves the real allocation split (all project fractions summing to roughly 100%) from a single point in time, rather than mixing stale data from different weeks where projects may have changed.
+</div>
+
+<h4>Step 3 — Project Forward</h4>
+<p>For each project that had a <strong>non-zero allocation fraction</strong> in the snapshot week, the system carries that same fraction forward into every future week. So if James was 33% allocated to a project in the snapshot week, the forecast assumes 33% continues indefinitely.</p>
+<p>The allocated hours for each future week are calculated as:</p>
+<div class="formula">Future Allocated Hours = Snapshot Fraction × Project Capacity for that week</div>
+<p>Note that project capacity can vary week to week due to absences — a future vacation week will show reduced capacity (and therefore reduced allocated hours) if the absence has been entered in the Settings tab.</p>
+
+<h4>Step 4 — Respect Project End Dates</h4>
+<p>If a project has an end date and a future week falls <strong>after that date</strong>, the allocation drops to zero for that project. This is how the forecast shows capacity "freeing up" when projects end — revealing future availability for new work.</p>
+
+<h4>Step 5 — Calculate Availability</h4>
+<p>For each person, for each week:</p>
+<div class="formula">Availability = Project Capacity − Total Allocated Hours</div>
+<p>Where Project Capacity uses the standard formula: <code>(40 − Absence Hours) × 0.75 × Project Time %</code>.</p>
+<p>Utilization is then: <code>Total Allocated Hours ÷ Project Capacity</code>, capped at 125% for display purposes.</p>
+
+<h4>Worked Example</h4>
+<p>James McGinnis is 63% project-allocated with no absences. In his snapshot week (March 8), he has:</p>
+<table class="guide-table">
+  <tr><th>Project</th><th>Snapshot Fraction</th></tr>
+  <tr><td>Safe Cities Dashboard</td><td>33%</td></tr>
+  <tr><td>Parking Utilization Analysis</td><td>25%</td></tr>
+  <tr><td>Water Quality Mapping</td><td>20%</td></tr>
+</table>
+<p>For a future week with no absences, his project capacity is 18.9 hours. The forecast calculates:</p>
+<table class="guide-table">
+  <tr><th>Project</th><th>Calculation</th><th>Hours</th></tr>
+  <tr><td>Safe Cities Dashboard</td><td>0.33 × 18.9</td><td>6.24h</td></tr>
+  <tr><td>Parking Utilization</td><td>0.25 × 18.9</td><td>4.73h</td></tr>
+  <tr><td>Water Quality Mapping</td><td>0.20 × 18.9</td><td>3.78h</td></tr>
+  <tr><td><strong>Total Allocated</strong></td><td></td><td><strong>14.74h</strong></td></tr>
+</table>
+<p>Availability = 18.9 − 14.74 = <strong>4.16 hours free</strong>. Utilization = 14.74 ÷ 18.9 = <strong>78%</strong>.</p>
+<p>If the Water Quality Mapping project ends in two weeks, then from that point forward James's forecast would show only 10.97h allocated and 7.93h free (58% utilization) — making him a good candidate for new work.</p>
+
+<h3>Limitations</h3>
+<div class="tip-box">
+  <strong>Important:</strong> The forecast is a projection, not a plan. Keep these limitations in mind:
+</div>
+<ul>
+  <li><strong>No allocation data = fully available:</strong> If a person has never had allocations entered (snapshot week is -1), their future shows as 100% available since there's nothing to project forward.</li>
+  <li><strong>Future absences must be pre-entered:</strong> The forecast uses the capacity formula, which depends on absence data. If someone has a planned vacation next month but the absence hours haven't been entered in the Settings tab yet, the forecast won't reflect that reduced capacity.</li>
+  <li><strong>Static snapshot:</strong> The forecast doesn't account for planned changes in allocation. If you know someone will move from Project A to Project B next month, the forecast won't reflect this until you actually update their allocations.</li>
+  <li><strong>No new project predictions:</strong> The forecast only projects existing allocations forward — it can't predict when new projects will start consuming capacity.</li>
+</ul>
 
 <!-- ═══════════════════════════════════════════════════ -->
 <h2 id="settings-tab">Settings Tab (Admin Only)</h2>
