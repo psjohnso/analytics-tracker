@@ -2664,7 +2664,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.6.3.0022';
+const APP_VERSION = '0.6.4.0023';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -3877,10 +3877,14 @@ function applyEditorChanges() {
   const name = editorPerson;
   const p    = RESOURCES_DATA.people[name];
   const N    = RESOURCES_DATA.weeks.length;
+  const weeks = RESOURCES_DATA.weeks;
+
+  // Collect changed allocation weeks for REST write-back
+  const editsToSave = []; // { name, project, project_status, project_type, analytics_id, week_date, fraction, hours }
+
   editorDraft[name].forEach(function(da) {
     let orig = p.allocations.find(function(a) { return a.project === da.project; });
     if (!orig) {
-      // New entry — find the project to get status/type/id, then add it
       const proj = PROJECTS.find(function(x) { return x.title === da.project; });
       orig = {
         project:      da.project,
@@ -3892,19 +3896,105 @@ function applyEditorChanges() {
       };
       p.allocations.push(orig);
     }
+    // Track changes before overwriting
+    for (var i = 0; i < N; i++) {
+      if (da.fracs[i] !== orig.fracs[i]) {
+        var newHrs = da.fracs[i] * (p.proj_cap[i] || 0);
+        editsToSave.push({
+          name:           name,
+          project:        da.project,
+          project_status: orig.status || da.status,
+          project_type:   orig.type || '',
+          analytics_id:   orig.analytics_id,
+          week_date:      weeks[i],
+          fraction:       da.fracs[i],
+          hours:          Math.round(newHrs * 100) / 100,
+        });
+      }
+    }
     orig.fracs = da.fracs.slice();
     orig.hours = orig.fracs.map(function(f, i) { return f * (p.proj_cap[i] || 0); });
   });
-  const weeks = RESOURCES_DATA.weeks;
+
+  // Recompute weekly_allocated and utilization (as 0.0–1.0 ratio, NOT percentage)
   p.weekly_allocated = weeks.map(function(_, i) {
     return p.allocations.reduce(function(s, a) { return s + (a.hours[i] || 0); }, 0);
   });
   p.utilization = weeks.map(function(_, i) {
-    return p.proj_cap[i] > 0 ? (p.weekly_allocated[i] / p.proj_cap[i]) * 100 : 0;
+    return p.proj_cap[i] > 0 ? p.weekly_allocated[i] / p.proj_cap[i] : 0;
   });
   closeAllocEditor();
-  markDirty();
   render();
+
+  // Save changed allocations to REST service (non-blocking)
+  if (editsToSave.length > 0 && _isLoggedIn) {
+    saveAllocationsToRest(editsToSave);
+  }
+}
+
+/**
+ * Write allocation changes to the ArcGIS Online allocations REST service.
+ * For each changed week, we delete any existing record for that person+project+week
+ * and add a new one with the updated values. Zero-fraction records are deleted only.
+ */
+async function saveAllocationsToRest(edits) {
+  try {
+    const token = await ensureAgolToken();
+    if (!token) return;
+
+    // Query existing records for this person to find ObjectIDs to update/delete
+    const personName = edits[0].name;
+    const existing = await agolQuery(ARCGIS_CONFIG.allocationsUrl,
+      "name='" + personName.replace(/'/g, "''") + "'");
+
+    // Build lookup: "project|week_date" → ObjectId
+    const existingMap = {};
+    existing.forEach(function(f) {
+      var a = f.attributes;
+      var wk = epochToDateStr(a.week_date);
+      var key = a.project + '|' + wk;
+      existingMap[key] = f.attributes.ObjectId || f.attributes.OBJECTID || f.attributes.objectid;
+    });
+
+    var deletes = [];
+    var adds = [];
+
+    edits.forEach(function(e) {
+      var key = e.project + '|' + e.week_date;
+      var existingOid = existingMap[key];
+
+      if (existingOid) {
+        deletes.push(existingOid);
+      }
+      // Only add back if fraction > 0 (sparse storage)
+      if (e.fraction > 0) {
+        adds.push({
+          attributes: {
+            name:           e.name,
+            project:        e.project,
+            project_status: e.project_status,
+            project_type:   e.project_type,
+            analytics_id:   e.analytics_id,
+            week_date:      new Date(e.week_date + 'T00:00:00Z').getTime(),
+            fraction:       e.fraction,
+            hours:          e.hours,
+          }
+        });
+      }
+    });
+
+    var editPayload = {};
+    if (deletes.length > 0) editPayload.deletes = deletes;
+    if (adds.length > 0)    editPayload.adds = adds;
+
+    if (deletes.length > 0 || adds.length > 0) {
+      var result = await agolApplyEdits(ARCGIS_CONFIG.allocationsUrl, editPayload);
+      console.log('[Allocations] Saved', adds.length, 'adds,', deletes.length, 'deletes', result);
+    }
+  } catch (err) {
+    console.error('[Allocations] Save failed:', err);
+    alert('Allocation changes were applied locally but failed to save to ArcGIS Online: ' + err.message);
+  }
 }
 
 async function saveAllData() {
@@ -3918,6 +4008,9 @@ async function saveAllData() {
     const taskFeatures = await agolQuery(ARCGIS_CONFIG.tasksUrl);
     TASKS.length = 0;
     taskFeatures.forEach(function(f) { TASKS.push(agolTaskToLocal(f)); });
+
+    await loadResourcesData();
+    initResourcesWeekIndices();
 
     hideLoadingOverlay();
     markSynced('Refreshed: ' + PROJECTS.length + ' projects, ' + TASKS.length + ' tasks');
