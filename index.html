@@ -1259,6 +1259,47 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .fm-search-option-desc { display:block; font-size:11px; color:var(--text-muted); margin-top:2px; line-height:1.4; }
 .fm-search-option:hover .fm-search-option-desc,
 .fm-search-option.highlighted .fm-search-option-desc { color:#4B5563; }
+
+/* Category wizard */
+.cat-wizard-link {
+  display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700;
+  color:var(--navy); cursor:pointer; margin-top:6px; padding:3px 0;
+  border:none; background:none; font-family:'Lato',sans-serif; text-decoration:none;
+}
+.cat-wizard-link:hover { text-decoration:underline; }
+.cat-wizard-panel {
+  display:none; margin-top:10px; padding:16px; background:#F0F4FF; border:1.5px solid #C7D2FE;
+  border-radius:10px; animation:catWizFade 0.2s ease;
+}
+.cat-wizard-panel.open { display:block; }
+@keyframes catWizFade { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+.cat-wizard-q { font-size:13px; font-weight:700; color:var(--navy); margin-bottom:10px; }
+.cat-wizard-opts { display:flex; flex-direction:column; gap:6px; }
+.cat-wizard-opt {
+  display:block; width:100%; text-align:left; padding:10px 14px; background:#fff; border:1.5px solid #D1D5DB;
+  border-radius:8px; font-size:12px; font-weight:600; color:var(--text); cursor:pointer;
+  font-family:'Lato',sans-serif; transition:all 0.15s; line-height:1.4;
+}
+.cat-wizard-opt:hover { border-color:var(--navy); background:#EEF2FF; color:var(--navy); }
+.cat-wizard-result {
+  padding:14px 16px; background:#fff; border:1.5px solid #22C55E; border-radius:10px; margin-top:10px;
+}
+.cat-wizard-result-label { font-size:10px; font-weight:800; text-transform:uppercase;
+  letter-spacing:0.08em; color:#15803D; margin-bottom:6px; }
+.cat-wizard-result-name { font-size:14px; font-weight:800; color:var(--navy); margin-bottom:4px; }
+.cat-wizard-result-desc { font-size:12px; color:var(--text-muted); line-height:1.5; margin-bottom:10px; }
+.cat-wizard-result-btn {
+  padding:8px 18px; background:var(--navy); color:#fff; border:none; border-radius:7px;
+  font-size:12px; font-weight:700; cursor:pointer; font-family:'Lato',sans-serif;
+  transition:background 0.15s;
+}
+.cat-wizard-result-btn:hover { background:#1a3a7c; }
+.cat-wizard-back {
+  display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700;
+  color:var(--text-muted); cursor:pointer; margin-top:8px; padding:3px 0;
+  border:none; background:none; font-family:'Lato',sans-serif;
+}
+.cat-wizard-back:hover { color:var(--navy); }
 .fm-hint { font-size:11px; color:var(--text-muted); margin-top:2px; }
 .fm-footer { padding:16px 24px; border-top:1px solid #E5E7EB;
   display:flex; align-items:center; gap:10px; background:#FAFAFA;
@@ -2736,7 +2777,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.8.1.0041';
+const APP_VERSION = '0.8.2.0042';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -5301,6 +5342,126 @@ function fmMemberMultiSelect(id, members, currentVal) {
   return '<div class="fm-members-grid" id="' + id + '-wrap">' + checks + '</div>';
 }
 
+// ── Category Wizard ──────────────────────────────────────────────
+// Two-question guided walkthrough to help users pick the right project category.
+const CAT_WIZARD_TREE = {
+  q1: {
+    question: 'What best describes the primary nature of this project?',
+    options: [
+      { label: 'Building or creating a new solution', next: 'q2_create' },
+      { label: 'Maintaining, supporting, or upgrading something existing', next: 'q2_maintain' },
+      { label: 'Analyzing data or producing insights', next: 'q2_data' },
+      { label: 'Planning, documenting, or enabling others', next: 'q2_knowledge' },
+      { label: 'Serving another department or the public', next: 'q2_service' },
+    ]
+  },
+  q2_create: {
+    question: 'What are you primarily building?',
+    options: [
+      { label: 'A GIS map, spatial dataset, or location-based app', category: 'Spatial Data Services & GIS Product Development' },
+      { label: 'An AI model, ML solution, or automated process', category: 'AI Enablement, Automation & Machine Intelligence' },
+      { label: 'A workflow connecting multiple tools or systems', category: 'Multi-Application Workflow Development' },
+      { label: 'A data pipeline, database, or system integration', category: 'Data Processing, Integration & Engineering' },
+      { label: 'A public-facing tool, open data portal, or story map', category: 'Public Engagement & Open Data' },
+    ]
+  },
+  q2_maintain: {
+    question: 'What best describes the work?',
+    options: [
+      { label: 'Updating or enhancing an existing application', category: 'Application Update & Enhancement' },
+      { label: 'Managing enterprise platforms, licenses, or accounts', category: 'Enterprise Administration & Platform Management' },
+      { label: 'Monitoring, troubleshooting, or supporting production systems', category: 'Operational Support & Sustainment Activities' },
+      { label: 'Migrating or modernizing legacy infrastructure', category: 'Infrastructure Modernization & Platform Migration' },
+    ]
+  },
+  q2_data: {
+    question: "What's the primary focus?",
+    options: [
+      { label: 'Producing reports, dashboards, or actionable insights', category: 'Data Analysis, Reporting & Insights' },
+      { label: 'Building or maintaining data pipelines and integrations', category: 'Data Processing, Integration & Engineering' },
+      { label: 'Establishing data standards, policies, or compliance', category: 'Data Governance, Compliance & Policy' },
+    ]
+  },
+  q2_knowledge: {
+    question: "What's the main deliverable?",
+    options: [
+      { label: 'Strategic plans, roadmaps, or solution architecture', category: 'Strategic Planning & Architecture' },
+      { label: 'Documentation, SOPs, or knowledge base content', category: 'Documentation & Knowledge Management' },
+      { label: 'Training materials, workshops, or user communities', category: 'Training, Enablement & Community' },
+    ]
+  },
+  q2_service: {
+    question: 'Who is the primary audience?',
+    options: [
+      { label: 'Another city department', category: 'Interdepartmental Consulting & Support' },
+      { label: 'The general public or external community', category: 'Public Engagement & Open Data' },
+    ]
+  },
+};
+
+function catWizardOpen() {
+  const panel = document.getElementById('cat-wizard-panel');
+  if (!panel) return;
+  panel.classList.add('open');
+  catWizardRenderStep('q1');
+}
+
+function catWizardClose() {
+  const panel = document.getElementById('cat-wizard-panel');
+  if (panel) { panel.classList.remove('open'); panel.innerHTML = ''; }
+}
+
+function catWizardRenderStep(stepId) {
+  const panel = document.getElementById('cat-wizard-panel');
+  if (!panel) return;
+  const step = CAT_WIZARD_TREE[stepId];
+  if (!step) return;
+
+  const isQ2 = stepId !== 'q1';
+  let html = '<div class="cat-wizard-q">' + (isQ2 ? 'Step 2 of 2: ' : 'Step 1 of 2: ') + esc(step.question) + '</div>';
+  html += '<div class="cat-wizard-opts">';
+  step.options.forEach(function(opt) {
+    if (opt.next) {
+      html += '<button type="button" class="cat-wizard-opt" onclick="catWizardRenderStep(\'' + opt.next + '\')">' + esc(opt.label) + '</button>';
+    } else if (opt.category) {
+      html += '<button type="button" class="cat-wizard-opt" onclick="catWizardShowResult(\'' + esc(opt.category).replace(/'/g, "\\'") + '\')">' + esc(opt.label) + '</button>';
+    }
+  });
+  html += '</div>';
+  if (isQ2) {
+    html += '<button type="button" class="cat-wizard-back" onclick="catWizardRenderStep(\'q1\')">← Back to first question</button>';
+  } else {
+    html += '<button type="button" class="cat-wizard-back" onclick="catWizardClose()">Cancel</button>';
+  }
+  panel.innerHTML = html;
+}
+
+function catWizardShowResult(categoryName) {
+  const panel = document.getElementById('cat-wizard-panel');
+  if (!panel) return;
+  const desc = CATEGORY_DESCRIPTIONS[categoryName] || '';
+  let html = '<div class="cat-wizard-result">' +
+    '<div class="cat-wizard-result-label">✓ Recommended Category</div>' +
+    '<div class="cat-wizard-result-name">' + esc(categoryName) + '</div>' +
+    (desc ? '<div class="cat-wizard-result-desc">' + esc(desc) + '</div>' : '') +
+    '<button type="button" class="cat-wizard-result-btn" onclick="catWizardApply(\'' + esc(categoryName).replace(/'/g, "\\'") + '\')">Use This Category</button>' +
+  '</div>';
+  html += '<div style="margin-top:8px;display:flex;gap:12px;">';
+  html += '<button type="button" class="cat-wizard-back" onclick="catWizardRenderStep(\'q1\')">← Start over</button>';
+  html += '<button type="button" class="cat-wizard-back" onclick="catWizardClose()">Cancel</button>';
+  html += '</div>';
+  panel.innerHTML = html;
+}
+
+function catWizardApply(categoryName) {
+  // Set the category field value
+  const input = document.getElementById('fm-category');
+  const hidden = document.getElementById('fm-category-val');
+  if (input) input.value = categoryName;
+  if (hidden) hidden.value = categoryName;
+  catWizardClose();
+}
+
 function buildProjectForm(p) {
   const v = function(k) { return p ? (p[k] || '') : ''; };
   return '<div class="fm-section-label">Basic Info</div>' +
@@ -5315,6 +5476,10 @@ function buildProjectForm(p) {
     '<div class="fm-section-label">Classification</div>' +
     '<div class="fm-grid">' +
       fmField('Category', fmSearchableSelect('fm-category', FM_PROJ_CATEGORIES, v('category'), 'Type to search categories…', CATEGORY_DESCRIPTIONS), false, true) +
+      '<div class="fm-field span2" style="margin-top:-6px;">' +
+        '<button type="button" class="cat-wizard-link" onclick="catWizardOpen()">🧭 Not sure? Help me choose a category</button>' +
+        '<div class="cat-wizard-panel" id="cat-wizard-panel"></div>' +
+      '</div>' +
       fmField('Partner Department', fmInput('fm-partner-dept', v('partner_dept'), 'Department name…')) +
       fmField('ITD Team', fmInput('fm-itd-team', v('itd_team'), 'e.g. GIS/Data Analytics')) +
     '</div>' +
@@ -5351,6 +5516,10 @@ function buildTaskForm(t) {
       fmField('Project', fmSelect('fm-project', projTitles, v('project'), 'Select project…'), false, true) +
       fmField('Tool / Technology', fmSelect('fm-tool', FM_TASK_TOOLS, v('tool'), 'Select tool…')) +
       fmField('Category', fmSearchableSelect('fm-category', FM_PROJ_CATEGORIES, v('category'), 'Type to search categories…', CATEGORY_DESCRIPTIONS)) +
+      '<div class="fm-field span2">' +
+        '<button type="button" class="cat-wizard-link" onclick="catWizardOpen()">🧭 Not sure? Help me choose a category</button>' +
+        '<div class="cat-wizard-panel" id="cat-wizard-panel"></div>' +
+      '</div>' +
     '</div>' +
     '<div class="fm-section-label">Timeline</div>' +
     '<div class="fm-grid">' +
