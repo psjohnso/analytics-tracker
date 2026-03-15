@@ -1885,6 +1885,44 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 
 /* ArcGIS sync styles */
 #btn-save-file { transition: background 0.3s ease; }
+
+/* ── Settings Tab ───────────────────────────────── */
+.settings-page { padding:20px 0; max-width:1100px; }
+.settings-section { margin-bottom:32px; }
+.settings-section-header { font-size:20px; font-weight:800; color:var(--navy); margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+.member-table { width:100%; border-collapse:collapse; background:#fff; border:1px solid #E5E7EB; border-radius:10px; overflow:hidden; font-size:13px; }
+.member-table th { background:#F8F9FA; padding:10px 14px; text-align:left; font-weight:700; color:var(--navy); border-bottom:2px solid #E5E7EB; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; }
+.member-table td { padding:10px 14px; border-bottom:1px solid #F3F4F6; vertical-align:middle; }
+.member-table tr:last-child td { border-bottom:none; }
+.member-table tr:hover td { background:#F8F9FA; }
+.settings-btn { padding:6px 14px; border-radius:6px; border:none; font-size:12px; font-weight:700; cursor:pointer; font-family:Lato,sans-serif; transition:background 0.15s; }
+.settings-btn-primary { background:var(--navy); color:#fff; }
+.settings-btn-primary:hover { background:#1a3a7c; }
+.settings-btn-danger { background:#FEE2E2; color:#DC2626; }
+.settings-btn-danger:hover { background:#FECACA; }
+.settings-btn-secondary { background:#F3F4F6; color:var(--navy); border:1px solid #D1D5DB; }
+.settings-btn-secondary:hover { background:#E5E7EB; }
+
+/* Absence editor in settings */
+.abs-grid { overflow-x:auto; margin-top:12px; }
+.abs-grid table { border-collapse:collapse; font-size:12px; }
+.abs-grid th { padding:6px 4px; text-align:center; font-weight:700; color:var(--navy); font-size:10px; white-space:nowrap; min-width:52px; }
+.abs-grid td { padding:3px 2px; text-align:center; }
+.abs-grid th.abs-cur { background:rgba(0,38,105,0.06); }
+.abs-grid td.abs-cur { background:rgba(0,38,105,0.04); }
+.abs-input { width:44px; padding:4px 2px; text-align:center; border:1px solid #E5E7EB; border-radius:4px; font-size:12px; font-family:Lato,sans-serif; }
+.abs-input:focus { outline:none; border-color:var(--navy); box-shadow:0 0 0 2px rgba(0,38,105,0.15); }
+.abs-input.has-val { background:#FFF7ED; border-color:#F59E0B; font-weight:700; }
+
+/* Member form modal */
+#member-form-backdrop { display:none; position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,0.4); align-items:center; justify-content:center; }
+#member-form-backdrop.open { display:flex; }
+#member-form-modal { background:#fff; border-radius:14px; padding:28px 32px; width:440px; max-width:95vw; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.25); }
+.mf-title { font-size:18px; font-weight:800; color:var(--navy); margin-bottom:18px; }
+.mf-label { font-size:12px; font-weight:700; color:#374151; margin-bottom:4px; display:block; text-transform:uppercase; letter-spacing:0.04em; }
+.mf-input { width:100%; padding:9px 12px; border:1.5px solid #D1D5DB; border-radius:7px; font-size:14px; font-family:Lato,sans-serif; margin-bottom:14px; box-sizing:border-box; }
+.mf-input:focus { outline:none; border-color:var(--navy); box-shadow:0 0 0 2px rgba(0,38,105,0.15); }
+.mf-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:8px; }
 </style>
 </head>
 <body>
@@ -1991,6 +2029,9 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
       </button>
       <button class="tab-btn" onclick="switchTab('forecast')">
         📊 Forecast
+      </button>
+      <button class="tab-btn" id="tab-settings" onclick="switchTab('settings')" style="display:none;">
+        ⚙️ Settings
       </button>
       <div style="margin-left:auto;display:flex;align-items:center;gap:8px;padding:0 4px 0 0;align-self:center;">
         <span id="unsaved-dot" title="Unsaved changes" class="show"></span>
@@ -2664,7 +2705,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.6.10.0029';
+const APP_VERSION = '0.7.0.0030';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -2847,14 +2888,15 @@ function switchTab(tab) {
   currentDetail = null;
   currentTab = tab;
   currentPage = 1;
+  const tabIds = ['overview','projects','tasks','resources','forecast','settings'];
   document.querySelectorAll('.tab-btn').forEach((b,i) => {
-    b.classList.toggle('active', ['overview','projects','tasks','resources','forecast'][i] === tab);
+    b.classList.toggle('active', tabIds[i] === tab);
   });
-  document.getElementById('view-toggle').style.display = (tab === 'overview' || tab === 'resources') ? 'none' : 'flex';
+  document.getElementById('view-toggle').style.display = (tab === 'overview' || tab === 'resources' || tab === 'settings') ? 'none' : 'flex';
   const addBtn = document.getElementById('btn-add-new');
   if (tab === 'tasks') { addBtn.style.display='flex'; addBtn.textContent='＋ New Task'; }
   else { addBtn.style.display='none'; }
-  document.getElementById('weekly-filter-btn').style.display = 'flex';
+  document.getElementById('weekly-filter-btn').style.display = (tab === 'settings') ? 'none' : 'flex';
   const ideaCount = PROJECTS.filter(p => p.status === 'Idea').length;
   const reviewBtn = document.getElementById('btn-review-ideas');
   if (reviewBtn) {
@@ -2862,10 +2904,13 @@ function switchTab(tab) {
     const badge = document.getElementById('idea-count-badge');
     if (badge) badge.textContent = ideaCount > 0 ? ideaCount : '';
   }
-  if (tab === 'forecast') {
+  if (tab === 'forecast' || tab === 'settings') {
     document.getElementById('view-toggle').style.display = 'none';
     document.getElementById('btn-add-new').style.display = 'none';
   }
+  // Hide sidebar for settings tab
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar) sidebar.style.display = (tab === 'settings') ? 'none' : '';
   const isTask = tab === 'tasks';
   reorderSidebarFilters(tab);
   document.getElementById('task-status-section').style.display = isTask ? 'block' : 'none';
@@ -2995,6 +3040,15 @@ function render() {
   if (currentTab === 'forecast') {
     document.querySelector('.app-body').classList.remove('detail-mode');
     area.innerHTML = buildForecastPage();
+    const pg = document.getElementById('pagination');
+    if (pg) pg.remove();
+    document.getElementById('result-count').textContent = '';
+    return;
+  }
+
+  if (currentTab === 'settings') {
+    document.querySelector('.app-body').classList.remove('detail-mode');
+    renderSettingsPage(area);
     const pg = document.getElementById('pagination');
     if (pg) pg.remove();
     document.getElementById('result-count').textContent = '';
@@ -4254,6 +4308,10 @@ function toggleAuth() {
     _isLoggedIn = false;
     _agolUsername = null;
     _canPromoteIdeas = false;
+    _isTeamLead = false;
+    const settingsTab = document.getElementById('tab-settings');
+    if (settingsTab) settingsTab.style.display = 'none';
+    if (currentTab === 'settings') switchTab('overview');
     applyAuthState();
   } else {
     // Log in: redirect to ArcGIS Online OAuth
@@ -4317,6 +4375,7 @@ async function ensureAgolToken() {
 
 let _agolUsername = null;       // ArcGIS Online username of the logged-in user
 let _canPromoteIdeas = false;  // Whether the user is authorized to promote Ideas
+let _isTeamLead = false;       // Whether the user can access Settings tab
 
 /**
  * Fetch the current user's profile from ArcGIS Online.
@@ -4366,9 +4425,14 @@ async function fetchAgolUserInfo(token) {
         const gData = await gResp.json();
         if (gData.groups && Array.isArray(gData.groups)) {
           _canPromoteIdeas = gData.groups.some(g => g.id === IDEA_PROMOTE_GROUP_ID);
+          _isTeamLead = _canPromoteIdeas; // same group controls both
           if (_canPromoteIdeas) {
             const badge = document.getElementById('user-role-badge');
             if (badge) badge.style.display = 'inline-block';
+          }
+          if (_isTeamLead) {
+            const settingsTab = document.getElementById('tab-settings');
+            if (settingsTab) settingsTab.style.display = '';
           }
         }
       } catch (gErr) {
@@ -6126,6 +6190,356 @@ function showToast(msg) {
     }, 3000);
   });
 }
+// ══════════════════════════════════════════════════════════════════════
+//  SETTINGS TAB — Team Member Management & Absence Editing
+// ══════════════════════════════════════════════════════════════════════
+let _settingsSelectedMember = null;
+let _absEditorWindowStart = 0;
+const ABS_COLS = 8;
+
+function renderSettingsPage(area) {
+  if (!_isTeamLead) {
+    area.innerHTML = '<div class="empty-state">You do not have access to Settings.</div>';
+    return;
+  }
+  if (!RESOURCES_DATA) {
+    area.innerHTML = '<div class="empty-state">Resources data is loading…</div>';
+    return;
+  }
+
+  const people = RESOURCES_DATA.people;
+  const names = Object.keys(people).sort();
+
+  // Team Members table
+  let memberRows = names.map(function(name) {
+    var p = people[name];
+    return '<tr>' +
+      '<td style="font-weight:700;color:var(--navy);">' + esc(name) + '</td>' +
+      '<td>' + esc(p.role) + '</td>' +
+      '<td>' + esc(p.team) + '</td>' +
+      '<td>' + esc(p.skill) + '</td>' +
+      '<td>' + Math.round(p.proj_pct * 100) + '%</td>' +
+      '<td style="text-align:right;">' +
+        '<button class="settings-btn settings-btn-secondary" style="margin-right:4px;" onclick="openAbsenceEditor(\'' + name.replace(/'/g, "\\'") + '\')">📅 Absences</button>' +
+        '<button class="settings-btn settings-btn-secondary" style="margin-right:4px;" onclick="openMemberForm(\'edit\',\'' + name.replace(/'/g, "\\'") + '\')">✏️ Edit</button>' +
+        '<button class="settings-btn settings-btn-danger" onclick="deleteMember(\'' + name.replace(/'/g, "\\'") + '\')">🗑</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+
+  var html = '<div class="settings-page">' +
+    '<div class="settings-section">' +
+      '<div class="settings-section-header">' +
+        '<span>Team Members</span>' +
+        '<button class="settings-btn settings-btn-primary" onclick="openMemberForm(\'add\')">＋ Add Member</button>' +
+      '</div>' +
+      '<table class="member-table">' +
+        '<thead><tr><th>Name</th><th>Role</th><th>Team</th><th>Skill</th><th>Project %</th><th style="text-align:right;">Actions</th></tr></thead>' +
+        '<tbody>' + memberRows + '</tbody>' +
+      '</table>' +
+    '</div>';
+
+  // Absence editor section (shown when a member is selected)
+  html += '<div id="settings-absence-section"></div>';
+  html += '</div>';
+
+  area.innerHTML = html;
+
+  // If a member was selected for absence editing, re-render that section
+  if (_settingsSelectedMember && people[_settingsSelectedMember]) {
+    renderAbsenceEditor(_settingsSelectedMember);
+  }
+}
+
+// ── Member Form (Add / Edit) ──────────────────────────────────────
+function openMemberForm(mode, name) {
+  document.getElementById('mf-title').textContent = mode === 'edit' ? 'Edit Team Member' : 'Add Team Member';
+  document.getElementById('mf-oid').value = '';
+  if (mode === 'edit' && RESOURCES_DATA && RESOURCES_DATA.people[name]) {
+    var p = RESOURCES_DATA.people[name];
+    document.getElementById('mf-name').value = name;
+    document.getElementById('mf-name').dataset.origName = name;
+    document.getElementById('mf-role').value = p.role;
+    document.getElementById('mf-team').value = p.team;
+    document.getElementById('mf-skill').value = p.skill;
+    document.getElementById('mf-proj-pct').value = Math.round(p.proj_pct * 100);
+    // We need to find the OID for this member
+    document.getElementById('mf-name').readOnly = true;
+    document.getElementById('mf-name').style.background = '#F3F4F6';
+  } else {
+    document.getElementById('mf-name').value = '';
+    document.getElementById('mf-name').dataset.origName = '';
+    document.getElementById('mf-role').value = '';
+    document.getElementById('mf-team').value = '';
+    document.getElementById('mf-skill').value = '';
+    document.getElementById('mf-proj-pct').value = '';
+    document.getElementById('mf-name').readOnly = false;
+    document.getElementById('mf-name').style.background = '';
+  }
+  document.getElementById('member-form-backdrop').classList.add('open');
+}
+
+function closeMemberForm() {
+  document.getElementById('member-form-backdrop').classList.remove('open');
+}
+
+async function saveMemberForm() {
+  var name = document.getElementById('mf-name').value.trim();
+  var role = document.getElementById('mf-role').value.trim();
+  var team = document.getElementById('mf-team').value.trim();
+  var skill = document.getElementById('mf-skill').value.trim();
+  var projPct = parseFloat(document.getElementById('mf-proj-pct').value) || 0;
+  var origName = document.getElementById('mf-name').dataset.origName || '';
+
+  if (!name) { alert('Name is required.'); return; }
+  if (projPct < 0 || projPct > 100) { alert('Project % must be 0–100.'); return; }
+
+  var isEdit = origName !== '' && origName === name;
+
+  try {
+    if (isEdit) {
+      // Find existing OID
+      var existing = await agolQuery(ARCGIS_CONFIG.teamMembersUrl, "name='" + name.replace(/'/g, "''") + "'");
+      if (existing.length === 0) { alert('Could not find existing record for ' + name); return; }
+      var oid = existing[0].attributes.ObjectId || existing[0].attributes.OBJECTID || existing[0].attributes.objectid || existing[0].attributes.FID;
+      var result = await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, {
+        updates: [{
+          attributes: {
+            ObjectId: oid, OBJECTID: oid,
+            name: name,
+            role: role,
+            team: team,
+            skill: skill,
+            proj_pct: projPct / 100,
+          }
+        }]
+      });
+      console.log('[Settings] Updated member:', name, result);
+    } else {
+      // Check for duplicate
+      if (RESOURCES_DATA && RESOURCES_DATA.people[name]) {
+        alert('A team member named "' + name + '" already exists.');
+        return;
+      }
+      var result = await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, {
+        adds: [{
+          attributes: {
+            name: name,
+            role: role,
+            team: team,
+            skill: skill,
+            proj_pct: projPct / 100,
+          }
+        }]
+      });
+      console.log('[Settings] Added member:', name, result);
+    }
+
+    // Check for errors
+    var errors = [];
+    if (result.addResults) result.addResults.forEach(function(r) { if (!r.success) errors.push(r.error ? r.error.description : 'unknown'); });
+    if (result.updateResults) result.updateResults.forEach(function(r) { if (!r.success) errors.push(r.error ? r.error.description : 'unknown'); });
+    if (errors.length > 0) {
+      alert('Save failed: ' + errors.join(', '));
+      return;
+    }
+
+    closeMemberForm();
+    // Reload resources data and re-render
+    showLoadingOverlay('Saving team member...');
+    await loadResourcesData();
+    initResourcesWeekIndices();
+    hideLoadingOverlay();
+    markSynced(isEdit ? 'Updated ' + name : 'Added ' + name);
+    render();
+  } catch (err) {
+    console.error('[Settings] Save member failed:', err);
+    alert('Save failed: ' + err.message);
+  }
+}
+
+async function deleteMember(name) {
+  if (!confirm('Remove "' + name + '" from the team?\n\nThis will delete their team member record. Their allocation and absence history will remain in the database.')) return;
+  try {
+    var existing = await agolQuery(ARCGIS_CONFIG.teamMembersUrl, "name='" + name.replace(/'/g, "''") + "'");
+    if (existing.length === 0) { alert('Could not find record for ' + name); return; }
+    var oid = existing[0].attributes.ObjectId || existing[0].attributes.OBJECTID || existing[0].attributes.objectid || existing[0].attributes.FID;
+    var result = await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, { deletes: [oid] });
+    console.log('[Settings] Deleted member:', name, result);
+
+    if (result.deleteResults && result.deleteResults[0] && !result.deleteResults[0].success) {
+      alert('Delete failed: ' + (result.deleteResults[0].error ? result.deleteResults[0].error.description : 'unknown'));
+      return;
+    }
+
+    if (_settingsSelectedMember === name) _settingsSelectedMember = null;
+
+    showLoadingOverlay('Removing team member...');
+    await loadResourcesData();
+    initResourcesWeekIndices();
+    hideLoadingOverlay();
+    markSynced('Removed ' + name);
+    render();
+  } catch (err) {
+    console.error('[Settings] Delete member failed:', err);
+    alert('Delete failed: ' + err.message);
+  }
+}
+
+// ── Absence Editor ───────────────────────────────────────────────
+function openAbsenceEditor(name) {
+  _settingsSelectedMember = name;
+  _absEditorWindowStart = Math.max(0, window.currentWeekIdx - 3);
+  renderAbsenceEditor(name);
+  // Scroll to the section
+  setTimeout(function() {
+    var el = document.getElementById('settings-absence-section');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 50);
+}
+
+function renderAbsenceEditor(name) {
+  var section = document.getElementById('settings-absence-section');
+  if (!section || !RESOURCES_DATA || !RESOURCES_DATA.people[name]) return;
+
+  var p = RESOURCES_DATA.people[name];
+  var weeks = RESOURCES_DATA.weeks;
+  var N = weeks.length;
+  var wEnd = Math.min(_absEditorWindowStart + ABS_COLS, N);
+  var wIdxs = [];
+  for (var i = _absEditorWindowStart; i < wEnd; i++) wIdxs.push(i);
+
+  var startLabel = absMonLabel(wIdxs[0]);
+  var endLabel = absMonLabel(wIdxs[wIdxs.length - 1]);
+
+  var html = '<div class="settings-section">' +
+    '<div class="settings-section-header">' +
+      '<span>Absences — ' + esc(name) + '</span>' +
+      '<button class="settings-btn settings-btn-secondary" onclick="_settingsSelectedMember=null;render();">✕ Close</button>' +
+    '</div>' +
+    '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">' +
+      '<button class="settings-btn settings-btn-secondary" onclick="absEditorShift(-1)" ' + (_absEditorWindowStart === 0 ? 'disabled' : '') + '>◀ Prev</button>' +
+      '<div style="text-align:center;flex:1;">' +
+        '<div style="font-weight:700;color:var(--navy);font-size:14px;">' + startLabel + ' — ' + endLabel + '</div>' +
+        '<div style="font-size:11px;color:var(--text-muted);">W' + (wIdxs[0]+1) + ' – W' + (wIdxs[wIdxs.length-1]+1) + ' · Enter hours off per week (0–40)</div>' +
+      '</div>' +
+      '<button class="settings-btn settings-btn-secondary" onclick="absJumpCurrent()">Today</button>' +
+      '<button class="settings-btn settings-btn-secondary" onclick="absEditorShift(1)" ' + (wEnd >= N ? 'disabled' : '') + '>Next ▶</button>' +
+    '</div>' +
+    '<div class="abs-grid"><table><thead><tr><th style="text-align:left;min-width:60px;">Week</th>';
+
+  // Header row: week labels
+  for (var ci = 0; ci < wIdxs.length; ci++) {
+    var wi = wIdxs[ci];
+    var isCur = wi === window.currentWeekIdx;
+    html += '<th class="' + (isCur ? 'abs-cur' : '') + '">' + absMonLabel(wi) + '</th>';
+  }
+  html += '</tr></thead><tbody><tr><td style="text-align:left;font-weight:700;color:var(--navy);font-size:12px;">Hours Off</td>';
+
+  // Input cells
+  for (var ci = 0; ci < wIdxs.length; ci++) {
+    var wi = wIdxs[ci];
+    var hrs = p.absences[wi] || 0;
+    var isCur = wi === window.currentWeekIdx;
+    var hasVal = hrs > 0;
+    html += '<td class="' + (isCur ? 'abs-cur' : '') + '">' +
+      '<input type="number" min="0" max="40" step="1" value="' + hrs + '" ' +
+      'class="abs-input' + (hasVal ? ' has-val' : '') + '" ' +
+      'data-name="' + esc(name) + '" data-wi="' + wi + '" ' +
+      'onchange="absValueChanged(this)" onfocus="this.select()">' +
+    '</td>';
+  }
+
+  // Capacity row (read-only, shows computed proj_cap)
+  html += '</tr><tr><td style="text-align:left;font-size:11px;color:var(--text-muted);">Proj Capacity</td>';
+  for (var ci = 0; ci < wIdxs.length; ci++) {
+    var wi = wIdxs[ci];
+    var cap = p.proj_cap[wi] || 0;
+    var isCur = wi === window.currentWeekIdx;
+    html += '<td class="' + (isCur ? 'abs-cur' : '') + '" style="font-size:11px;color:var(--text-muted);">' + cap.toFixed(1) + 'h</td>';
+  }
+
+  html += '</tr></tbody></table></div></div>';
+  section.innerHTML = html;
+}
+
+function absMonLabel(wi) {
+  if (!RESOURCES_DATA || !RESOURCES_DATA.weeks[wi]) return '';
+  var d = new Date(RESOURCES_DATA.weeks[wi] + 'T00:00:00');
+  d.setDate(d.getDate() + 1); // Sun→Mon
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function absEditorShift(dir) {
+  var N = RESOURCES_DATA.weeks.length;
+  _absEditorWindowStart = Math.max(0, Math.min(_absEditorWindowStart + dir, N - ABS_COLS));
+  renderAbsenceEditor(_settingsSelectedMember);
+}
+
+function absJumpCurrent() {
+  _absEditorWindowStart = Math.max(0, window.currentWeekIdx - 3);
+  renderAbsenceEditor(_settingsSelectedMember);
+}
+
+async function absValueChanged(input) {
+  var name = input.dataset.name;
+  var wi = parseInt(input.dataset.wi);
+  var hrs = Math.min(40, Math.max(0, parseFloat(input.value) || 0));
+  input.value = hrs;
+  input.className = 'abs-input' + (hrs > 0 ? ' has-val' : '');
+
+  var p = RESOURCES_DATA.people[name];
+  if (!p) return;
+
+  var oldHrs = p.absences[wi] || 0;
+  p.absences[wi] = hrs;
+
+  // Recalculate proj_cap for this week (formula: (40 - absences) × proj_pct)
+  p.proj_cap[wi] = (40 - hrs) * p.proj_pct;
+
+  // Recalculate hours and utilization for this week
+  p.allocations.forEach(function(a) {
+    a.hours[wi] = (a.fracs[wi] || 0) * p.proj_cap[wi];
+  });
+  var totalHrs = 0;
+  p.allocations.forEach(function(a) { totalHrs += (a.hours[wi] || 0); });
+  p.weekly_allocated[wi] = totalHrs;
+  p.utilization[wi] = p.proj_cap[wi] > 0 ? totalHrs / p.proj_cap[wi] : 0;
+
+  // Update capacity display in the grid
+  renderAbsenceEditor(name);
+
+  // Save to REST
+  var weekDate = RESOURCES_DATA.weeks[wi];
+  try {
+    // Find existing absence record for this person+week
+    var existing = await agolQuery(ARCGIS_CONFIG.absencesUrl,
+      "name='" + name.replace(/'/g, "''") + "' AND week_date='" + weekDate + "'");
+
+    if (existing.length > 0) {
+      var oid = existing[0].attributes.ObjectId || existing[0].attributes.OBJECTID || existing[0].attributes.objectid || existing[0].attributes.FID;
+      if (hrs > 0) {
+        // Update existing
+        await agolApplyEdits(ARCGIS_CONFIG.absencesUrl, {
+          updates: [{ attributes: { ObjectId: oid, OBJECTID: oid, absence_hours: hrs } }]
+        });
+      } else {
+        // Delete if zero
+        await agolApplyEdits(ARCGIS_CONFIG.absencesUrl, { deletes: [oid] });
+      }
+    } else if (hrs > 0) {
+      // Add new
+      await agolApplyEdits(ARCGIS_CONFIG.absencesUrl, {
+        adds: [{ attributes: { name: name, week_date: weekDate, absence_hours: hrs } }]
+      });
+    }
+    console.log('[Settings] Saved absence for', name, 'week', weekDate, ':', hrs, 'hours');
+  } catch (err) {
+    console.error('[Settings] Absence save failed:', err);
+    alert('Absence save failed: ' + err.message);
+  }
+}
+
 
 </script>
 
@@ -6169,7 +6583,30 @@ function showToast(msg) {
 
 
 <!-- FORM MODAL (Create / Edit) -->
-<div id="form-modal-backdrop" class="">
+
+<!-- MEMBER FORM MODAL (Add / Edit Team Member) -->
+<div id="member-form-backdrop" onclick="if(event.target===this)closeMemberForm()">
+  <div id="member-form-modal">
+    <div class="mf-title" id="mf-title">Add Team Member</div>
+    <input type="hidden" id="mf-oid" value="">
+    <label class="mf-label">Full Name</label>
+    <input class="mf-input" id="mf-name" placeholder="e.g. Jane Smith">
+    <label class="mf-label">Role / Title</label>
+    <input class="mf-input" id="mf-role" placeholder="e.g. GIS Analyst II">
+    <label class="mf-label">Team</label>
+    <input class="mf-input" id="mf-team" placeholder="e.g. GIS, Analytics, AI, Server, Management">
+    <label class="mf-label">Skill</label>
+    <input class="mf-input" id="mf-skill" placeholder="e.g. Data Analysis, GIS Application Building">
+    <label class="mf-label">Project Time Allocation (%)</label>
+    <input class="mf-input" id="mf-proj-pct" type="number" min="0" max="100" step="1" placeholder="e.g. 70">
+    <div class="mf-actions">
+      <button class="settings-btn settings-btn-secondary" onclick="closeMemberForm()">Cancel</button>
+      <button class="settings-btn settings-btn-primary" onclick="saveMemberForm()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="form-modal-backdrop" class="">>
   <div id="form-modal">
     <div class="fm-header">
       <span class="fm-type-badge" id="fm-type-badge">PROJECT</span>
