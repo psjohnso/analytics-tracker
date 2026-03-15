@@ -2664,7 +2664,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.6.5.0024';
+const APP_VERSION = '0.6.7.0026';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -3990,13 +3990,12 @@ async function saveAllocationsToRest(edits) {
       "name='" + personName.replace(/'/g, "''") + "'");
     console.log('[Allocations] Found', existing.length, 'existing records');
 
-    // Log first record to verify field names
+    // week_date is a Date Only field — always send "YYYY-MM-DD" strings
     if (existing.length > 0) {
       console.log('[Allocations] Sample existing record:', JSON.stringify(existing[0].attributes));
     }
 
-    // Build lookup: "project|week_date" → { oid, rawProject }
-    // We need to match by canonicalized name since edits use canonical names
+    // Build lookup: "canonicalProject|week_date_str" → array of OIDs
     const projTitleSet4 = new Set(PROJECTS.map(proj => proj.title));
     function canonTitle2(raw) {
       if (projTitleSet4.has(raw)) return raw;
@@ -4004,14 +4003,13 @@ async function saveAllocationsToRest(edits) {
       return projTitleSet4.has(stripped) ? stripped : raw;
     }
 
-    var existingMap = {}; // "canonicalProject|week_date" → OID
+    var existingMap = {};
     existing.forEach(function(f) {
       var a = f.attributes;
       var oid = a.ObjectId || a.OBJECTID || a.objectid || a.FID;
-      var wk = epochToDateStr(a.week_date);
+      var wk = epochToDateStr(a.week_date); // normalizes both number and string to "YYYY-MM-DD"
       var canon = canonTitle2(a.project || '');
       var key = canon + '|' + wk;
-      // If multiple records match same canonical+week, store all OIDs
       if (!existingMap[key]) existingMap[key] = [];
       existingMap[key].push(oid);
     });
@@ -4037,7 +4035,7 @@ async function saveAllocationsToRest(edits) {
             project_status: e.project_status,
             project_type:   e.project_type,
             analytics_id:   e.analytics_id,
-            week_date:      new Date(e.week_date + 'T00:00:00Z').getTime(),
+            week_date:      e.week_date,
             fraction:       e.fraction,
             hours:          e.hours,
           }
@@ -4539,10 +4537,13 @@ function localToAgolTask(fields) {
 // ══════════════════════════════════════════════════════════════════════
 let _agolDataLoaded = false;
 
-// ── Convert ArcGIS epoch milliseconds to YYYY-MM-DD string ──
-function epochToDateStr(epoch) {
-  if (!epoch && epoch !== 0) return '';
-  var d = new Date(epoch);
+// ── Convert ArcGIS date values to YYYY-MM-DD string ──
+// Handles both epoch milliseconds (Date fields) and "YYYY-MM-DD" strings (Date Only fields)
+function epochToDateStr(val) {
+  if (!val && val !== 0) return '';
+  // If it's already a YYYY-MM-DD string, return as-is
+  if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+  var d = new Date(val);
   var yyyy = d.getUTCFullYear();
   var mm = String(d.getUTCMonth() + 1).padStart(2, '0');
   var dd = String(d.getUTCDate()).padStart(2, '0');
