@@ -1987,6 +1987,36 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 
 /* Member form modal */
 #member-form-backdrop { display:none; position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,0.4); align-items:center; justify-content:center; }
+
+/* Dropdown List Editor */
+.list-editor-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+@media (max-width:700px) { .list-editor-grid { grid-template-columns:1fr; } }
+.list-editor-card { background:#fff; border:1px solid #E5E7EB; border-radius:10px; overflow:hidden; }
+.list-editor-card-header { background:#F8F9FA; padding:12px 16px; font-size:13px; font-weight:800;
+  color:var(--navy); text-transform:uppercase; letter-spacing:0.04em; border-bottom:2px solid #E5E7EB;
+  display:flex; align-items:center; justify-content:space-between; }
+.list-editor-card-header .list-count { font-size:11px; font-weight:600; color:var(--text-muted);
+  background:#E5E7EB; padding:2px 8px; border-radius:10px; text-transform:none; letter-spacing:0; }
+.list-editor-items { max-height:280px; overflow-y:auto; }
+.list-editor-item { display:flex; align-items:center; justify-content:space-between; padding:8px 16px;
+  border-bottom:1px solid #F3F4F6; font-size:13px; color:var(--text); }
+.list-editor-item:last-child { border-bottom:none; }
+.list-editor-item:hover { background:#F8F9FA; }
+.list-editor-item-name { flex:1; }
+.list-editor-item-from-data { font-size:10px; color:var(--text-muted); margin-left:8px;
+  background:#E5E7EB; padding:1px 6px; border-radius:8px; }
+.list-editor-remove { background:none; border:none; color:#D1D5DB; font-size:16px; cursor:pointer;
+  padding:2px 6px; border-radius:4px; line-height:1; }
+.list-editor-remove:hover { color:#EF4444; background:#FEF2F2; }
+.list-editor-add { display:flex; gap:6px; padding:10px 12px; border-top:1px solid #E5E7EB; }
+.list-editor-add input { flex:1; padding:7px 10px; border:1.5px solid #D1D5DB; border-radius:6px;
+  font-size:12px; font-family:Lato,sans-serif; }
+.list-editor-add input:focus { outline:none; border-color:var(--navy); box-shadow:0 0 0 2px rgba(0,38,105,0.15); }
+.list-editor-add button { padding:7px 14px; border:none; border-radius:6px; background:var(--navy);
+  color:#fff; font-size:12px; font-weight:700; cursor:pointer; font-family:Lato,sans-serif; white-space:nowrap; }
+.list-editor-add button:hover { background:#1a3a7c; }
+.list-editor-note { font-size:11px; color:var(--text-muted); margin-top:10px; line-height:1.5;
+  background:#FFFBEB; border:1px solid #FDE68A; border-radius:8px; padding:10px 14px; }
 #member-form-backdrop.open { display:flex; }
 #member-form-modal { background:#fff; border-radius:14px; padding:28px 32px; width:440px; max-width:95vw; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.25); }
 .mf-title { font-size:18px; font-weight:800; color:var(--navy); margin-bottom:18px; }
@@ -2777,7 +2807,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.8.3.0003';
+const APP_VERSION = '0.8.3.0004';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -5150,31 +5180,11 @@ function getEnums() {
     TASKS.map(t => t.tool)
   );
   const partnerDepts = mergeEnums(
-    ['Business Services',
-     'City Attorney',
-     'City Clerk',
-     'City Court',
-     'City Manager\'s Office',
-     'Environmental & General Services',
-     'Fire',
-     'Housing & Community Development',
-     'Human Resources',
-     'Information Technology',
-     'Mayor & Council',
-     'Parks & Recreation',
-     'Planning & Development Services',
-     'Police',
-     'Procurement',
-     'Transportation & Mobility',
-     'Tucson Water',
-     'Multiple Departments'],
+    _customPartnerDepts,
     PROJECTS.map(p => p.partner_dept)
   );
   const itdTeams = mergeEnums(
-    ['Data Intelligence - GIS',
-     'Data Intelligence - Business and Advanced Analytics',
-     'Data Intelligence - Artificial Intelligence',
-     'Emerging Data Infrastructure - Cloud Data Services'],
+    _customItdTeams,
     PROJECTS.map(p => p.itd_team)
   );
   return { projStatuses, projPriorities, projCategories,
@@ -6585,6 +6595,111 @@ let _settingsSelectedMember = null;
 let _absEditorWindowStart = 0;
 const ABS_COLS = 8;
 
+// ── Dropdown List Editor State ──────────────────────────────────
+// These arrays are the "base" lists that users can edit in Settings.
+// They are initialized from the hardcoded defaults and can be modified at runtime.
+// mergeEnums() in getEnums() will add any values found in existing project data
+// that aren't in these lists, so historical data is never lost.
+var _customPartnerDepts = [
+  'Business Services', 'City Attorney', 'City Clerk', 'City Court',
+  "City Manager's Office", 'Environmental & General Services', 'Fire',
+  'Housing & Community Development', 'Human Resources', 'Information Technology',
+  'Mayor & Council', 'Parks & Recreation', 'Planning & Development Services',
+  'Police', 'Procurement', 'Transportation & Mobility', 'Tucson Water',
+  'Multiple Departments'
+];
+var _customItdTeams = [
+  'Data Intelligence - GIS',
+  'Data Intelligence - Business and Advanced Analytics',
+  'Data Intelligence - Artificial Intelligence',
+  'Emerging Data Infrastructure - Cloud Data Services'
+];
+
+function renderListEditor(containerId, title, items, listKey) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+
+  // Get values from project data that aren't in the custom list
+  var fromData = [];
+  if (listKey === 'dept') {
+    fromData = [...new Set(PROJECTS.map(function(p) { return p.partner_dept; }))].filter(function(v) { return v && !items.includes(v); }).sort();
+  } else if (listKey === 'team') {
+    fromData = [...new Set(PROJECTS.map(function(p) { return p.itd_team; }))].filter(function(v) { return v && !items.includes(v); }).sort();
+  }
+
+  var itemsHtml = items.map(function(item, idx) {
+    return '<div class="list-editor-item">' +
+      '<span class="list-editor-item-name">' + esc(item) + '</span>' +
+      '<button class="list-editor-remove" title="Remove" onclick="removeListItem(\'' + listKey + '\',' + idx + ')">✕</button>' +
+    '</div>';
+  }).join('');
+
+  // Show data-sourced items (read-only, can't be removed since they come from project data)
+  var dataItemsHtml = fromData.map(function(item) {
+    return '<div class="list-editor-item">' +
+      '<span class="list-editor-item-name">' + esc(item) + '</span>' +
+      '<span class="list-editor-item-from-data">from project data</span>' +
+    '</div>';
+  }).join('');
+
+  var totalCount = items.length + fromData.length;
+
+  container.innerHTML = '<div class="list-editor-card">' +
+    '<div class="list-editor-card-header">' +
+      '<span>' + title + '</span>' +
+      '<span class="list-count">' + totalCount + ' items</span>' +
+    '</div>' +
+    '<div class="list-editor-items">' + itemsHtml + dataItemsHtml + '</div>' +
+    '<div class="list-editor-add">' +
+      '<input type="text" id="list-add-input-' + listKey + '" placeholder="Add new ' + (listKey === 'dept' ? 'department' : 'team') + '…" onkeydown="if(event.key===\'Enter\')addListItem(\'' + listKey + '\')">' +
+      '<button onclick="addListItem(\'' + listKey + '\')">＋ Add</button>' +
+    '</div>' +
+  '</div>';
+}
+
+function addListItem(listKey) {
+  var inputId = 'list-add-input-' + listKey;
+  var input = document.getElementById(inputId);
+  if (!input) return;
+  var val = input.value.trim();
+  if (!val) return;
+
+  var list = listKey === 'dept' ? _customPartnerDepts : _customItdTeams;
+  if (list.includes(val)) {
+    alert('This item already exists in the list.');
+    return;
+  }
+  list.push(val);
+  list.sort();
+
+  // Refresh the enum aliases so form dropdowns pick up the change
+  refreshEnums();
+
+  // Re-render the editor
+  renderListEditor(
+    listKey === 'dept' ? 'list-editor-dept' : 'list-editor-team',
+    listKey === 'dept' ? 'Partner Departments' : 'ITD Teams',
+    list, listKey
+  );
+}
+
+function removeListItem(listKey, idx) {
+  var list = listKey === 'dept' ? _customPartnerDepts : _customItdTeams;
+  var item = list[idx];
+  if (!confirm('Remove "' + item + '" from the list?')) return;
+  list.splice(idx, 1);
+
+  // Refresh the enum aliases
+  refreshEnums();
+
+  // Re-render the editor
+  renderListEditor(
+    listKey === 'dept' ? 'list-editor-dept' : 'list-editor-team',
+    listKey === 'dept' ? 'Partner Departments' : 'ITD Teams',
+    list, listKey
+  );
+}
+
 function renderSettingsPage(area) {
   if (!_isTeamLead) {
     area.innerHTML = '<div class="empty-state">You do not have access to Settings.</div>';
@@ -6629,9 +6744,24 @@ function renderSettingsPage(area) {
 
   // Absence editor section (shown when a member is selected)
   html += '<div id="settings-absence-section"></div>';
+
+  // ── Dropdown List Editor ──────────────────────────────────────
+  html += '<div class="settings-section">' +
+    '<div class="settings-section-header"><span>Manage Dropdown Lists</span></div>' +
+    '<div class="list-editor-grid">' +
+      '<div id="list-editor-dept"></div>' +
+      '<div id="list-editor-team"></div>' +
+    '</div>' +
+    '<div class="list-editor-note">⚠️ Changes to these lists take effect immediately in the project form. Values that have been used in existing projects will always appear in the dropdown (even if removed here) because the system automatically includes values found in project data.</div>' +
+  '</div>';
+
   html += '</div>';
 
   area.innerHTML = html;
+
+  // Render the dropdown list editors
+  renderListEditor('list-editor-dept', 'Partner Departments', _customPartnerDepts, 'dept');
+  renderListEditor('list-editor-team', 'ITD Teams', _customItdTeams, 'team');
 
   // If a member was selected for absence editing, re-render that section
   if (_settingsSelectedMember && people[_settingsSelectedMember]) {
