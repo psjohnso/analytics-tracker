@@ -2664,7 +2664,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.6.1.0020';
+const APP_VERSION = '0.6.2.0021';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -4435,16 +4435,26 @@ async function loadResourcesData() {
     }
   });
 
-  // Fill weekly_capacity (proj_cap, weekly_allocated, utilization)
+  // Fill proj_cap from weekly_capacity table (captures short-week adjustments).
+  // Only proj_cap_hours is used — weekly_allocated and utilization are computed
+  // below from the actual allocation data so they stay in sync after edits.
   capFeatures.forEach(function(f) {
     var a = f.attributes;
     var nm = a.name;
     var wk = epochToDateStr(a.week_date);
     if (people[nm] && weekIdx[wk] !== undefined) {
-      var idx = weekIdx[wk];
-      people[nm].proj_cap[idx]         = a.proj_cap_hours || 0;
-      people[nm].weekly_allocated[idx] = a.allocated_hours || 0;
-      people[nm].utilization[idx]      = a.utilization || 0;
+      people[nm].proj_cap[weekIdx[wk]] = a.proj_cap_hours || 0;
+    }
+  });
+
+  // For any week without a weekly_capacity row, compute proj_cap from formula:
+  // proj_cap = (40 - absence_hours) × proj_pct
+  // (Short/holiday weeks should have rows in weekly_capacity; this is a fallback)
+  Object.values(people).forEach(function(p) {
+    for (var i = 0; i < N; i++) {
+      if (p.proj_cap[i] === 0 && p.proj_pct > 0) {
+        p.proj_cap[i] = (40 - (p.absences[i] || 0)) * p.proj_pct;
+      }
     }
   });
 
@@ -4478,6 +4488,18 @@ async function loadResourcesData() {
     delete alloc._name;
     if (people[nm]) {
       people[nm].allocations.push(alloc);
+    }
+  });
+
+  // Compute weekly_allocated and utilization from actual allocation data.
+  // This ensures they're always in sync, even if the weekly_capacity table
+  // hasn't been updated after allocation edits.
+  Object.values(people).forEach(function(p) {
+    for (var i = 0; i < N; i++) {
+      var totalHrs = 0;
+      p.allocations.forEach(function(a) { totalHrs += (a.hours[i] || 0); });
+      p.weekly_allocated[i] = totalHrs;
+      p.utilization[i] = p.proj_cap[i] > 0 ? totalHrs / p.proj_cap[i] : 0;
     }
   });
 
