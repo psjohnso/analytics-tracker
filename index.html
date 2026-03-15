@@ -1262,13 +1262,13 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 
 /* Category wizard */
 .cat-wizard-link {
-  display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700;
-  color:var(--navy); cursor:pointer; margin-top:6px; padding:3px 0;
-  border:none; background:none; font-family:'Lato',sans-serif; text-decoration:none;
+  font-size:10px; font-weight:600; color:var(--navy); cursor:pointer;
+  text-decoration:none; margin-left:8px; opacity:0.7;
+  font-family:'Lato',sans-serif; letter-spacing:0.02em;
 }
-.cat-wizard-link:hover { text-decoration:underline; }
+.cat-wizard-link:hover { opacity:1; text-decoration:underline; }
 .cat-wizard-panel {
-  display:none; margin-top:10px; padding:16px; background:#F0F4FF; border:1.5px solid #C7D2FE;
+  padding:14px; background:#F0F4FF; border:1.5px solid #C7D2FE;
   border-radius:10px; animation:catWizFade 0.2s ease;
 }
 .cat-wizard-panel.open { display:block; }
@@ -2777,7 +2777,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.8.3.0043';
+const APP_VERSION = '0.8.3.0001';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -5219,6 +5219,22 @@ function fmField(label, inputHtml, required, span2, hint) {
   return '<div class="' + cls + '"><label class="fm-label">' + label + req + '</label>' + inputHtml + h + '</div>';
 }
 
+// Special category field: label has wizard link inline, content area can transform
+function fmCategoryField(currentValue, span2) {
+  const cls = 'fm-field' + (span2 ? ' span2' : '');
+  return '<div class="' + cls + '" id="fm-category-field">' +
+    '<label class="fm-label">' +
+      'Category ' +
+      '<a href="javascript:void(0)" class="cat-wizard-link" onclick="catWizardOpen()">' +
+        'Not sure? Help me choose' +
+      '</a>' +
+    '</label>' +
+    '<div id="fm-category-content">' +
+      fmSearchableSelect('fm-category', FM_PROJ_CATEGORIES, currentValue, 'Type to search categories…', CATEGORY_DESCRIPTIONS) +
+    '</div>' +
+  '</div>';
+}
+
 // Searchable dropdown: renders a text input with a filterable dropdown list
 // descriptions is an optional map of { optionValue: 'short description' }
 function fmSearchableSelect(id, options, value, placeholder, descriptions) {
@@ -5399,26 +5415,35 @@ const CAT_WIZARD_TREE = {
   },
 };
 
+// Stores the original category field HTML so we can restore it
+var _catWizardOriginalHTML = '';
+
 function catWizardOpen() {
-  const panel = document.getElementById('cat-wizard-panel');
-  if (!panel) return;
-  panel.classList.add('open');
+  const container = document.getElementById('fm-category-content');
+  if (!container) return;
+  // Save the current field content so we can restore it
+  _catWizardOriginalHTML = container.innerHTML;
   catWizardRenderStep('q1');
 }
 
 function catWizardClose() {
-  const panel = document.getElementById('cat-wizard-panel');
-  if (panel) { panel.classList.remove('open'); panel.innerHTML = ''; }
+  const container = document.getElementById('fm-category-content');
+  if (!container || !_catWizardOriginalHTML) return;
+  container.innerHTML = _catWizardOriginalHTML;
+  _catWizardOriginalHTML = '';
+  // Re-initialize the searchable select
+  initSearchableSelect('fm-category');
 }
 
 function catWizardRenderStep(stepId) {
-  const panel = document.getElementById('cat-wizard-panel');
-  if (!panel) return;
+  const container = document.getElementById('fm-category-content');
+  if (!container) return;
   const step = CAT_WIZARD_TREE[stepId];
   if (!step) return;
 
   const isQ2 = stepId !== 'q1';
-  let html = '<div class="cat-wizard-q">' + (isQ2 ? 'Step 2 of 2: ' : 'Step 1 of 2: ') + esc(step.question) + '</div>';
+  let html = '<div class="cat-wizard-panel open">';
+  html += '<div class="cat-wizard-q">' + (isQ2 ? 'Step 2 of 2: ' : 'Step 1 of 2: ') + esc(step.question) + '</div>';
   html += '<div class="cat-wizard-opts">';
   step.options.forEach(function(opt) {
     if (opt.next) {
@@ -5428,38 +5453,40 @@ function catWizardRenderStep(stepId) {
     }
   });
   html += '</div>';
+  html += '<div style="margin-top:8px;">';
   if (isQ2) {
-    html += '<button type="button" class="cat-wizard-back" onclick="catWizardRenderStep(\'q1\')">← Back to first question</button>';
-  } else {
-    html += '<button type="button" class="cat-wizard-back" onclick="catWizardClose()">Cancel</button>';
+    html += '<button type="button" class="cat-wizard-back" onclick="catWizardRenderStep(\'q1\')">← Back</button>';
   }
-  panel.innerHTML = html;
+  html += ' <button type="button" class="cat-wizard-back" onclick="catWizardClose()">Cancel</button>';
+  html += '</div></div>';
+  container.innerHTML = html;
 }
 
 function catWizardShowResult(categoryName) {
-  const panel = document.getElementById('cat-wizard-panel');
-  if (!panel) return;
+  const container = document.getElementById('fm-category-content');
+  if (!container) return;
   const desc = CATEGORY_DESCRIPTIONS[categoryName] || '';
-  let html = '<div class="cat-wizard-result">' +
+  let html = '<div class="cat-wizard-panel open">';
+  html += '<div class="cat-wizard-result">' +
     '<div class="cat-wizard-result-label">✓ Recommended Category</div>' +
     '<div class="cat-wizard-result-name">' + esc(categoryName) + '</div>' +
     (desc ? '<div class="cat-wizard-result-desc">' + esc(desc) + '</div>' : '') +
     '<button type="button" class="cat-wizard-result-btn" onclick="catWizardApply(\'' + esc(categoryName).replace(/'/g, "\\'") + '\')">Use This Category</button>' +
   '</div>';
-  html += '<div style="margin-top:8px;display:flex;gap:12px;">';
+  html += '<div style="margin-top:8px;">';
   html += '<button type="button" class="cat-wizard-back" onclick="catWizardRenderStep(\'q1\')">← Start over</button>';
-  html += '<button type="button" class="cat-wizard-back" onclick="catWizardClose()">Cancel</button>';
-  html += '</div>';
-  panel.innerHTML = html;
+  html += ' <button type="button" class="cat-wizard-back" onclick="catWizardClose()">Cancel</button>';
+  html += '</div></div>';
+  container.innerHTML = html;
 }
 
 function catWizardApply(categoryName) {
-  // Set the category field value
+  // Restore the original field, then set the selected value
+  catWizardClose();
   const input = document.getElementById('fm-category');
   const hidden = document.getElementById('fm-category-val');
   if (input) input.value = categoryName;
   if (hidden) hidden.value = categoryName;
-  catWizardClose();
 }
 
 function buildProjectForm(p) {
@@ -5475,11 +5502,7 @@ function buildProjectForm(p) {
     '</div>' +
     '<div class="fm-section-label">Classification</div>' +
     '<div class="fm-grid">' +
-      fmField('Category',
-        fmSearchableSelect('fm-category', FM_PROJ_CATEGORIES, v('category'), 'Type to search categories…', CATEGORY_DESCRIPTIONS) +
-        '<button type="button" class="cat-wizard-link" onclick="catWizardOpen()">🧭 Not sure? Help me choose a category</button>' +
-        '<div class="cat-wizard-panel" id="cat-wizard-panel"></div>',
-        false, true) +
+      fmCategoryField(v('category'), true) +
       fmField('Partner Department', fmInput('fm-partner-dept', v('partner_dept'), 'Department name…')) +
       fmField('ITD Team', fmInput('fm-itd-team', v('itd_team'), 'e.g. GIS/Data Analytics')) +
     '</div>' +
@@ -5515,10 +5538,7 @@ function buildTaskForm(t) {
     '<div class="fm-grid">' +
       fmField('Project', fmSelect('fm-project', projTitles, v('project'), 'Select project…'), false, true) +
       fmField('Tool / Technology', fmSelect('fm-tool', FM_TASK_TOOLS, v('tool'), 'Select tool…')) +
-      fmField('Category',
-        fmSearchableSelect('fm-category', FM_PROJ_CATEGORIES, v('category'), 'Type to search categories…', CATEGORY_DESCRIPTIONS) +
-        '<button type="button" class="cat-wizard-link" onclick="catWizardOpen()">🧭 Not sure? Help me choose a category</button>' +
-        '<div class="cat-wizard-panel" id="cat-wizard-panel"></div>') +
+      fmCategoryField(v('category'), false) +
     '</div>' +
     '<div class="fm-section-label">Timeline</div>' +
     '<div class="fm-grid">' +
