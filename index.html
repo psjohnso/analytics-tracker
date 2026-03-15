@@ -2705,7 +2705,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.7.0.0030';
+const APP_VERSION = '0.7.1.0031';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -4645,23 +4645,21 @@ function generateWeeks(year) {
 async function loadResourcesData() {
   var N = 52; // weeks per year
 
-  // Query all 4 services in parallel
+  // Query 3 services in parallel (weekly_capacity no longer needed —
+  // proj_cap is always computed from absences × proj_pct)
   var results = await Promise.all([
     agolQuery(ARCGIS_CONFIG.teamMembersUrl),
     agolQuery(ARCGIS_CONFIG.absencesUrl),
     agolQuery(ARCGIS_CONFIG.allocationsUrl),
-    agolQuery(ARCGIS_CONFIG.weeklyCapacityUrl),
   ]);
   var memberFeatures = results[0];
   var absenceFeatures = results[1];
   var allocFeatures = results[2];
-  var capFeatures = results[3];
 
   // Log first feature from each for field-name debugging
   if (memberFeatures.length) console.log('[Resources] team_members fields:', Object.keys(memberFeatures[0].attributes));
   if (absenceFeatures.length) console.log('[Resources] absences fields:', Object.keys(absenceFeatures[0].attributes));
   if (allocFeatures.length) console.log('[Resources] allocations fields:', Object.keys(allocFeatures[0].attributes));
-  if (capFeatures.length) console.log('[Resources] weekly_capacity fields:', Object.keys(capFeatures[0].attributes));
 
   // Generate weeks array (52 Sundays of 2026)
   var weeks = generateWeeks(2026);
@@ -4697,26 +4695,11 @@ async function loadResourcesData() {
     }
   });
 
-  // Fill proj_cap from weekly_capacity table (captures short-week adjustments).
-  // Only proj_cap_hours is used — weekly_allocated and utilization are computed
-  // below from the actual allocation data so they stay in sync after edits.
-  capFeatures.forEach(function(f) {
-    var a = f.attributes;
-    var nm = a.name;
-    var wk = epochToDateStr(a.week_date);
-    if (people[nm] && weekIdx[wk] !== undefined) {
-      people[nm].proj_cap[weekIdx[wk]] = a.proj_cap_hours || 0;
-    }
-  });
-
-  // For any week without a weekly_capacity row, compute proj_cap from formula:
-  // proj_cap = (40 - absence_hours) × proj_pct
-  // (Short/holiday weeks should have rows in weekly_capacity; this is a fallback)
+  // Compute proj_cap from formula: (40 - absence_hours) × proj_pct
+  // Absences are the single source of truth for time off.
   Object.values(people).forEach(function(p) {
     for (var i = 0; i < N; i++) {
-      if (p.proj_cap[i] === 0 && p.proj_pct > 0) {
-        p.proj_cap[i] = (40 - (p.absences[i] || 0)) * p.proj_pct;
-      }
+      p.proj_cap[i] = (40 - (p.absences[i] || 0)) * p.proj_pct;
     }
   });
 
@@ -4767,7 +4750,7 @@ async function loadResourcesData() {
 
   RESOURCES_DATA = { weeks: weeks, people: people };
   console.log('[Resources] Loaded:', memberFeatures.length, 'members,', absenceFeatures.length, 'absence records,',
-    allocFeatures.length, 'allocation records,', capFeatures.length, 'capacity records');
+    allocFeatures.length, 'allocation records');
 }
 
 async function loadArcGISData() {
