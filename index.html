@@ -1966,6 +1966,8 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .mywork-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-bottom:28px; }
 .mywork-columns { display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start; }
 @media (max-width:860px) { .mywork-columns { grid-template-columns:1fr; } }
+.mywork-full-width { grid-column:1 / -1; }
+@media (max-width:860px) { .mywork-full-width { grid-column:auto; } }
 .mywork-kpi { background:#fff; border:1px solid #E5E7EB; border-radius:10px; padding:16px; text-align:center; }
 .mywork-kpi-value { font-size:28px; font-weight:800; color:var(--navy); line-height:1.1; }
 .mywork-kpi-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; margin-top:4px; }
@@ -2864,7 +2866,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.9.0.0004';
+const APP_VERSION = '0.9.0.0005';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -6910,6 +6912,20 @@ function toggleMyWorkTasks() {
   }
 }
 
+function toggleMyWorkProjects() {
+  var panel = document.getElementById('mywork-proj-expand');
+  var btn = document.getElementById('mywork-proj-toggle');
+  if (!panel || !btn) return;
+  var isHidden = panel.style.display === 'none';
+  panel.style.display = isHidden ? '' : 'none';
+  if (isHidden) {
+    btn.dataset.origLabel = btn.textContent;
+    btn.textContent = 'Show fewer projects';
+  } else {
+    btn.textContent = btn.dataset.origLabel || 'Show more';
+  }
+}
+
 function renderMyWork(area) {
   if (!_userFullName) {
     area.innerHTML = '<div class="empty-state">Sign in to see your personalized work view.</div>';
@@ -7055,8 +7071,11 @@ function renderMyWork(area) {
   html += '<div class="mywork-kpi"><div class="mywork-kpi-value ' + utilClass + '">' + weekUtil + '%</div><div class="mywork-kpi-label">Utilization</div></div>';
   html += '</div>';
 
-  // ── My Week (Allocation Breakdown) — full width ─────────────
-  html += '<div class="mywork-section">';
+  // ── All sections in one grid (My Week & Attention span full width) ──
+  html += '<div class="mywork-columns">';
+
+  // ── My Week — spans both columns ───────────────────────────
+  html += '<div class="mywork-section mywork-full-width">';
   html += '<div class="mywork-section-header">📅 My Week</div>';
   if (!RESOURCES_DATA || !RESOURCES_DATA.people[name]) {
     html += '<div class="mywork-empty">Resource data not available. Sign in and ensure your name matches the team roster.</div>';
@@ -7081,8 +7100,8 @@ function renderMyWork(area) {
   }
   html += '</div>';
 
-  // ── Attention Needed — full width ────────────────────────────
-  html += '<div class="mywork-section">';
+  // ── Attention Needed — spans both columns ───────────────────
+  html += '<div class="mywork-section mywork-full-width">';
   html += '<div class="mywork-section-header">⚡ Attention Needed <span class="badge-count">' + alerts.length + '</span></div>';
   if (alerts.length === 0) {
     html += '<div class="mywork-empty">All caught up! No items need your attention right now.</div>';
@@ -7105,42 +7124,63 @@ function renderMyWork(area) {
   }
   html += '</div>';
 
-  // ── Two-column layout: Projects (left) + Tasks (right) ─────
-  html += '<div class="mywork-columns">';
-
   // ── LEFT COLUMN: My Projects ────────────────────────────────
   html += '<div>';
   html += '<div class="mywork-section">';
   html += '<div class="mywork-section-header">📁 My Projects <span class="badge-count">' + myProjects.length + '</span></div>';
-  var statusOrder = ['Active', 'Scheduled', 'On Hold', 'Future', 'Idea', 'Complete', 'Canceled'];
   var projByStatus = {};
   myProjects.forEach(function(p) {
     var s = p.status || 'Unknown';
     if (!projByStatus[s]) projByStatus[s] = [];
     projByStatus[s].push(p);
   });
-  var hasProjects = false;
-  statusOrder.forEach(function(status) {
+
+  // Helper to render a group of projects by status
+  function renderProjGroup(status) {
     var list = projByStatus[status];
-    if (!list || !list.length) return;
-    hasProjects = true;
+    if (!list || !list.length) return '';
     var statusColor = STATUS_COLOR(status);
-    html += '<div style="margin-bottom:4px;margin-top:12px;font-size:11px;font-weight:700;color:' + statusColor + ';text-transform:uppercase;letter-spacing:0.06em;">' + esc(status) + ' (' + list.length + ')</div>';
+    var out = '<div style="margin-bottom:4px;margin-top:12px;font-size:11px;font-weight:700;color:' + statusColor + ';text-transform:uppercase;letter-spacing:0.06em;">' + esc(status) + ' (' + list.length + ')</div>';
     list.forEach(function(p) {
       var taskCount = TASKS.filter(function(t) { return t.project_id === p.id; });
       var doneCount = taskCount.filter(function(t) { return t.status === 'Complete'; }).length;
       var totalCount = taskCount.length;
       var taskLabel = totalCount > 0 ? doneCount + '/' + totalCount + ' tasks done' : 'No tasks';
       var isContact = p.contact === name;
-      html += '<div class="mywork-compact-row" onclick="openProject(' + p.objectId + ')">';
-      html += '<span class="mywork-compact-badge" style="background:' + statusColor + '22;color:' + statusColor + ';">' + esc(status) + '</span>';
-      html += '<span class="mywork-compact-title">' + esc(p.title) + '</span>';
-      html += '<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">' + taskLabel + '</span>';
-      if (isContact) html += '<span style="font-size:10px;font-weight:700;color:var(--navy);background:#EEF2FF;padding:2px 8px;border-radius:8px;white-space:nowrap;">Lead</span>';
-      html += '</div>';
+      out += '<div class="mywork-compact-row" onclick="openProject(' + p.objectId + ')">';
+      out += '<span class="mywork-compact-badge" style="background:' + statusColor + '22;color:' + statusColor + ';">' + esc(status) + '</span>';
+      out += '<span class="mywork-compact-title">' + esc(p.title) + '</span>';
+      out += '<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">' + taskLabel + '</span>';
+      if (isContact) out += '<span style="font-size:10px;font-weight:700;color:var(--navy);background:#EEF2FF;padding:2px 8px;border-radius:8px;white-space:nowrap;">Lead</span>';
+      out += '</div>';
     });
+    return out;
+  }
+
+  // Default visible: Active, Scheduled, Idea
+  var defaultProjStatuses = ['Active', 'Scheduled', 'Idea'];
+  var hasDefaultProj = false;
+  defaultProjStatuses.forEach(function(status) {
+    var chunk = renderProjGroup(status);
+    if (chunk) { hasDefaultProj = true; html += chunk; }
   });
-  if (!hasProjects) html += '<div class="mywork-empty">No projects assigned to you.</div>';
+  if (!hasDefaultProj && myProjects.length === 0) {
+    html += '<div class="mywork-empty">No projects assigned to you.</div>';
+  }
+
+  // Expandable: On Hold, Future, Complete, Canceled
+  var expandProjStatuses = ['On Hold', 'Future', 'Complete', 'Canceled'];
+  var expandProjItems = expandProjStatuses.filter(function(s) { return projByStatus[s] && projByStatus[s].length > 0; });
+  if (expandProjItems.length > 0) {
+    var expandProjLabel = expandProjItems.map(function(s) { return s + ' (' + projByStatus[s].length + ')'; }).join(', ');
+    html += '<div id="mywork-proj-expand" style="display:none;">';
+    expandProjItems.forEach(function(status) { html += renderProjGroup(status); });
+    html += '</div>';
+    html += '<button class="mywork-expand-btn" id="mywork-proj-toggle" onclick="toggleMyWorkProjects()">' +
+      'Show more (' + expandProjLabel + ')' +
+    '</button>';
+  }
+
   html += '</div>';
   html += '</div>'; // close left column
 
