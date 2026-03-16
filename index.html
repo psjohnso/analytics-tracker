@@ -2817,7 +2817,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.8.4.0001';
+const APP_VERSION = '0.8.4.0003';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -4286,6 +4286,12 @@ async function saveAllData() {
     TASKS.length = 0;
     taskFeatures.forEach(function(f) { TASKS.push(agolTaskToLocal(f)); });
 
+    // Reload config
+    try {
+      const configFeatures = await agolQuery(ARCGIS_CONFIG.appConfigUrl);
+      applyAppConfig(configFeatures);
+    } catch (e) { console.warn('app_config reload failed:', e); }
+
     await loadResourcesData();
     initResourcesWeekIndices();
 
@@ -4342,6 +4348,7 @@ const ARCGIS_CONFIG = {
   absencesUrl:      'https://services3.arcgis.com/9coHY2fvuFjG9HQX/ArcGIS/rest/services/absences/FeatureServer/0',
   allocationsUrl:   'https://services3.arcgis.com/9coHY2fvuFjG9HQX/ArcGIS/rest/services/allocations/FeatureServer/0',
   weeklyCapacityUrl:'https://services3.arcgis.com/9coHY2fvuFjG9HQX/ArcGIS/rest/services/weekly_capacity/FeatureServer/0',
+  appConfigUrl:     'https://services3.arcgis.com/9coHY2fvuFjG9HQX/ArcGIS/rest/services/app_config/FeatureServer/0',
 };
 
 // ── ACCESS CONTROL ────────────────────────────────────────────────────
@@ -4890,10 +4897,20 @@ async function loadResourcesData() {
 async function loadArcGISData() {
   showLoadingOverlay('Connecting to ArcGIS Online...');
   try {
-    updateLoadingOverlay('Loading projects from ArcGIS Online...');
-    const projectFeatures = await agolQuery(ARCGIS_CONFIG.projectsUrl);
+    updateLoadingOverlay('Loading projects and configuration...');
+    // Load projects and app config in parallel
+    const [projectFeatures, configFeatures] = await Promise.all([
+      agolQuery(ARCGIS_CONFIG.projectsUrl),
+      agolQuery(ARCGIS_CONFIG.appConfigUrl).catch(function(e) {
+        console.warn('app_config load failed, using defaults:', e);
+        return [];
+      }),
+    ]);
     PROJECTS.length = 0;
     projectFeatures.forEach(function(f) { PROJECTS.push(agolProjectToLocal(f)); });
+
+    // Apply config from ArcGIS Online
+    applyAppConfig(configFeatures);
 
     updateLoadingOverlay('Loaded ' + PROJECTS.length + ' projects. Loading tasks...');
     const taskFeatures = await agolQuery(ARCGIS_CONFIG.tasksUrl);
@@ -6619,10 +6636,11 @@ const ABS_COLS = 8;
 
 // ── Dropdown List Editor State ──────────────────────────────────
 // These arrays are the "base" lists that users can edit in Settings.
-// They are initialized from the hardcoded defaults and can be modified at runtime.
+// They persist to the app_config ArcGIS Online service so changes
+// are shared across all users and browsers.
 // mergeEnums() in getEnums() will add any values found in existing project data
 // that aren't in these lists, so historical data is never lost.
-var _customPartnerDepts = [
+const _defaultPartnerDepts = [
   'Business Services', 'City Attorney', 'City Clerk', 'City Court',
   "City Manager's Office", 'Environmental & General Services', 'Fire',
   'Housing & Community Development', 'Human Resources', 'Information Technology',
@@ -6630,12 +6648,76 @@ var _customPartnerDepts = [
   'Police', 'Procurement', 'Transportation & Mobility', 'Tucson Water',
   'Multiple Departments'
 ];
-var _customItdTeams = [
+const _defaultItdTeams = [
   'Data Intelligence - GIS',
   'Data Intelligence - Business and Advanced Analytics',
   'Data Intelligence - Artificial Intelligence',
   'Emerging Data Infrastructure - Cloud Data Services'
 ];
+
+// ObjectIds for the two config records (populated on load from ArcGIS)
+var _configOids = { partner_depts: null, itd_teams: null };
+
+// Start with defaults; overwritten by applyAppConfig() after ArcGIS load
+var _customPartnerDepts = [..._defaultPartnerDepts];
+var _customItdTeams = [..._defaultItdTeams];
+
+// Called after loading config features from ArcGIS Online
+function applyAppConfig(features) {
+  if (!features || !features.length) return;
+  features.forEach(function(f) {
+    var a = f.attributes;
+    var key = a.config_key;
+    var val = a.config_value;
+    var oid = a.ObjectId || a.OBJECTID || a.objectid;
+    if (!key || !val) return;
+    try {
+      var parsed = JSON.parse(val);
+      if (!Array.isArray(parsed)) return;
+      if (key === 'partner_depts') {
+        _customPartnerDepts = parsed;
+        _configOids.partner_depts = oid;
+      } else if (key === 'itd_teams') {
+        _customItdTeams = parsed;
+        _configOids.itd_teams = oid;
+      }
+    } catch (e) {
+      console.warn('Could not parse config value for key:', key, e);
+    }
+  });
+  // Refresh enum aliases so dropdowns reflect loaded config
+  if (typeof refreshEnums === 'function') refreshEnums();
+  console.log('[Config] Loaded:', _customPartnerDepts.length, 'depts,', _customItdTeams.length, 'teams');
+}
+
+// Save a single config key back to ArcGIS Online
+async function saveConfigKey(key, valueArray) {
+  var oid = _configOids[key];
+  var jsonValue = JSON.stringify(valueArray);
+  if (!oid) {
+    console.warn('No ObjectId for config key "' + key + '", cannot save to ArcGIS');
+    return false;
+  }
+  try {
+    await agolApplyEdits(ARCGIS_CONFIG.appConfigUrl, {
+      updates: [{ attributes: { ObjectId: oid, config_value: jsonValue } }]
+    });
+    console.log('[Config] Saved "' + key + '" to ArcGIS Online');
+    return true;
+  } catch (e) {
+    console.error('Failed to save config "' + key + '" to ArcGIS:', e);
+    alert('Failed to save dropdown list changes: ' + e.message);
+    return false;
+  }
+}
+
+async function saveCustomLists(listKey) {
+  if (listKey === 'dept') {
+    await saveConfigKey('partner_depts', _customPartnerDepts);
+  } else if (listKey === 'team') {
+    await saveConfigKey('itd_teams', _customItdTeams);
+  }
+}
 
 function renderListEditor(containerId, title, items, listKey) {
   var container = document.getElementById(containerId);
@@ -6679,7 +6761,7 @@ function renderListEditor(containerId, title, items, listKey) {
   '</div>';
 }
 
-function addListItem(listKey) {
+async function addListItem(listKey) {
   var inputId = 'list-add-input-' + listKey;
   var input = document.getElementById(inputId);
   if (!input) return;
@@ -6697,15 +6779,18 @@ function addListItem(listKey) {
   // Refresh the enum aliases so form dropdowns pick up the change
   refreshEnums();
 
-  // Re-render the editor
+  // Re-render the editor immediately (optimistic UI)
   renderListEditor(
     listKey === 'dept' ? 'list-editor-dept' : 'list-editor-team',
     listKey === 'dept' ? 'Partner Departments' : 'ITD Teams',
     list, listKey
   );
+
+  // Save to ArcGIS Online
+  await saveCustomLists(listKey);
 }
 
-function removeListItem(listKey, idx) {
+async function removeListItem(listKey, idx) {
   var list = listKey === 'dept' ? _customPartnerDepts : _customItdTeams;
   var item = list[idx];
   if (!confirm('Remove "' + item + '" from the list?')) return;
@@ -6714,12 +6799,15 @@ function removeListItem(listKey, idx) {
   // Refresh the enum aliases
   refreshEnums();
 
-  // Re-render the editor
+  // Re-render the editor immediately (optimistic UI)
   renderListEditor(
     listKey === 'dept' ? 'list-editor-dept' : 'list-editor-team',
     listKey === 'dept' ? 'Partner Departments' : 'ITD Teams',
     list, listKey
   );
+
+  // Save to ArcGIS Online
+  await saveCustomLists(listKey);
 }
 
 function renderSettingsPage(area) {
@@ -6774,7 +6862,7 @@ function renderSettingsPage(area) {
       '<div id="list-editor-dept"></div>' +
       '<div id="list-editor-team"></div>' +
     '</div>' +
-    '<div class="list-editor-note">⚠️ Changes to these lists take effect immediately in the project form. Values that have been used in existing projects will always appear in the dropdown (even if removed here) because the system automatically includes values found in project data.</div>' +
+    '<div class="list-editor-note">Changes are saved to ArcGIS Online and shared across all users. Values used in existing projects will always appear in the dropdown even if removed here.</div>' +
   '</div>';
 
   html += '</div>';
