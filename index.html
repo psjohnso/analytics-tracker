@@ -1977,14 +1977,17 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   margin-bottom:12px; padding-bottom:8px; border-bottom:2px solid #E5E7EB; display:flex; align-items:center; gap:8px; }
 .mywork-section-header .badge-count { background:var(--navy); color:#fff; font-size:10px; font-weight:700;
   padding:2px 8px; border-radius:10px; }
-.mywork-alert-card { background:#fff; border:1px solid #E5E7EB; border-radius:10px; padding:14px 18px;
-  margin-bottom:8px; display:flex; align-items:flex-start; gap:12px; cursor:pointer; transition:all 0.15s; }
+.mywork-alert-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; }
+@media (max-width:960px) { .mywork-alert-grid { grid-template-columns:repeat(2, 1fr); } }
+@media (max-width:600px) { .mywork-alert-grid { grid-template-columns:1fr; } }
+.mywork-alert-card { background:#fff; border:1px solid #E5E7EB; border-radius:8px; padding:10px 12px;
+  display:flex; align-items:flex-start; gap:8px; cursor:pointer; transition:all 0.15s; }
 .mywork-alert-card:hover { border-color:var(--navy); background:#F0F4FF; }
-.mywork-alert-icon { font-size:18px; flex-shrink:0; margin-top:1px; }
+.mywork-alert-icon { font-size:14px; flex-shrink:0; margin-top:1px; }
 .mywork-alert-body { flex:1; min-width:0; }
-.mywork-alert-title { font-size:13px; font-weight:700; color:var(--text); }
-.mywork-alert-meta { font-size:11px; color:var(--text-muted); margin-top:2px; }
-.mywork-alert-reason { font-size:11px; color:#EF4444; font-weight:600; margin-top:3px; }
+.mywork-alert-title { font-size:12px; font-weight:700; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mywork-alert-meta { font-size:10px; color:var(--text-muted); margin-top:1px; }
+.mywork-alert-reason { font-size:10px; color:#EF4444; font-weight:600; margin-top:2px; }
 .mywork-compact-row { background:#fff; border:1px solid #E5E7EB; border-radius:8px; padding:10px 16px;
   margin-bottom:6px; display:flex; align-items:center; gap:12px; cursor:pointer; transition:all 0.15s; }
 .mywork-compact-row:hover { border-color:var(--navy); background:#F0F4FF; }
@@ -2861,7 +2864,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.9.0.0003';
+const APP_VERSION = '0.9.0.0004';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -7084,6 +7087,7 @@ function renderMyWork(area) {
   if (alerts.length === 0) {
     html += '<div class="mywork-empty">All caught up! No items need your attention right now.</div>';
   } else {
+    html += '<div class="mywork-alert-grid">';
     alerts.slice(0, 15).forEach(function(a) {
       var onclick = a.type === 'project' ? 'openProject(' + a.id + ')' : 'openTask(' + a.id + ')';
       html += '<div class="mywork-alert-card" onclick="' + onclick + '">';
@@ -7094,8 +7098,9 @@ function renderMyWork(area) {
       html += '<div class="mywork-alert-reason">' + esc(a.reason) + '</div>';
       html += '</div></div>';
     });
+    html += '</div>';
     if (alerts.length > 15) {
-      html += '<div class="mywork-empty">And ' + (alerts.length - 15) + ' more items…</div>';
+      html += '<div class="mywork-empty" style="margin-top:8px;">And ' + (alerts.length - 15) + ' more items…</div>';
     }
   }
   html += '</div>';
