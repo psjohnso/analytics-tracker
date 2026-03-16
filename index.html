@@ -2853,7 +2853,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.9.0.0000';
+const APP_VERSION = '0.9.0.0001';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -4573,8 +4573,8 @@ async function fetchAgolUserInfo(token) {
     const fullName = data.fullName || data.username || '';
     const username = data.username || '';
     _agolUsername = username;  // Store for permission checks
-    _userFullName = displayName; // Store for My Work tab matching
     const displayName = fullName || username;
+    _userFullName = displayName; // Store for My Work tab matching
     if (!displayName) return;
 
     // Build initials from full name
@@ -5863,6 +5863,9 @@ function confirmDeleteTask(taskIdx) {
   // Mark as logged in and update UI
   _isLoggedIn = true;
   applyAuthState();
+  // Show My Work tab immediately for all logged-in users
+  const myWorkTabEarly = document.getElementById('tab-mywork');
+  if (myWorkTabEarly) myWorkTabEarly.style.display = '';
 
   // Fetch and display the logged-in user's name (non-blocking)
   fetchAgolUserInfo(token);
