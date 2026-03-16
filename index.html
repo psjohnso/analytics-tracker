@@ -2866,7 +2866,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.9.0.0006';
+const APP_VERSION = '0.9.0.0007';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -3029,7 +3029,8 @@ function toggleWeeklyFilter() {
 
 function openTaskFromProject(taskIdx) {
   const fromProjectId = currentDetail && currentDetail.type === 'project' ? currentDetail.id : null;
-  currentDetail = { type: 'task', id: taskIdx, _fromProject: fromProjectId };
+  const returnTab = currentDetail && currentDetail._returnTab ? currentDetail._returnTab : null;
+  currentDetail = { type: 'task', id: taskIdx, _fromProject: fromProjectId, _returnTab: returnTab };
   render();
 }
 
@@ -3515,13 +3516,13 @@ function goPage(p) {
 
 // ─── MODALS ───────────────────────────────────────────────────────────
 function openProject(id) {
-  currentDetail = { type: 'project', id };
+  currentDetail = { type: 'project', id, _returnTab: currentTab };
   render();
 }
 
 
 function openTask(id) {
-  currentDetail = { type: 'task', id };
+  currentDetail = { type: 'task', id, _returnTab: currentTab };
   render();
 }
 
@@ -5902,6 +5903,7 @@ function renderProjectDetail(id) {
   const relTasks = TASKS.filter(t => t.project_id === p.id);
   const statusColor = STATUS_COLOR(p.status) || '#9CA3AF';
   const returnTab = currentDetail._returnTab || 'projects';
+  const backLabel = returnTab === 'mywork' ? '← Back to My Work' : '← Back to Projects';
 
   const allMembers = (() => {
     const arr = [p.contact, ...(p.other_members||'').split(',').map(s=>s.trim())].filter(Boolean);
@@ -5931,7 +5933,7 @@ function renderProjectDetail(id) {
         <button class="modal-edit-btn" onclick="openFormModal('edit-project',${p.objectId})">✏ Edit</button>
         <button class="modal-del-btn" onclick="confirmDeleteProject(${p.objectId})">🗑 Delete</button>
       </div>
-      <button class="detail-back-btn" onclick="goBackFromDetail()">← Back to Projects</button>
+      <button class="detail-back-btn" onclick="goBackFromDetail()">${backLabel}</button>
       <div class="detail-hero-title">${esc(p.title)}</div>
       <div class="detail-hero-badges">
         <span class="status-pill" style="background:rgba(255,255,255,0.15);color:white;font-size:12px;">
@@ -5987,6 +5989,10 @@ function renderTaskDetail(idx) {
   if (!t) return '<div class="empty-state">Task not found.</div>';
   const statusColor = STATUS_COLOR(t.status) || '#9CA3AF';
   const proj = PROJECTS.find(x => x.id === t.project_id);
+  const taskReturnTab = currentDetail._returnTab || 'tasks';
+  const taskFromProject = currentDetail._fromProject;
+  const taskBackLabel = taskFromProject ? '← Back to Project'
+    : taskReturnTab === 'mywork' ? '← Back to My Work' : '← Back';
 
   return `<div class="detail-page">
     <div class="detail-hero task-hero" style="background:linear-gradient(135deg, var(--orange) 0%, #A03500 55%, ${statusColor}cc 100%);">
@@ -5994,7 +6000,7 @@ function renderTaskDetail(idx) {
         <button class="modal-edit-btn" onclick="openFormModal('edit-task',${t.idx})">✏ Edit</button>
         <button class="modal-del-btn" onclick="confirmDeleteTask(${t.idx})">🗑 Delete</button>
       </div>
-      <button class="detail-back-btn" onclick="goBackFromDetail()">← Back</button>
+      <button class="detail-back-btn" onclick="goBackFromDetail()">${taskBackLabel}</button>
       <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;opacity:0.7;margin-bottom:6px;">Task</div>
       <div class="detail-hero-title">${esc(t.title)}</div>
       <div class="detail-hero-badges">
@@ -6057,12 +6063,13 @@ function goBackFromDetail() {
   }
   // From task inside a project detail → go back to project
   if (prevDetail && prevDetail.type === 'task' && prevDetail._fromProject) {
-    currentDetail = { type: 'project', id: prevDetail._fromProject };
+    currentDetail = { type: 'project', id: prevDetail._fromProject, _returnTab: prevDetail._returnTab };
     render();
     return;
   }
-  // Default: go back to the appropriate tab
-  const tab = (prevDetail && prevDetail.type === 'task') ? 'tasks' : 'projects';
+  // Return to the tab we came from (default: projects or tasks based on type)
+  const tab = (prevDetail && prevDetail._returnTab) ? prevDetail._returnTab
+    : (prevDetail && prevDetail.type === 'task') ? 'tasks' : 'projects';
   switchTab(tab);
 }
 
