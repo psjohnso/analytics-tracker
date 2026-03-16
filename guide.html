@@ -185,7 +185,7 @@ li strong { color: var(--navy); }
 <p>Five cards at the top show your active project count, open task count, overdue tasks, tasks due this week, and your current week utilization percentage. Overdue and due-this-week counts highlight in red and yellow respectively when they need attention.</p>
 
 <h3>My Week</h3>
-<p>Directly below the KPIs, this section shows your allocation breakdown for the current week from the Resources data. Displays hours and percentage allocated to each project, with a visual bar chart. Also shows your total allocated hours, capacity, and remaining availability.</p>
+<p>Directly below the KPIs, this section shows your allocation breakdown for the current week from the Resources data. It displays your work schedule type (5/8, 4/10, or 9/80), which pay period week you're in (A or B), your scheduled hours, and your RDO day if applicable. Below that, it shows hours and percentage allocated to each project, with a visual bar chart, plus your total allocated hours, capacity, and remaining availability.</p>
 
 <h3>Two-Column Layout</h3>
 <p>Below Attention Needed, the remaining sections are arranged in two columns. The left column shows your Projects, while the right column shows your Tasks.</p>
@@ -344,15 +344,21 @@ li strong { color: var(--navy); }
 <p>The Settings tab is only visible to members of the Team Leads group in ArcGIS Online. It provides team management capabilities.</p>
 
 <h3>Team Members Table</h3>
-<p>Lists all team members with their name, role, team, skill, and project allocation percentage. From each row you can:</p>
+<p>Lists all team members with their name, role, team, project allocation percentage, and work schedule. From each row you can:</p>
 <ul>
-  <li><strong>✏️ Edit:</strong> Update the person's role, team, skill, and project time percentage. Changes save directly to the team_members REST service.</li>
-  <li><strong>📅 Absences:</strong> Opens an inline absence editor showing 8 weeks at a time, centered on the current week. Enter hours off per week (0–40). Changes auto-save to the absences REST service. A read-only "Proj Capacity" row shows the impact on available project hours.</li>
+  <li><strong>✏️ Edit:</strong> Update the person's role, team, skill, project time percentage, and work schedule (5/8, 4/10, or 9/80). Changes save directly to the team_members REST service.</li>
+  <li><strong>📅 Absences:</strong> Opens an inline absence editor showing 8 weeks at a time, centered on the current week. Enter hours off per week. Changes auto-save to the absences REST service. A read-only "Proj Capacity" row shows the impact on available project hours.</li>
   <li><strong>🗑 Delete:</strong> Removes the team member from the roster (with confirmation). Allocation and absence history is preserved in the database.</li>
 </ul>
 
 <h3>Adding Team Members</h3>
-<p>Click <strong>"＋ Add Member"</strong> to open a form for adding a new team member. Enter their full name, role, team, skill area, and the percentage of their work week allocated to project work.</p>
+<p>Click <strong>"＋ Add Member"</strong> to open a form for adding a new team member. Enter their full name, role, team, skill area, percentage of their work week allocated to project work, and work schedule. The schedule options are:</p>
+<ul>
+  <li><strong>5/8:</strong> Standard schedule — five 8-hour days, 40 hours every week.</li>
+  <li><strong>4/10:</strong> Four 10-hour days, 40 hours every week, with one regular day off (RDO).</li>
+  <li><strong>9/80:</strong> Alternating weeks — Week A is 44 hours (four 9-hour days + one 8-hour day), Week B is 36 hours (four 9-hour days + one RDO). The pay period starts on Sunday, with December 28, 2025 as the Week A reference date.</li>
+</ul>
+<p>When you select a schedule type, the Week A and Week B hours auto-fill to the standard values. You can override them for non-standard arrangements. The RDO Day field specifies which day of the week the employee has off.</p>
 
 <h3>Managing Dropdown Lists</h3>
 <p>The <strong>Manage Dropdown Lists</strong> section at the bottom of the Settings tab lets you add or remove options from two key project form fields:</p>
@@ -372,31 +378,42 @@ li strong { color: var(--navy); }
 <h3>Core Assumptions</h3>
 <table class="guide-table">
   <tr><th>Assumption</th><th>Value / Explanation</th></tr>
-  <tr><td><strong>Base Work Week</strong></td><td>40 hours per employee</td></tr>
+  <tr><td><strong>Scheduled Work Hours</strong></td><td>Based on the employee's work schedule. A 5/8 or 4/10 schedule is 40 hours every week. A 9/80 schedule alternates between 44 hours (Week A) and 36 hours (Week B) across a 2-week pay period starting on Sundays.</td></tr>
   <tr><td><strong>Productivity Factor</strong></td><td><strong>75%</strong> — Only 75% of available work hours are assumed to be productive project time. The remaining 25% accounts for meetings, email, administrative tasks, context-switching, and breaks. This is based on workplace productivity research showing the average knowledge worker is productively focused for roughly 6 of 8 hours per day.</td></tr>
   <tr><td><strong>Project Time %</strong></td><td>Each team member has a configurable percentage of their productive time dedicated to project work (e.g., 63% for a Lead Data Analyst). The remainder goes to operational duties, support, and overhead not tracked as projects.</td></tr>
-  <tr><td><strong>Absences</strong></td><td>Hours off per week (vacation, sick, holidays) are entered in the Settings tab. These reduce the base 40-hour week before the productivity factor is applied.</td></tr>
+  <tr><td><strong>Absences</strong></td><td>Hours off per week (vacation, sick, holidays) are entered in the Settings tab. These reduce the scheduled hours before the productivity factor is applied.</td></tr>
 </table>
 
 <h3>The Capacity Formula</h3>
 <p>For each person, for each week:</p>
-<div class="formula">Project Capacity = (40 − Absence Hours) × 0.75 × Project Time %</div>
+<div class="formula">Project Capacity = (Scheduled Hours − Absence Hours) × 0.75 × Project Time %</div>
+<p>Where Scheduled Hours is determined by the employee's work schedule and which week of the pay period it is (Week A or Week B for 9/80 employees).</p>
 
-<h4>Worked Example — No Absences</h4>
-<p>James McGinnis has a project time allocation of 63% and no absences this week:</p>
+<h4>Worked Example — 5/8 Schedule, No Absences</h4>
+<p>James McGinnis has a 5/8 schedule, a project time allocation of 63%, and no absences this week:</p>
 <table class="guide-table">
   <tr><th>Step</th><th>Calculation</th></tr>
-  <tr><td>Base work week</td><td>40 hours</td></tr>
+  <tr><td>Scheduled hours</td><td>40 hours (5/8 schedule)</td></tr>
   <tr><td>Subtract absences</td><td>40 − 0 = 40 hours available</td></tr>
   <tr><td>Apply 75% productivity</td><td>40 × 0.75 = 30 productive hours</td></tr>
   <tr><td>Apply 63% project time</td><td>30 × 0.63 = <strong>18.9 project hours</strong></td></tr>
 </table>
 
-<h4>Worked Example — With 1 Day Off</h4>
-<p>If James takes 8 hours (1 day) off:</p>
+<h4>Worked Example — 9/80 Schedule, Week B</h4>
+<p>If James were on a 9/80 schedule during Week B (36-hour week) with no absences:</p>
 <table class="guide-table">
   <tr><th>Step</th><th>Calculation</th></tr>
-  <tr><td>Base work week</td><td>40 hours</td></tr>
+  <tr><td>Scheduled hours</td><td>36 hours (9/80 Week B)</td></tr>
+  <tr><td>Subtract absences</td><td>36 − 0 = 36 hours available</td></tr>
+  <tr><td>Apply 75% productivity</td><td>36 × 0.75 = 27 productive hours</td></tr>
+  <tr><td>Apply 63% project time</td><td>27 × 0.63 = <strong>17.01 project hours</strong></td></tr>
+</table>
+
+<h4>Worked Example — With 1 Day Off</h4>
+<p>If James (5/8 schedule) takes 8 hours (1 day) off:</p>
+<table class="guide-table">
+  <tr><th>Step</th><th>Calculation</th></tr>
+  <tr><td>Scheduled hours</td><td>40 hours</td></tr>
   <tr><td>Subtract absences</td><td>40 − 8 = 32 hours available</td></tr>
   <tr><td>Apply 75% productivity</td><td>32 × 0.75 = 24 productive hours</td></tr>
   <tr><td>Apply 63% project time</td><td>24 × 0.63 = <strong>15.12 project hours</strong></td></tr>

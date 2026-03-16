@@ -2866,7 +2866,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.9.0.0009';
+const APP_VERSION = '0.9.1.0000';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -4865,6 +4865,17 @@ async function loadResourcesData() {
 
   // Build people from team_members
   var people = {};
+
+  // Pay period reference: 2025-12-28 is a Week A (Sunday) start.
+  // Every 14 days alternates A/B. Week A = week1_hours, Week B = week2_hours.
+  var PAY_PERIOD_REF = new Date('2025-12-28T00:00:00');
+  function getPayPeriodWeek(weekDateStr) {
+    var d = new Date(weekDateStr + 'T00:00:00');
+    var diffDays = Math.round((d - PAY_PERIOD_REF) / (1000 * 60 * 60 * 24));
+    var weekNum = Math.floor(diffDays / 7);
+    return (weekNum % 2 === 0) ? 'A' : 'B';
+  }
+
   memberFeatures.forEach(function(f) {
     var a = f.attributes;
     var nm = a.name;
@@ -4874,6 +4885,10 @@ async function loadResourcesData() {
       team:             a.team || '',
       skill:            a.skill || '',
       proj_pct:         a.proj_pct || 0,
+      schedule_type:    a.schedule_type || '5/8',
+      week1_hours:      (a.week1_hours != null) ? a.week1_hours : 40,
+      week2_hours:      (a.week2_hours != null) ? a.week2_hours : 40,
+      rdo_day:          a.rdo_day || null,
       proj_cap:         new Array(N).fill(0),
       absences:         new Array(N).fill(0),
       allocations:      [],
@@ -4892,11 +4907,15 @@ async function loadResourcesData() {
     }
   });
 
-  // Compute proj_cap from formula: (40 - absence_hours) × 75% productivity × proj_pct
+  // Compute proj_cap from formula: (scheduled_hours - absence_hours) × 75% productivity × proj_pct
   // The 0.75 factor accounts for non-project-work time (meetings, email, breaks, etc.)
-  Object.values(people).forEach(function(p) {
+  // For 9/80 schedules, Week A = week1_hours (44), Week B = week2_hours (36).
+  Object.entries(people).forEach(function(entry) {
+    var p = entry[1];
     for (var i = 0; i < N; i++) {
-      p.proj_cap[i] = (40 - (p.absences[i] || 0)) * 0.75 * p.proj_pct;
+      var ppWeek = getPayPeriodWeek(weeks[i]);
+      var scheduledHours = (ppWeek === 'A') ? p.week1_hours : p.week2_hours;
+      p.proj_cap[i] = (scheduledHours - (p.absences[i] || 0)) * 0.75 * p.proj_pct;
     }
   });
 
@@ -6962,12 +6981,26 @@ function renderMyWork(area) {
   var weekAllocHours = 0;
   var weekCapHours = 0;
   var weekAllocations = [];
+  var myScheduleType = '5/8';
+  var myRdoDay = null;
+  var myPayWeek = '';
+  var myScheduledHours = 40;
   if (RESOURCES_DATA && RESOURCES_DATA.people[name]) {
     var p = RESOURCES_DATA.people[name];
     var cwIdx = typeof currentWeekIdx !== 'undefined' ? currentWeekIdx : 0;
     weekCapHours = p.proj_cap[cwIdx] || 0;
     weekAllocHours = p.weekly_allocated[cwIdx] || 0;
     weekUtil = weekCapHours > 0 ? Math.round(weekAllocHours / weekCapHours * 100) : 0;
+    myScheduleType = p.schedule_type || '5/8';
+    myRdoDay = p.rdo_day || null;
+    // Determine pay period week for current week
+    if (RESOURCES_DATA.weeks && RESOURCES_DATA.weeks[cwIdx]) {
+      var PAY_PERIOD_REF_MW = new Date('2025-12-28T00:00:00');
+      var cwDate = new Date(RESOURCES_DATA.weeks[cwIdx] + 'T00:00:00');
+      var diffDays = Math.round((cwDate - PAY_PERIOD_REF_MW) / (1000 * 60 * 60 * 24));
+      myPayWeek = (Math.floor(diffDays / 7) % 2 === 0) ? 'A' : 'B';
+    }
+    myScheduledHours = (myPayWeek === 'A') ? (p.week1_hours || 40) : (p.week2_hours || 40);
     weekAllocations = (p.allocations || []).filter(function(a) {
       return a.fracs && a.fracs[cwIdx] > 0;
     }).map(function(a) {
@@ -7068,9 +7101,25 @@ function renderMyWork(area) {
   if (!RESOURCES_DATA || !RESOURCES_DATA.people[name]) {
     html += '<div class="mywork-empty">Resource data not available. Sign in and ensure your name matches the team roster.</div>';
   } else if (weekAllocations.length === 0) {
+    html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">';
+    html += '<strong>' + esc(myScheduleType) + '</strong> schedule';
+    if (myPayWeek) html += ' · Week ' + myPayWeek + ' (' + myScheduledHours + 'h)';
+    if (myRdoDay) {
+      var rdoThisWeek = myScheduleType === '9/80' ? (myPayWeek === 'B') : true;
+      html += ' · RDO: ' + esc(myRdoDay) + (rdoThisWeek ? ' (this week)' : ' (next week)');
+    }
+    html += '</div>';
     html += '<div class="mywork-empty">No allocations recorded for this week.</div>';
   } else {
     var availableHours = Math.max(0, weekCapHours - weekAllocHours);
+    html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">';
+    html += '<strong>' + esc(myScheduleType) + '</strong> schedule';
+    if (myPayWeek) html += ' · Week ' + myPayWeek + ' (' + myScheduledHours + 'h)';
+    if (myRdoDay) {
+      var rdoThisWeek2 = myScheduleType === '9/80' ? (myPayWeek === 'B') : true;
+      html += ' · RDO: ' + esc(myRdoDay) + (rdoThisWeek2 ? ' (this week)' : ' (next week)');
+    }
+    html += '</div>';
     html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">';
     html += '<strong>' + Math.round(weekAllocHours * 10) / 10 + 'h</strong> allocated of <strong>' + Math.round(weekCapHours * 10) / 10 + 'h</strong> capacity';
     html += ' · <strong style="color:' + (availableHours > 0 ? '#22C55E' : '#EF4444') + ';">' + Math.round(availableHours * 10) / 10 + 'h</strong> available';
@@ -7275,12 +7324,14 @@ function renderSettingsPage(area) {
   // Team Members table
   let memberRows = names.map(function(name) {
     var p = people[name];
+    var schedLabel = p.schedule_type || '5/8';
+    if (p.rdo_day) schedLabel += ' · ' + p.rdo_day + ' off';
     return '<tr>' +
       '<td style="font-weight:700;color:var(--navy);">' + esc(name) + '</td>' +
       '<td>' + esc(p.role) + '</td>' +
       '<td>' + esc(p.team) + '</td>' +
-      '<td>' + esc(p.skill) + '</td>' +
       '<td>' + Math.round(p.proj_pct * 100) + '%</td>' +
+      '<td>' + esc(schedLabel) + '</td>' +
       '<td style="text-align:right;">' +
         '<button class="settings-btn settings-btn-secondary" style="margin-right:4px;" onclick="openAbsenceEditor(\'' + name.replace(/'/g, "\\'") + '\')">📅 Absences</button>' +
         '<button class="settings-btn settings-btn-secondary" style="margin-right:4px;" onclick="openMemberForm(\'edit\',\'' + name.replace(/'/g, "\\'") + '\')">✏️ Edit</button>' +
@@ -7296,7 +7347,7 @@ function renderSettingsPage(area) {
         '<button class="settings-btn settings-btn-primary" onclick="openMemberForm(\'add\')">＋ Add Member</button>' +
       '</div>' +
       '<table class="member-table">' +
-        '<thead><tr><th>Name</th><th>Role</th><th>Team</th><th>Skill</th><th>Project %</th><th style="text-align:right;">Actions</th></tr></thead>' +
+        '<thead><tr><th>Name</th><th>Role</th><th>Team</th><th>Project %</th><th>Schedule</th><th style="text-align:right;">Actions</th></tr></thead>' +
         '<tbody>' + memberRows + '</tbody>' +
       '</table>' +
     '</div>';
@@ -7340,6 +7391,10 @@ function openMemberForm(mode, name) {
     document.getElementById('mf-team').value = p.team;
     document.getElementById('mf-skill').value = p.skill;
     document.getElementById('mf-proj-pct').value = Math.round(p.proj_pct * 100);
+    document.getElementById('mf-schedule-type').value = p.schedule_type || '5/8';
+    document.getElementById('mf-week1-hours').value = p.week1_hours;
+    document.getElementById('mf-week2-hours').value = p.week2_hours;
+    document.getElementById('mf-rdo-day').value = p.rdo_day || '';
     // We need to find the OID for this member
     document.getElementById('mf-name').readOnly = true;
     document.getElementById('mf-name').style.background = '#F3F4F6';
@@ -7350,10 +7405,30 @@ function openMemberForm(mode, name) {
     document.getElementById('mf-team').value = '';
     document.getElementById('mf-skill').value = '';
     document.getElementById('mf-proj-pct').value = '';
+    document.getElementById('mf-schedule-type').value = '5/8';
+    document.getElementById('mf-week1-hours').value = '40';
+    document.getElementById('mf-week2-hours').value = '40';
+    document.getElementById('mf-rdo-day').value = '';
     document.getElementById('mf-name').readOnly = false;
     document.getElementById('mf-name').style.background = '';
   }
   document.getElementById('member-form-backdrop').classList.add('open');
+}
+
+// Auto-fill hours when schedule type changes
+function onScheduleTypeChange() {
+  var type = document.getElementById('mf-schedule-type').value;
+  if (type === '5/8') {
+    document.getElementById('mf-week1-hours').value = 40;
+    document.getElementById('mf-week2-hours').value = 40;
+    document.getElementById('mf-rdo-day').value = '';
+  } else if (type === '4/10') {
+    document.getElementById('mf-week1-hours').value = 40;
+    document.getElementById('mf-week2-hours').value = 40;
+  } else if (type === '9/80') {
+    document.getElementById('mf-week1-hours').value = 44;
+    document.getElementById('mf-week2-hours').value = 36;
+  }
 }
 
 function closeMemberForm() {
@@ -7366,10 +7441,26 @@ async function saveMemberForm() {
   var team = document.getElementById('mf-team').value.trim();
   var skill = document.getElementById('mf-skill').value.trim();
   var projPct = parseFloat(document.getElementById('mf-proj-pct').value) || 0;
+  var scheduleType = document.getElementById('mf-schedule-type').value || '5/8';
+  var week1Hours = parseFloat(document.getElementById('mf-week1-hours').value) || 40;
+  var week2Hours = parseFloat(document.getElementById('mf-week2-hours').value) || 40;
+  var rdoDay = document.getElementById('mf-rdo-day').value || null;
   var origName = document.getElementById('mf-name').dataset.origName || '';
 
   if (!name) { alert('Name is required.'); return; }
   if (projPct < 0 || projPct > 100) { alert('Project % must be 0–100.'); return; }
+
+  var memberAttrs = {
+    name: name,
+    role: role,
+    team: team,
+    skill: skill,
+    proj_pct: projPct / 100,
+    schedule_type: scheduleType,
+    week1_hours: week1Hours,
+    week2_hours: week2Hours,
+    rdo_day: rdoDay,
+  };
 
   var isEdit = origName !== '' && origName === name;
 
@@ -7379,17 +7470,10 @@ async function saveMemberForm() {
       var existing = await agolQuery(ARCGIS_CONFIG.teamMembersUrl, "name='" + name.replace(/'/g, "''") + "'");
       if (existing.length === 0) { alert('Could not find existing record for ' + name); return; }
       var oid = existing[0].attributes.ObjectId || existing[0].attributes.OBJECTID || existing[0].attributes.objectid || existing[0].attributes.FID;
+      memberAttrs.ObjectId = oid;
+      memberAttrs.OBJECTID = oid;
       var result = await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, {
-        updates: [{
-          attributes: {
-            ObjectId: oid, OBJECTID: oid,
-            name: name,
-            role: role,
-            team: team,
-            skill: skill,
-            proj_pct: projPct / 100,
-          }
-        }]
+        updates: [{ attributes: memberAttrs }]
       });
       console.log('[Settings] Updated member:', name, result);
     } else {
@@ -7399,15 +7483,7 @@ async function saveMemberForm() {
         return;
       }
       var result = await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, {
-        adds: [{
-          attributes: {
-            name: name,
-            role: role,
-            team: team,
-            skill: skill,
-            proj_pct: projPct / 100,
-          }
-        }]
+        adds: [{ attributes: memberAttrs }]
       });
       console.log('[Settings] Added member:', name, result);
     }
@@ -7676,6 +7752,33 @@ async function absValueChanged(input) {
     <input class="mf-input" id="mf-skill" placeholder="e.g. Data Analysis, GIS Application Building">
     <label class="mf-label">Project Time Allocation (%)</label>
     <input class="mf-input" id="mf-proj-pct" type="number" min="0" max="100" step="1" placeholder="e.g. 70">
+    <label class="mf-label">Work Schedule</label>
+    <select class="mf-input" id="mf-schedule-type" onchange="onScheduleTypeChange()">
+      <option value="5/8">5/8 — Five 8-hour days (40h/week)</option>
+      <option value="4/10">4/10 — Four 10-hour days (40h/week)</option>
+      <option value="9/80">9/80 — 44h Week A / 36h Week B</option>
+    </select>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+      <div>
+        <label class="mf-label">Week A Hours</label>
+        <input class="mf-input" id="mf-week1-hours" type="number" min="0" max="60" step="1" placeholder="40">
+      </div>
+      <div>
+        <label class="mf-label">Week B Hours</label>
+        <input class="mf-input" id="mf-week2-hours" type="number" min="0" max="60" step="1" placeholder="40">
+      </div>
+      <div>
+        <label class="mf-label">RDO Day</label>
+        <select class="mf-input" id="mf-rdo-day">
+          <option value="">None</option>
+          <option value="Monday">Monday</option>
+          <option value="Tuesday">Tuesday</option>
+          <option value="Wednesday">Wednesday</option>
+          <option value="Thursday">Thursday</option>
+          <option value="Friday">Friday</option>
+        </select>
+      </div>
+    </div>
     <div class="mf-actions">
       <button class="settings-btn settings-btn-secondary" onclick="closeMemberForm()">Cancel</button>
       <button class="settings-btn settings-btn-primary" onclick="saveMemberForm()">Save</button>
