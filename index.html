@@ -2871,7 +2871,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.9.2.0002';
+const APP_VERSION = '0.9.2.0003';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -3039,6 +3039,17 @@ function openTaskFromProject(taskIdx) {
   const returnTab = currentDetail && currentDetail._returnTab ? currentDetail._returnTab : null;
   currentDetail = { type: 'task', id: taskIdx, _fromProject: fromProjectId, _returnTab: returnTab };
   render();
+}
+
+function addTaskToProject(projectObjectId, projectTitle) {
+  openFormModal('new-task');
+  // Pre-fill the project dropdown after the form renders
+  setTimeout(function() {
+    var projSelect = document.getElementById('fm-project');
+    if (projSelect) {
+      projSelect.value = projectTitle;
+    }
+  }, 50);
 }
 
 function setFilter(type, val) {
@@ -6013,7 +6024,10 @@ function renderProjectDetail(id) {
       </div>` : ''}
 
       <div class="detail-section">
-        <div class="detail-section-label">Tasks (${relTasks.length})</div>
+        <div class="detail-section-label" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Tasks (${relTasks.length})</span>
+          <button onclick="addTaskToProject(${p.objectId}, '${esc(p.title).replace(/'/g, "\\'")}')" style="background:var(--navy);color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:Lato,sans-serif;">＋ Add Task</button>
+        </div>
         <div class="detail-tasks-table">
           ${relTasks.length ? `<div class="detail-tasks-header">
             <div>Task</div><div>Status</div><div>Priority</div><div>Assignee</div><div>Due Date</div>
