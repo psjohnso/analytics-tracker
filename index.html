@@ -2866,7 +2866,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.9.0.0007';
+const APP_VERSION = '0.9.0.0009';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -6948,7 +6948,7 @@ function renderMyWork(area) {
   const myProjects = getMyProjects();
   const myTasks = getMyTasks();
   const activeProjects = myProjects.filter(function(p) { return p.status === 'Active' || p.status === 'Scheduled'; });
-  const openTasks = myTasks.filter(function(t) { return t.status !== 'Complete' && t.status !== 'Canceled'; });
+  const openTasks = myTasks.filter(function(t) { return ['In Progress', 'On Hold', 'Waiting for Response'].includes(t.status); });
   const overdueTasks = openTasks.filter(function(t) { return t.due && t.due < todayStr; });
   const dueThisWeek = openTasks.filter(function(t) {
     if (!t.due || t.due < todayStr) return false;
@@ -6976,10 +6976,10 @@ function renderMyWork(area) {
     }).sort(function(a, b) { return b.hours - a.hours; });
   }
 
-  // ── Incomplete data checks ──────────────────────────────────
+  // ── Attention Needed alerts ──────────────────────────────────
   var alerts = [];
 
-  // Overdue tasks
+  // Overdue open tasks (In Progress, On Hold, Waiting for Response)
   overdueTasks.forEach(function(t) {
     var daysOver = Math.ceil((today - new Date(t.due + 'T00:00:00')) / (1000 * 60 * 60 * 24));
     alerts.push({
@@ -6991,7 +6991,7 @@ function renderMyWork(area) {
     });
   });
 
-  // Due this week
+  // Open tasks due this week
   dueThisWeek.forEach(function(t) {
     var dueDate = new Date(t.due + 'T00:00:00');
     var daysLeft = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
@@ -7004,8 +7004,8 @@ function renderMyWork(area) {
     });
   });
 
-  // Incomplete project data (where user is primary contact)
-  myProjects.filter(function(p) { return p.contact === name && p.status !== 'Complete' && p.status !== 'Canceled' && p.status !== 'Idea'; }).forEach(function(p) {
+  // Incomplete project data — all projects (except Complete/Canceled) where user is contact or member
+  myProjects.filter(function(p) { return p.status !== 'Complete' && p.status !== 'Canceled'; }).forEach(function(p) {
     var missing = [];
     if (!p.description) missing.push('description');
     if (!p.end) missing.push('end date');
@@ -7023,8 +7023,8 @@ function renderMyWork(area) {
     }
   });
 
-  // Incomplete task data
-  openTasks.forEach(function(t) {
+  // Incomplete task data — all tasks (except Complete/Canceled)
+  myTasks.filter(function(t) { return t.status !== 'Complete' && t.status !== 'Canceled'; }).forEach(function(t) {
     var missing = [];
     if (!t.description) missing.push('description');
     if (!t.due) missing.push('due date');
@@ -7037,25 +7037,6 @@ function renderMyWork(area) {
         reason: 'Missing: ' + missing.join(', '),
         priority: 3,
       });
-    }
-  });
-
-  // Stale tasks — In Progress for 14+ days with no recent due date change
-  openTasks.filter(function(t) { return t.status === 'In Progress' && t.start; }).forEach(function(t) {
-    var startDate = new Date(t.start + 'T00:00:00');
-    var daysSinceStart = Math.ceil((today - startDate) / (1000 * 60 * 60 * 24));
-    if (daysSinceStart > 14) {
-      // Only add if not already flagged as overdue or due this week
-      var alreadyFlagged = alerts.some(function(a) { return a.type === 'task' && a.id === t.idx && a.priority <= 1; });
-      if (!alreadyFlagged) {
-        alerts.push({
-          icon: '⏱️', type: 'task', id: t.idx,
-          title: t.title,
-          meta: 'Started ' + t.start,
-          reason: 'In Progress for ' + daysSinceStart + ' days — needs update?',
-          priority: 4,
-        });
-      }
     }
   });
 
