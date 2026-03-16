@@ -1963,10 +1963,10 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .mywork-page { padding:20px 0; max-width:1100px; }
 .mywork-greeting { font-size:22px; font-weight:800; color:var(--navy); margin-bottom:4px; }
 .mywork-subtitle { font-size:13px; color:var(--text-muted); margin-bottom:24px; }
-.mywork-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-bottom:28px; }
+.mywork-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; }
 .mywork-columns { display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start; }
 @media (max-width:860px) { .mywork-columns { grid-template-columns:1fr; } }
-.mywork-full-width { grid-column:1 / -1; }
+.mywork-full-width { grid-column:1 / -1; margin-bottom:0; }
 @media (max-width:860px) { .mywork-full-width { grid-column:auto; } }
 .mywork-kpi { background:#fff; border:1px solid #E5E7EB; border-radius:10px; padding:16px; text-align:center; }
 .mywork-kpi-value { font-size:28px; font-weight:800; color:var(--navy); line-height:1.1; }
@@ -2866,7 +2866,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.9.0.0005';
+const APP_VERSION = '0.9.0.0006';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -7061,18 +7061,18 @@ function renderMyWork(area) {
   html += '<div class="mywork-greeting">Good ' + (today.getHours() < 12 ? 'morning' : today.getHours() < 17 ? 'afternoon' : 'evening') + ', ' + esc(firstName) + '</div>';
   html += '<div class="mywork-subtitle">' + today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) + '</div>';
 
-  // ── KPIs ────────────────────────────────────────────────────
+  // ── All sections in one grid ─────────────────────────────────
+  html += '<div class="mywork-columns">';
+
+  // ── KPIs — spans both columns ──────────────────────────────
   var utilClass = weekUtil > 100 ? 'alert' : weekUtil > 85 ? 'warn' : 'good';
-  html += '<div class="mywork-kpis">';
+  html += '<div class="mywork-kpis mywork-full-width">';
   html += '<div class="mywork-kpi"><div class="mywork-kpi-value">' + activeProjects.length + '</div><div class="mywork-kpi-label">Active Projects</div></div>';
   html += '<div class="mywork-kpi"><div class="mywork-kpi-value">' + openTasks.length + '</div><div class="mywork-kpi-label">Open Tasks</div></div>';
   html += '<div class="mywork-kpi"><div class="mywork-kpi-value' + (overdueTasks.length > 0 ? ' alert' : '') + '">' + overdueTasks.length + '</div><div class="mywork-kpi-label">Overdue</div></div>';
   html += '<div class="mywork-kpi"><div class="mywork-kpi-value' + (dueThisWeek.length > 0 ? ' warn' : '') + '">' + dueThisWeek.length + '</div><div class="mywork-kpi-label">Due This Week</div></div>';
   html += '<div class="mywork-kpi"><div class="mywork-kpi-value ' + utilClass + '">' + weekUtil + '%</div><div class="mywork-kpi-label">Utilization</div></div>';
   html += '</div>';
-
-  // ── All sections in one grid (My Week & Attention span full width) ──
-  html += '<div class="mywork-columns">';
 
   // ── My Week — spans both columns ───────────────────────────
   html += '<div class="mywork-section mywork-full-width">';
