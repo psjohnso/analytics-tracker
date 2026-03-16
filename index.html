@@ -1964,6 +1964,8 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .mywork-greeting { font-size:22px; font-weight:800; color:var(--navy); margin-bottom:4px; }
 .mywork-subtitle { font-size:13px; color:var(--text-muted); margin-bottom:24px; }
 .mywork-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-bottom:28px; }
+.mywork-columns { display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start; }
+@media (max-width:860px) { .mywork-columns { grid-template-columns:1fr; } }
 .mywork-kpi { background:#fff; border:1px solid #E5E7EB; border-radius:10px; padding:16px; text-align:center; }
 .mywork-kpi-value { font-size:28px; font-weight:800; color:var(--navy); line-height:1.1; }
 .mywork-kpi-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; margin-top:4px; }
@@ -2853,7 +2855,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.9.0.0001';
+const APP_VERSION = '0.9.0.0002';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -7030,7 +7032,39 @@ function renderMyWork(area) {
   html += '<div class="mywork-kpi"><div class="mywork-kpi-value ' + utilClass + '">' + weekUtil + '%</div><div class="mywork-kpi-label">Utilization</div></div>';
   html += '</div>';
 
-  // ── Action Items ────────────────────────────────────────────
+  // ── My Week (Allocation Breakdown) — full width ─────────────
+  html += '<div class="mywork-section">';
+  html += '<div class="mywork-section-header">📅 My Week</div>';
+  if (!RESOURCES_DATA || !RESOURCES_DATA.people[name]) {
+    html += '<div class="mywork-empty">Resource data not available. Sign in and ensure your name matches the team roster.</div>';
+  } else if (weekAllocations.length === 0) {
+    html += '<div class="mywork-empty">No allocations recorded for this week.</div>';
+  } else {
+    var availableHours = Math.max(0, weekCapHours - weekAllocHours);
+    html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">';
+    html += '<strong>' + Math.round(weekAllocHours * 10) / 10 + 'h</strong> allocated of <strong>' + Math.round(weekCapHours * 10) / 10 + 'h</strong> capacity';
+    html += ' · <strong style="color:' + (availableHours > 0 ? '#22C55E' : '#EF4444') + ';">' + Math.round(availableHours * 10) / 10 + 'h</strong> available';
+    html += '</div>';
+    weekAllocations.forEach(function(a) {
+      var pct = weekCapHours > 0 ? (a.hours / weekCapHours * 100) : 0;
+      var barColor = pct > 40 ? 'var(--navy)' : pct > 20 ? '#3B82F6' : '#93C5FD';
+      html += '<div class="mywork-compact-row" style="cursor:default;">';
+      html += '<span class="mywork-compact-title">' + esc(a.project) + '</span>';
+      html += '<span style="font-size:12px;font-weight:700;color:var(--navy);white-space:nowrap;min-width:50px;text-align:right;">' + a.hours + 'h</span>';
+      html += '<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;min-width:35px;text-align:right;">' + Math.round(a.frac * 100) + '%</span>';
+      html += '<div class="mywork-alloc-bar"><div class="mywork-alloc-fill" style="width:' + Math.min(100, pct) + '%;background:' + barColor + ';"></div></div>';
+      html += '</div>';
+    });
+  }
+  html += '</div>';
+
+  // ── Two-column layout ───────────────────────────────────────
+  html += '<div class="mywork-columns">';
+
+  // ── LEFT COLUMN: Attention Needed + My Tasks ────────────────
+  html += '<div>';
+
+  // Action Items
   html += '<div class="mywork-section">';
   html += '<div class="mywork-section-header">⚡ Attention Needed <span class="badge-count">' + alerts.length + '</span></div>';
   if (alerts.length === 0) {
@@ -7052,7 +7086,54 @@ function renderMyWork(area) {
   }
   html += '</div>';
 
-  // ── My Projects ─────────────────────────────────────────────
+  // My Tasks
+  html += '<div class="mywork-section">';
+  html += '<div class="mywork-section-header">✅ My Tasks <span class="badge-count">' + myTasks.length + '</span></div>';
+  var taskStatusOrder = ['In Progress', 'Pending', 'Waiting for Response', 'On Hold', 'Complete', 'Canceled'];
+  var tasksByStatus = {};
+  myTasks.forEach(function(t) {
+    var s = t.status || 'Unknown';
+    if (!tasksByStatus[s]) tasksByStatus[s] = [];
+    tasksByStatus[s].push(t);
+  });
+  var hasTasks = false;
+  taskStatusOrder.forEach(function(status) {
+    var list = tasksByStatus[status];
+    if (!list || !list.length) return;
+    hasTasks = true;
+    list.sort(function(a, b) { return (a.due || '9999').localeCompare(b.due || '9999'); });
+    var statusColor = STATUS_COLOR(status);
+    var isCollapsed = status === 'Complete' || status === 'Canceled';
+    html += '<div style="margin-bottom:4px;margin-top:12px;font-size:11px;font-weight:700;color:' + statusColor + ';text-transform:uppercase;letter-spacing:0.06em;">' + esc(status) + ' (' + list.length + ')' + (isCollapsed ? ' <span style="font-weight:400;color:var(--text-muted);text-transform:none;letter-spacing:0;">— click to view</span>' : '') + '</div>';
+    var showList = isCollapsed ? list.slice(0, 3) : list;
+    showList.forEach(function(t) {
+      var isOverdue = t.due && t.due < todayStr && status !== 'Complete' && status !== 'Canceled';
+      var projTitle = '';
+      if (t.project_id) {
+        var proj = PROJECTS.find(function(x) { return x.id == t.project_id; });
+        if (proj) projTitle = proj.title;
+      }
+      if (!projTitle) projTitle = t.project || '';
+      html += '<div class="mywork-compact-row" onclick="openTask(' + t.idx + ')">';
+      html += '<span class="mywork-compact-badge" style="background:' + statusColor + '22;color:' + statusColor + ';">' + esc(status) + '</span>';
+      html += '<span class="mywork-compact-title">' + esc(t.title) + '</span>';
+      if (t.due) {
+        html += '<span style="font-size:11px;font-weight:600;white-space:nowrap;color:' + (isOverdue ? '#EF4444' : 'var(--text-muted)') + ';">' + (isOverdue ? '⚠ ' : '') + t.due + '</span>';
+      }
+      html += '</div>';
+    });
+    if (isCollapsed && list.length > 3) {
+      html += '<div class="mywork-empty" style="font-size:11px;padding:8px;">+ ' + (list.length - 3) + ' more ' + status.toLowerCase() + '</div>';
+    }
+  });
+  if (!hasTasks) html += '<div class="mywork-empty">No tasks assigned to you.</div>';
+  html += '</div>';
+
+  html += '</div>'; // close left column
+
+  // ── RIGHT COLUMN: My Projects ───────────────────────────────
+  html += '<div>';
+
   html += '<div class="mywork-section">';
   html += '<div class="mywork-section-header">📁 My Projects <span class="badge-count">' + myProjects.length + '</span></div>';
   var statusOrder = ['Active', 'Scheduled', 'On Hold', 'Future', 'Idea', 'Complete', 'Canceled'];
@@ -7086,76 +7167,8 @@ function renderMyWork(area) {
   if (!hasProjects) html += '<div class="mywork-empty">No projects assigned to you.</div>';
   html += '</div>';
 
-  // ── My Tasks ────────────────────────────────────────────────
-  html += '<div class="mywork-section">';
-  html += '<div class="mywork-section-header">✅ My Tasks <span class="badge-count">' + myTasks.length + '</span></div>';
-  var taskStatusOrder = ['In Progress', 'Pending', 'Waiting for Response', 'On Hold', 'Complete', 'Canceled'];
-  var tasksByStatus = {};
-  myTasks.forEach(function(t) {
-    var s = t.status || 'Unknown';
-    if (!tasksByStatus[s]) tasksByStatus[s] = [];
-    tasksByStatus[s].push(t);
-  });
-  var hasTasks = false;
-  taskStatusOrder.forEach(function(status) {
-    var list = tasksByStatus[status];
-    if (!list || !list.length) return;
-    hasTasks = true;
-    // Sort by due date within each status group
-    list.sort(function(a, b) { return (a.due || '9999').localeCompare(b.due || '9999'); });
-    var statusColor = STATUS_COLOR(status);
-    var isCollapsed = status === 'Complete' || status === 'Canceled';
-    html += '<div style="margin-bottom:4px;margin-top:12px;font-size:11px;font-weight:700;color:' + statusColor + ';text-transform:uppercase;letter-spacing:0.06em;">' + esc(status) + ' (' + list.length + ')' + (isCollapsed ? ' <span style="font-weight:400;color:var(--text-muted);text-transform:none;letter-spacing:0;">— click a task to view</span>' : '') + '</div>';
-    var showList = isCollapsed ? list.slice(0, 3) : list;
-    showList.forEach(function(t) {
-      var isOverdue = t.due && t.due < todayStr && status !== 'Complete' && status !== 'Canceled';
-      var projTitle = '';
-      if (t.project_id) {
-        var proj = PROJECTS.find(function(x) { return x.id == t.project_id; });
-        if (proj) projTitle = proj.title;
-      }
-      if (!projTitle) projTitle = t.project || '';
-      html += '<div class="mywork-compact-row" onclick="openTask(' + t.idx + ')">';
-      html += '<span class="mywork-compact-badge" style="background:' + statusColor + '22;color:' + statusColor + ';">' + esc(status) + '</span>';
-      html += '<span class="mywork-compact-title">' + esc(t.title) + '</span>';
-      if (projTitle) html += '<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;">' + esc(projTitle) + '</span>';
-      if (t.due) {
-        html += '<span style="font-size:11px;font-weight:600;white-space:nowrap;color:' + (isOverdue ? '#EF4444' : 'var(--text-muted)') + ';">' + (isOverdue ? '⚠ ' : '') + t.due + '</span>';
-      }
-      html += '</div>';
-    });
-    if (isCollapsed && list.length > 3) {
-      html += '<div class="mywork-empty" style="font-size:11px;padding:8px;">+ ' + (list.length - 3) + ' more ' + status.toLowerCase() + '</div>';
-    }
-  });
-  if (!hasTasks) html += '<div class="mywork-empty">No tasks assigned to you.</div>';
-  html += '</div>';
-
-  // ── My Week (Allocation Breakdown) ──────────────────────────
-  html += '<div class="mywork-section">';
-  html += '<div class="mywork-section-header">📅 My Week</div>';
-  if (!RESOURCES_DATA || !RESOURCES_DATA.people[name]) {
-    html += '<div class="mywork-empty">Resource data not available. Sign in and ensure your name matches the team roster.</div>';
-  } else if (weekAllocations.length === 0) {
-    html += '<div class="mywork-empty">No allocations recorded for this week.</div>';
-  } else {
-    var availableHours = Math.max(0, weekCapHours - weekAllocHours);
-    html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">';
-    html += '<strong>' + Math.round(weekAllocHours * 10) / 10 + 'h</strong> allocated of <strong>' + Math.round(weekCapHours * 10) / 10 + 'h</strong> capacity';
-    html += ' · <strong style="color:' + (availableHours > 0 ? '#22C55E' : '#EF4444') + ';">' + Math.round(availableHours * 10) / 10 + 'h</strong> available';
-    html += '</div>';
-    weekAllocations.forEach(function(a) {
-      var pct = weekCapHours > 0 ? (a.hours / weekCapHours * 100) : 0;
-      var barColor = pct > 40 ? 'var(--navy)' : pct > 20 ? '#3B82F6' : '#93C5FD';
-      html += '<div class="mywork-compact-row" style="cursor:default;">';
-      html += '<span class="mywork-compact-title">' + esc(a.project) + '</span>';
-      html += '<span style="font-size:12px;font-weight:700;color:var(--navy);white-space:nowrap;min-width:50px;text-align:right;">' + a.hours + 'h</span>';
-      html += '<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;min-width:35px;text-align:right;">' + Math.round(a.frac * 100) + '%</span>';
-      html += '<div class="mywork-alloc-bar"><div class="mywork-alloc-fill" style="width:' + Math.min(100, pct) + '%;background:' + barColor + ';"></div></div>';
-      html += '</div>';
-    });
-  }
-  html += '</div>';
+  html += '</div>'; // close right column
+  html += '</div>'; // close mywork-columns
 
   html += '</div>'; // close mywork-page
   area.innerHTML = html;
