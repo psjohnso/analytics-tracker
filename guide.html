@@ -117,6 +117,7 @@ li strong { color: var(--navy); }
   <a href="#getting-started">Getting Started</a>
   <a href="#navigation">Navigating the App</a>
   <a href="#overview-tab">Overview Tab</a>
+  <a href="#mywork-tab">My Work Tab</a>
   <a href="#projects-tab">Projects Tab</a>
   <a href="#tasks-tab">Tasks Tab</a>
   <a href="#resources-tab">Resources Tab</a>
@@ -185,7 +186,7 @@ li strong { color: var(--navy); }
 <p>Five cards at the top show your active project count, open task count, overdue tasks, tasks due this week, and your current week utilization percentage. Overdue and due-this-week counts highlight in red and yellow respectively when they need attention.</p>
 
 <h3>My Week</h3>
-<p>Directly below the KPIs, this section shows your allocation breakdown for the current week from the Resources data. It displays your work schedule type (5/8, 4/10, or 9/80), which pay period week you're in (A or B), your scheduled hours, and your RDO day if applicable. Below that, it shows hours and percentage allocated to each project, with a visual bar chart, plus your total allocated hours, capacity, and remaining availability.</p>
+<p>Directly below the KPIs, this section shows your allocation breakdown for the current week from the Resources data. It displays your work schedule type (5/8, 4/10, or 9/80), which pay period week you're in (A or B), your scheduled hours, and your RDO day if applicable. A daily hours bar shows your scheduled hours for each day of the current week (Mon–Fri), with days off marked as "OFF." Below that, it shows hours and percentage allocated to each project, with a visual bar chart, plus your total allocated hours, capacity, and remaining availability.</p>
 
 <h3>Two-Column Layout</h3>
 <p>Below Attention Needed, the remaining sections are arranged in two columns. The left column shows your Projects, while the right column shows your Tasks.</p>
@@ -208,6 +209,34 @@ li strong { color: var(--navy); }
 
 <div class="note-box">
   <strong>Name matching:</strong> The My Work tab matches your ArcGIS Online display name to the data. If your projects or tasks don't appear, ensure your display name in ArcGIS Online matches the name used in the project/task records (e.g., "Peter Johnson" not "pjohnson").
+</div>
+
+<h3>Time Tracking</h3>
+<p>Time tracking is an <strong>opt-in feature</strong> that must be enabled per employee by a team lead in the Settings tab. When enabled, a "⏱️ Time Tracking" panel appears in the My Work tab between the KPI cards and the My Week section.</p>
+
+<h4>How It Works</h4>
+<p>The system uses a <strong>start/stop timer</strong> model. To log time on a task:</p>
+<ul>
+  <li>Select a task from the dropdown (shows your In Progress, Waiting for Response, and On Hold tasks).</li>
+  <li>Click <strong>"▶ Start"</strong> to begin the timer.</li>
+  <li>Work on the task. The elapsed time updates automatically.</li>
+  <li>Click <strong>"⏹ Stop"</strong> when you're done. Hours are calculated automatically from the start and end times.</li>
+</ul>
+<p>You can run <strong>multiple timers simultaneously</strong> on different tasks. Active timers display with a green pulsing indicator and a live elapsed time counter.</p>
+
+<h4>Today's Log</h4>
+<p>Completed time entries for today appear below the timer controls, showing the task name, start/end times, and calculated hours. You can:</p>
+<ul>
+  <li><strong>✏️ Edit:</strong> Adjust start/end times and add notes (useful if you forgot to start or stop the timer).</li>
+  <li><strong>🗑 Delete:</strong> Remove an incorrect entry.</li>
+</ul>
+<p>Daily and weekly hour totals are displayed above the log.</p>
+
+<h4>Enabling Time Tracking</h4>
+<p>In the Settings tab, the team members table includes a <strong>⏱️ checkbox column</strong>. Check the box to enable time tracking for that employee; uncheck to disable it. Changes take effect immediately. Time entries already recorded are preserved even if tracking is disabled — they can be re-enabled at any time.</p>
+
+<div class="tip-box">
+  <strong>Pilot approach:</strong> Consider enabling time tracking for a few team members first to test the workflow, then roll it out to the full team once the process is established.
 </div>
 
 <!-- ═══════════════════════════════════════════════════ -->
@@ -358,7 +387,7 @@ li strong { color: var(--navy); }
   <li><strong>4/10:</strong> Four 10-hour days, 40 hours every week, with one regular day off (RDO).</li>
   <li><strong>9/80:</strong> Alternating weeks — Week A is 44 hours (four 9-hour days + one 8-hour day), Week B is 36 hours (four 9-hour days + one RDO). The pay period starts on Sunday, with December 28, 2025 as the Week A reference date.</li>
 </ul>
-<p>When you select a schedule type, the Week A and Week B hours auto-fill to the standard values. You can override them for non-standard arrangements. The RDO Day field specifies which day of the week the employee has off.</p>
+<p>When you select a schedule type, the daily hours grid auto-fills with the standard pattern for that schedule. For example, selecting "9/80" with a Friday RDO fills Week A as 9-9-9-9-8 and Week B as 9-9-9-9-0. You can override individual day values for non-standard arrangements. The weekly totals update automatically and are saved alongside the daily values. The RDO Day field specifies which day of the week the employee has off.</p>
 
 <h3>Managing Dropdown Lists</h3>
 <p>The <strong>Manage Dropdown Lists</strong> section at the bottom of the Settings tab lets you add or remove options from two key project form fields:</p>
@@ -447,9 +476,11 @@ li strong { color: var(--navy); }
   <tr><th>Service</th><th>Purpose</th><th>Key Fields</th></tr>
   <tr><td><strong>projects</strong></td><td>Analytics project records with metadata, dates, status, and assignments</td><td>title, status, priority, category, contact, start, end</td></tr>
   <tr><td><strong>tasks</strong></td><td>Individual work items linked to projects</td><td>title, status, assignee, due_date, project_id</td></tr>
-  <tr><td><strong>team_members</strong></td><td>Team roster with roles and capacity settings</td><td>name, role, team, skill, proj_pct</td></tr>
+  <tr><td><strong>team_members</strong></td><td>Team roster with roles, capacity, schedule, and time tracking opt-in</td><td>name, role, team, proj_pct, schedule_type, week1_hours, week2_hours, rdo_day, wk1_mon–wk2_fri, time_tracking</td></tr>
   <tr><td><strong>absences</strong></td><td>Per-person, per-week time off records</td><td>name, week_date, absence_hours</td></tr>
   <tr><td><strong>allocations</strong></td><td>Per-person, per-project, per-week allocation records</td><td>name, project, week_date, fraction, hours</td></tr>
+  <tr><td><strong>app_config</strong></td><td>Shared key-value config store for dropdown lists</td><td>config_key, config_value</td></tr>
+  <tr><td><strong>time_entries</strong></td><td>Employee time tracking records (start/stop per task per day)</td><td>name, task_idx, project_id, start_time, end_time, hours, work_date, notes</td></tr>
 </table>
 
 <div class="note-box">
@@ -460,7 +491,7 @@ li strong { color: var(--navy); }
 <p>The application uses a 52-week calendar year (2026) where each week starts on Sunday. Week dates are stored as Date Only fields in <code>YYYY-MM-DD</code> format. The week of January 4, 2026 is Week 1.</p>
 
 <h3>Data Flow</h3>
-<p>On page load, the application queries projects, tasks, team_members, absences, and allocations in parallel. The data is reconstructed into an in-memory structure used for all rendering. When changes are made (editing allocations, updating absences, managing team members), the application writes back to the appropriate REST service and updates local data immediately for a responsive UI.</p>
+<p>On page load, the application queries projects, tasks, team_members, absences, allocations, and app_config in parallel. The data is reconstructed into an in-memory structure used for all rendering. If the logged-in user has time tracking enabled, their time entries are also loaded. When changes are made (editing allocations, updating absences, managing team members, logging time), the application writes back to the appropriate REST service and updates local data immediately for a responsive UI.</p>
 
 <!-- ═══════════════════════════════════════════════════ -->
 <h2 id="access-control">Access Control & Permissions</h2>
@@ -472,7 +503,7 @@ li strong { color: var(--navy); }
 <p>Administrative privileges (Settings tab access, Idea promotion) are controlled by membership in a designated ArcGIS Online group (Team Leads). This is managed entirely through ArcGIS Online group membership — no application-level user management is needed.</p>
 
 <h3>Feature Service Permissions</h3>
-<p>Read and write access to the underlying feature services is controlled through ArcGIS Online sharing settings. The following services must have editing enabled: projects, tasks, team_members, absences, and allocations.</p>
+<p>Read and write access to the underlying feature services is controlled through ArcGIS Online sharing settings. The following services must have editing enabled: projects, tasks, team_members, absences, allocations, app_config, and time_entries.</p>
 
 <h3>Permission Summary</h3>
 <table class="guide-table">
@@ -485,6 +516,8 @@ li strong { color: var(--navy); }
   <tr><td>Edit allocations</td><td>✅ Yes</td><td>✅ Yes</td></tr>
   <tr><td>Manage team members</td><td>❌ No</td><td>✅ Yes</td></tr>
   <tr><td>Edit absences / time off</td><td>❌ No</td><td>✅ Yes</td></tr>
+  <tr><td>Enable/disable time tracking per employee</td><td>❌ No</td><td>✅ Yes</td></tr>
+  <tr><td>Log time entries (if enabled for them)</td><td>✅ Yes</td><td>✅ Yes</td></tr>
 </table>
 
 </main>

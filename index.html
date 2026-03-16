@@ -2004,6 +2004,10 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   font-family:Lato,sans-serif; text-align:center; transition:all 0.15s;
 }
 .mywork-expand-btn:hover { background:#E5E7EB; border-color:var(--navy); }
+.te-entry-row { display:flex; align-items:center; gap:10px; padding:8px 12px; background:#fff; border:1px solid #E5E7EB;
+  border-radius:8px; margin-bottom:6px; }
+.te-entry-row:hover { border-color:var(--navy); background:#F8FAFF; }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
 .settings-page { padding:20px 0; max-width:1100px; }
 .settings-section { margin-bottom:32px; }
 .settings-section-header { font-size:20px; font-weight:800; color:var(--navy); margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
@@ -2069,6 +2073,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .mf-label { font-size:12px; font-weight:700; color:#374151; margin-bottom:4px; display:block; text-transform:uppercase; letter-spacing:0.04em; }
 .mf-input { width:100%; padding:9px 12px; border:1.5px solid #D1D5DB; border-radius:7px; font-size:14px; font-family:Lato,sans-serif; margin-bottom:14px; box-sizing:border-box; }
 .mf-input:focus { outline:none; border-color:var(--navy); box-shadow:0 0 0 2px rgba(0,38,105,0.15); }
+.mf-daily-hr { text-align:center; padding:6px 2px !important; width:100%; box-sizing:border-box; font-size:13px; font-weight:600; }
 .mf-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:8px; }
 </style>
 </head>
@@ -2866,7 +2871,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.9.1.0002';
+const APP_VERSION = '0.9.2.0000';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -2874,6 +2879,8 @@ let TASKS = [];
 // RESOURCES_DATA is loaded from ArcGIS Online REST services at startup.
 // See loadResourcesData() for the query logic that reconstructs this object.
 let RESOURCES_DATA = null;
+let TIME_ENTRIES = [];          // Array of time entry records for the current user
+let _timeEntryTimerInterval = null; // Interval for updating running timers
 
 let currentTab = 'overview';
 let currentDetail = null; // {type:'project'|'task', id}
@@ -4408,6 +4415,7 @@ const ARCGIS_CONFIG = {
   allocationsUrl:   'https://services3.arcgis.com/9coHY2fvuFjG9HQX/ArcGIS/rest/services/allocations/FeatureServer/0',
   weeklyCapacityUrl:'https://services3.arcgis.com/9coHY2fvuFjG9HQX/ArcGIS/rest/services/weekly_capacity/FeatureServer/0',
   appConfigUrl:     'https://services3.arcgis.com/9coHY2fvuFjG9HQX/ArcGIS/rest/services/app_config/FeatureServer/0',
+  timeEntriesUrl:   'https://services3.arcgis.com/9coHY2fvuFjG9HQX/ArcGIS/rest/services/time_series/FeatureServer/0',
 };
 
 // ── ACCESS CONTROL ────────────────────────────────────────────────────
@@ -4895,6 +4903,11 @@ async function loadResourcesData() {
       week1_hours:      (ci('week1_hours') != null) ? ci('week1_hours') : 40,
       week2_hours:      (ci('week2_hours') != null) ? ci('week2_hours') : 40,
       rdo_day:          ci('rdo_day') || null,
+      wk1_mon: ci('wk1_mon') || 0, wk1_tue: ci('wk1_tue') || 0, wk1_wed: ci('wk1_wed') || 0,
+      wk1_thu: ci('wk1_thu') || 0, wk1_fri: ci('wk1_fri') || 0,
+      wk2_mon: ci('wk2_mon') || 0, wk2_tue: ci('wk2_tue') || 0, wk2_wed: ci('wk2_wed') || 0,
+      wk2_thu: ci('wk2_thu') || 0, wk2_fri: ci('wk2_fri') || 0,
+      time_tracking:    (ci('time_tracking') === 'true' || ci('time_tracking') === true) ? true : false,
       proj_cap:         new Array(N).fill(0),
       absences:         new Array(N).fill(0),
       allocations:      [],
@@ -5914,9 +5927,13 @@ function confirmDeleteTask(taskIdx) {
   if (loaded) {
     render();
   } else {
-    // If ArcGIS load fails, still render with empty data
-    // so the UI is visible (user can retry via Sync button)
     render();
+  }
+
+  // Step 3: Load time entries (requires _userFullName from step 1)
+  if (_userFullName && isTimeTrackingEnabled()) {
+    await loadTimeEntries();
+    render(); // re-render with time data
   }
 })();
 
@@ -6915,6 +6932,307 @@ async function removeListItem(listKey, idx) {
 //  MY WORK TAB
 // ══════════════════════════════════════════════════════════════════════
 
+// ══════════════════════════════════════════════════════════════════════
+//  TIME TRACKING
+// ══════════════════════════════════════════════════════════════════════
+
+function isTimeTrackingEnabled() {
+  if (!_userFullName || !RESOURCES_DATA || !RESOURCES_DATA.people[_userFullName]) return false;
+  return RESOURCES_DATA.people[_userFullName].time_tracking === true;
+}
+
+async function loadTimeEntries() {
+  if (!_userFullName || !isTimeTrackingEnabled()) { TIME_ENTRIES = []; return; }
+  try {
+    var features = await agolQuery(ARCGIS_CONFIG.timeEntriesUrl, "name='" + _userFullName.replace(/'/g, "''") + "'");
+    TIME_ENTRIES = features.map(function(f) {
+      var a = f.attributes;
+      return {
+        oid: a.OBJECTID || a.ObjectId || a.objectid,
+        name: a.name,
+        task_idx: a.task_idx,
+        project_id: a.project_id,
+        start_time: a.start_time, // epoch ms
+        end_time: a.end_time,     // epoch ms or null
+        hours: a.hours,
+        work_date: a.work_date,   // epoch ms
+        notes: a.notes || '',
+      };
+    });
+    console.log('[TimeTracking] Loaded', TIME_ENTRIES.length, 'entries for', _userFullName);
+  } catch (err) {
+    console.error('[TimeTracking] Load failed:', err);
+    TIME_ENTRIES = [];
+  }
+}
+
+function getActiveTimers() {
+  return TIME_ENTRIES.filter(function(e) { return !e.end_time; });
+}
+
+function getTodayEntries() {
+  var todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  var todayEnd = new Date(todayStart);
+  todayEnd.setDate(todayEnd.getDate() + 1);
+  return TIME_ENTRIES.filter(function(e) {
+    var d = e.work_date || e.start_time;
+    return d >= todayStart.getTime() && d < todayEnd.getTime();
+  });
+}
+
+function getWeekEntries() {
+  var now = new Date();
+  // Start of week (Monday)
+  var dayOfWeek = now.getDay();
+  var mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  var weekStart = new Date(now);
+  weekStart.setDate(weekStart.getDate() + mondayOffset);
+  weekStart.setHours(0, 0, 0, 0);
+  var weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+  return TIME_ENTRIES.filter(function(e) {
+    var d = e.work_date || e.start_time;
+    return d >= weekStart.getTime() && d < weekEnd.getTime();
+  });
+}
+
+async function startTimer(taskIdx) {
+  if (!_userFullName) return;
+  var task = TASKS.find(function(t) { return t.idx === taskIdx; });
+  if (!task) { alert('Task not found.'); return; }
+  var now = new Date();
+  var workDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  try {
+    var result = await agolApplyEdits(ARCGIS_CONFIG.timeEntriesUrl, {
+      adds: [{ attributes: {
+        name: _userFullName,
+        task_idx: taskIdx,
+        project_id: task.project_id || null,
+        start_time: now.getTime(),
+        end_time: null,
+        hours: null,
+        work_date: workDate.getTime(),
+        notes: '',
+      }}]
+    });
+    console.log('[TimeTracking] Started timer for task', taskIdx, result);
+    await loadTimeEntries();
+    renderMyWork(document.getElementById('content-area'));
+  } catch (err) {
+    console.error('[TimeTracking] Start timer failed:', err);
+    alert('Failed to start timer: ' + err.message);
+  }
+}
+
+async function stopTimer(oid) {
+  var entry = TIME_ENTRIES.find(function(e) { return e.oid === oid; });
+  if (!entry) return;
+  var now = new Date();
+  var hours = Math.round((now.getTime() - entry.start_time) / 3600000 * 100) / 100;
+  try {
+    await agolApplyEdits(ARCGIS_CONFIG.timeEntriesUrl, {
+      updates: [{ attributes: {
+        OBJECTID: oid,
+        end_time: now.getTime(),
+        hours: hours,
+      }}]
+    });
+    console.log('[TimeTracking] Stopped timer', oid, hours, 'hours');
+    await loadTimeEntries();
+    renderMyWork(document.getElementById('content-area'));
+  } catch (err) {
+    console.error('[TimeTracking] Stop timer failed:', err);
+    alert('Failed to stop timer: ' + err.message);
+  }
+}
+
+async function deleteTimeEntry(oid) {
+  if (!confirm('Delete this time entry?')) return;
+  try {
+    await agolApplyEdits(ARCGIS_CONFIG.timeEntriesUrl, { deletes: [oid] });
+    console.log('[TimeTracking] Deleted entry', oid);
+    await loadTimeEntries();
+    renderMyWork(document.getElementById('content-area'));
+  } catch (err) {
+    console.error('[TimeTracking] Delete failed:', err);
+    alert('Failed to delete entry: ' + err.message);
+  }
+}
+
+async function saveTimeEntryEdit(oid) {
+  var startEl = document.getElementById('te-start-' + oid);
+  var endEl = document.getElementById('te-end-' + oid);
+  var notesEl = document.getElementById('te-notes-' + oid);
+  if (!startEl) return;
+  var startVal = startEl.value; // datetime-local string
+  if (!startVal) { alert('Start time is required.'); return; }
+  var startMs = new Date(startVal).getTime();
+  var endMs = endEl && endEl.value ? new Date(endEl.value).getTime() : null;
+  var hours = endMs ? Math.round((endMs - startMs) / 3600000 * 100) / 100 : null;
+  if (hours !== null && hours < 0) { alert('End time must be after start time.'); return; }
+  var workDate = new Date(new Date(startVal).getFullYear(), new Date(startVal).getMonth(), new Date(startVal).getDate());
+  var attrs = {
+    OBJECTID: oid,
+    start_time: startMs,
+    end_time: endMs,
+    hours: hours,
+    work_date: workDate.getTime(),
+  };
+  if (notesEl) attrs.notes = notesEl.value || '';
+  try {
+    await agolApplyEdits(ARCGIS_CONFIG.timeEntriesUrl, { updates: [{ attributes: attrs }] });
+    console.log('[TimeTracking] Updated entry', oid);
+    await loadTimeEntries();
+    renderMyWork(document.getElementById('content-area'));
+  } catch (err) {
+    console.error('[TimeTracking] Edit failed:', err);
+    alert('Failed to save: ' + err.message);
+  }
+}
+
+function formatDuration(ms) {
+  var totalMin = Math.floor(ms / 60000);
+  var h = Math.floor(totalMin / 60);
+  var m = totalMin % 60;
+  return h + 'h ' + (m < 10 ? '0' : '') + m + 'm';
+}
+
+function formatTimeShort(epochMs) {
+  if (!epochMs) return '—';
+  var d = new Date(epochMs);
+  var h = d.getHours(); var m = d.getMinutes();
+  var ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return h + ':' + (m < 10 ? '0' : '') + m + ' ' + ampm;
+}
+
+function toDatetimeLocal(epochMs) {
+  if (!epochMs) return '';
+  var d = new Date(epochMs);
+  var pad = function(n) { return n < 10 ? '0' + n : n; };
+  return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) +
+    'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+function startTimerTick() {
+  if (_timeEntryTimerInterval) clearInterval(_timeEntryTimerInterval);
+  _timeEntryTimerInterval = setInterval(function() {
+    var activeTimers = getActiveTimers();
+    activeTimers.forEach(function(e) {
+      var el = document.getElementById('timer-elapsed-' + e.oid);
+      if (el) el.textContent = formatDuration(Date.now() - e.start_time);
+    });
+  }, 10000); // update every 10 seconds
+}
+
+function buildTimeTrackingPanel() {
+  var myTasks = getMyTasks();
+  var activeTimers = getActiveTimers();
+  var todayEntries = getTodayEntries().filter(function(e) { return e.end_time; }); // completed only
+  var weekEntries = getWeekEntries().filter(function(e) { return e.end_time; });
+  var todayHours = todayEntries.reduce(function(s, e) { return s + (e.hours || 0); }, 0);
+  var weekHours = weekEntries.reduce(function(s, e) { return s + (e.hours || 0); }, 0);
+
+  var html = '<div class="mywork-section mywork-full-width">';
+  html += '<div class="mywork-section-header">⏱️ Time Tracking</div>';
+
+  // Active timers
+  if (activeTimers.length > 0) {
+    html += '<div style="margin-bottom:14px;">';
+    activeTimers.forEach(function(e) {
+      var task = TASKS.find(function(t) { return t.idx === e.task_idx; });
+      var taskTitle = task ? task.title : 'Task #' + e.task_idx;
+      var projTitle = '';
+      if (task && task.project_id) {
+        var proj = PROJECTS.find(function(p) { return p.id === task.project_id; });
+        if (proj) projTitle = proj.title;
+      }
+      var elapsed = formatDuration(Date.now() - e.start_time);
+      html += '<div style="background:#EFF6FF;border:2px solid var(--navy);border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">';
+      html += '<div style="width:10px;height:10px;border-radius:50%;background:#22C55E;animation:pulse 1.5s infinite;flex-shrink:0;"></div>';
+      html += '<div style="flex:1;min-width:0;">';
+      html += '<div style="font-size:13px;font-weight:700;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(taskTitle) + '</div>';
+      if (projTitle) html += '<div style="font-size:11px;color:var(--text-muted);">' + esc(projTitle) + '</div>';
+      html += '<div style="font-size:11px;color:var(--text-muted);">Started ' + formatTimeShort(e.start_time) + '</div>';
+      html += '</div>';
+      html += '<div style="font-size:20px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;" id="timer-elapsed-' + e.oid + '">' + elapsed + '</div>';
+      html += '<button onclick="stopTimer(' + e.oid + ')" style="background:#EF4444;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">⏹ Stop</button>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  // Start new timer — task selector
+  var availableTasks = myTasks.filter(function(t) {
+    return t.status === 'In Progress' || t.status === 'Waiting for Response' || t.status === 'On Hold';
+  });
+  html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;">';
+  html += '<select id="te-task-select" class="mf-input" style="flex:1;margin-bottom:0;">';
+  html += '<option value="">Select a task to start timing…</option>';
+  availableTasks.forEach(function(t) {
+    var projLabel = '';
+    if (t.project_id) {
+      var proj = PROJECTS.find(function(p) { return p.id === t.project_id; });
+      if (proj) projLabel = ' — ' + proj.title;
+    }
+    html += '<option value="' + t.idx + '">' + esc(t.title + projLabel) + '</option>';
+  });
+  html += '</select>';
+  html += '<button onclick="var s=document.getElementById(\'te-task-select\');if(s.value)startTimer(parseInt(s.value));else alert(\'Select a task first.\');" style="background:var(--navy);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">▶ Start</button>';
+  html += '</div>';
+
+  // Today's summary
+  html += '<div style="display:flex;gap:16px;margin-bottom:12px;font-size:12px;color:var(--text-muted);">';
+  html += '<span><strong style="color:var(--navy);">' + Math.round(todayHours * 100) / 100 + 'h</strong> logged today</span>';
+  html += '<span><strong style="color:var(--navy);">' + Math.round(weekHours * 100) / 100 + 'h</strong> this week</span>';
+  html += '</div>';
+
+  // Today's completed entries
+  if (todayEntries.length > 0) {
+    todayEntries.sort(function(a, b) { return b.start_time - a.start_time; });
+    html += '<div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Today\'s Log</div>';
+    todayEntries.forEach(function(e) {
+      var task = TASKS.find(function(t) { return t.idx === e.task_idx; });
+      var taskTitle = task ? task.title : 'Task #' + e.task_idx;
+      var hrs = e.hours ? (Math.round(e.hours * 100) / 100) + 'h' : '—';
+      html += '<div class="te-entry-row" id="te-row-' + e.oid + '">';
+      html += '<div style="flex:1;min-width:0;">';
+      html += '<div style="font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(taskTitle) + '</div>';
+      html += '<div style="font-size:11px;color:var(--text-muted);">' + formatTimeShort(e.start_time) + ' → ' + formatTimeShort(e.end_time) + '</div>';
+      if (e.notes) html += '<div style="font-size:10px;color:var(--text-muted);font-style:italic;">' + esc(e.notes) + '</div>';
+      html += '</div>';
+      html += '<div style="font-size:14px;font-weight:800;color:var(--navy);white-space:nowrap;">' + hrs + '</div>';
+      html += '<button onclick="toggleEditTimeEntry(' + e.oid + ')" style="background:none;border:none;cursor:pointer;font-size:12px;padding:4px;">✏️</button>';
+      html += '<button onclick="deleteTimeEntry(' + e.oid + ')" style="background:none;border:none;cursor:pointer;font-size:12px;padding:4px;color:#EF4444;">🗑</button>';
+      html += '</div>';
+      // Inline edit form (hidden by default)
+      html += '<div id="te-edit-' + e.oid + '" style="display:none;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:10px 12px;margin-bottom:8px;">';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end;">';
+      html += '<div><label style="font-size:10px;font-weight:700;color:var(--text-muted);">START</label><input type="datetime-local" id="te-start-' + e.oid + '" class="mf-input" style="font-size:12px;margin-bottom:0;" value="' + toDatetimeLocal(e.start_time) + '"></div>';
+      html += '<div><label style="font-size:10px;font-weight:700;color:var(--text-muted);">END</label><input type="datetime-local" id="te-end-' + e.oid + '" class="mf-input" style="font-size:12px;margin-bottom:0;" value="' + toDatetimeLocal(e.end_time) + '"></div>';
+      html += '<div><label style="font-size:10px;font-weight:700;color:var(--text-muted);">NOTES</label><input type="text" id="te-notes-' + e.oid + '" class="mf-input" style="font-size:12px;margin-bottom:0;" value="' + esc(e.notes || '') + '" placeholder="Work description"></div>';
+      html += '</div>';
+      html += '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">';
+      html += '<button onclick="toggleEditTimeEntry(' + e.oid + ')" style="background:#F3F4F6;border:1px solid #D1D5DB;border-radius:6px;padding:4px 12px;font-size:11px;cursor:pointer;">Cancel</button>';
+      html += '<button onclick="saveTimeEntryEdit(' + e.oid + ')" style="background:var(--navy);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;">Save</button>';
+      html += '</div></div>';
+    });
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function toggleEditTimeEntry(oid) {
+  var el = document.getElementById('te-edit-' + oid);
+  if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  MY WORK TAB
+// ══════════════════════════════════════════════════════════════════════
+
 function getMyProjects() {
   if (!_userFullName) return [];
   const name = _userFullName;
@@ -7007,6 +7325,15 @@ function renderMyWork(area) {
       myPayWeek = (Math.floor(diffDays / 7) % 2 === 0) ? 'A' : 'B';
     }
     myScheduledHours = (myPayWeek === 'A') ? (p.week1_hours || 40) : (p.week2_hours || 40);
+    // Daily schedule for current week
+    var prefix = (myPayWeek === 'A') ? 'wk1_' : 'wk2_';
+    var myDailyHours = {
+      Mon: p[prefix + 'mon'] || 0,
+      Tue: p[prefix + 'tue'] || 0,
+      Wed: p[prefix + 'wed'] || 0,
+      Thu: p[prefix + 'thu'] || 0,
+      Fri: p[prefix + 'fri'] || 0,
+    };
     weekAllocations = (p.allocations || []).filter(function(a) {
       return a.fracs && a.fracs[cwIdx] > 0;
     }).map(function(a) {
@@ -7101,12 +7428,19 @@ function renderMyWork(area) {
   html += '<div class="mywork-kpi"><div class="mywork-kpi-value ' + utilClass + '">' + weekUtil + '%</div><div class="mywork-kpi-label">Utilization</div></div>';
   html += '</div>';
 
+  // ── Time Tracking panel (if enabled for this user) ─────────
+  if (isTimeTrackingEnabled()) {
+    html += buildTimeTrackingPanel();
+    startTimerTick();
+  }
+
   // ── My Week — spans both columns ───────────────────────────
   html += '<div class="mywork-section mywork-full-width">';
   html += '<div class="mywork-section-header">📅 My Week</div>';
   if (!RESOURCES_DATA || !RESOURCES_DATA.people[name]) {
     html += '<div class="mywork-empty">Resource data not available. Sign in and ensure your name matches the team roster.</div>';
-  } else if (weekAllocations.length === 0) {
+  } else {
+    // Schedule summary line
     html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">';
     html += '<strong>' + esc(myScheduleType) + '</strong> schedule';
     if (myPayWeek) html += ' · Week ' + myPayWeek + ' (' + myScheduledHours + 'h)';
@@ -7115,21 +7449,30 @@ function renderMyWork(area) {
       html += ' · RDO: ' + esc(myRdoDay) + (rdoThisWeek ? ' (this week)' : ' (next week)');
     }
     html += '</div>';
-    html += '<div class="mywork-empty">No allocations recorded for this week.</div>';
-  } else {
-    var availableHours = Math.max(0, weekCapHours - weekAllocHours);
-    html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">';
-    html += '<strong>' + esc(myScheduleType) + '</strong> schedule';
-    if (myPayWeek) html += ' · Week ' + myPayWeek + ' (' + myScheduledHours + 'h)';
-    if (myRdoDay) {
-      var rdoThisWeek2 = myScheduleType === '9/80' ? (myPayWeek === 'B') : true;
-      html += ' · RDO: ' + esc(myRdoDay) + (rdoThisWeek2 ? ' (this week)' : ' (next week)');
+
+    // Daily hours bar
+    if (typeof myDailyHours !== 'undefined') {
+      html += '<div style="display:flex;gap:6px;margin-bottom:12px;">';
+      ['Mon','Tue','Wed','Thu','Fri'].forEach(function(day) {
+        var hrs = myDailyHours[day] || 0;
+        var isOff = hrs === 0;
+        var bg = isOff ? '#F3F4F6' : 'var(--navy)';
+        var color = isOff ? 'var(--text-muted)' : '#fff';
+        var label = isOff ? 'OFF' : hrs + 'h';
+        html += '<div style="flex:1;text-align:center;padding:6px 4px;background:' + bg + ';color:' + color + ';border-radius:6px;font-size:11px;font-weight:700;">';
+        html += '<div style="font-size:10px;font-weight:600;opacity:0.7;margin-bottom:2px;">' + day + '</div>' + label + '</div>';
+      });
+      html += '</div>';
     }
-    html += '</div>';
-    html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">';
-    html += '<strong>' + Math.round(weekAllocHours * 10) / 10 + 'h</strong> allocated of <strong>' + Math.round(weekCapHours * 10) / 10 + 'h</strong> capacity';
-    html += ' · <strong style="color:' + (availableHours > 0 ? '#22C55E' : '#EF4444') + ';">' + Math.round(availableHours * 10) / 10 + 'h</strong> available';
-    html += '</div>';
+
+    if (weekAllocations.length === 0) {
+      html += '<div class="mywork-empty">No allocations recorded for this week.</div>';
+    } else {
+      var availableHours = Math.max(0, weekCapHours - weekAllocHours);
+      html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">';
+      html += '<strong>' + Math.round(weekAllocHours * 10) / 10 + 'h</strong> allocated of <strong>' + Math.round(weekCapHours * 10) / 10 + 'h</strong> capacity';
+      html += ' · <strong style="color:' + (availableHours > 0 ? '#22C55E' : '#EF4444') + ';">' + Math.round(availableHours * 10) / 10 + 'h</strong> available';
+      html += '</div>';
     weekAllocations.forEach(function(a) {
       var pct = weekCapHours > 0 ? (a.hours / weekCapHours * 100) : 0;
       var barColor = pct > 40 ? 'var(--navy)' : pct > 20 ? '#3B82F6' : '#93C5FD';
@@ -7140,7 +7483,8 @@ function renderMyWork(area) {
       html += '<div class="mywork-alloc-bar"><div class="mywork-alloc-fill" style="width:' + Math.min(100, pct) + '%;background:' + barColor + ';"></div></div>';
       html += '</div>';
     });
-  }
+    } // close else (has allocations)
+  } // close else (has RESOURCES_DATA)
   html += '</div>';
 
   // ── Attention Needed — spans both columns ───────────────────
@@ -7332,12 +7676,14 @@ function renderSettingsPage(area) {
     var p = people[name];
     var schedLabel = p.schedule_type || '5/8';
     if (p.rdo_day) schedLabel += ' · ' + p.rdo_day + ' off';
+    var ttChecked = p.time_tracking ? ' checked' : '';
     return '<tr>' +
       '<td style="font-weight:700;color:var(--navy);">' + esc(name) + '</td>' +
       '<td>' + esc(p.role) + '</td>' +
       '<td>' + esc(p.team) + '</td>' +
       '<td>' + Math.round(p.proj_pct * 100) + '%</td>' +
       '<td>' + esc(schedLabel) + '</td>' +
+      '<td style="text-align:center;"><input type="checkbox"' + ttChecked + ' onchange="toggleTimeTracking(\'' + name.replace(/'/g, "\\'") + '\', this.checked)" style="width:16px;height:16px;cursor:pointer;"></td>' +
       '<td style="text-align:right;">' +
         '<button class="settings-btn settings-btn-secondary" style="margin-right:4px;" onclick="openAbsenceEditor(\'' + name.replace(/'/g, "\\'") + '\')">📅 Absences</button>' +
         '<button class="settings-btn settings-btn-secondary" style="margin-right:4px;" onclick="openMemberForm(\'edit\',\'' + name.replace(/'/g, "\\'") + '\')">✏️ Edit</button>' +
@@ -7353,7 +7699,7 @@ function renderSettingsPage(area) {
         '<button class="settings-btn settings-btn-primary" onclick="openMemberForm(\'add\')">＋ Add Member</button>' +
       '</div>' +
       '<table class="member-table">' +
-        '<thead><tr><th>Name</th><th>Role</th><th>Team</th><th>Project %</th><th>Schedule</th><th style="text-align:right;">Actions</th></tr></thead>' +
+        '<thead><tr><th>Name</th><th>Role</th><th>Team</th><th>Project %</th><th>Schedule</th><th style="text-align:center;">⏱️</th><th style="text-align:right;">Actions</th></tr></thead>' +
         '<tbody>' + memberRows + '</tbody>' +
       '</table>' +
     '</div>';
@@ -7398,9 +7744,14 @@ function openMemberForm(mode, name) {
     document.getElementById('mf-skill').value = p.skill;
     document.getElementById('mf-proj-pct').value = Math.round(p.proj_pct * 100);
     document.getElementById('mf-schedule-type').value = p.schedule_type || '5/8';
-    document.getElementById('mf-week1-hours').value = p.week1_hours;
-    document.getElementById('mf-week2-hours').value = p.week2_hours;
     document.getElementById('mf-rdo-day').value = p.rdo_day || '';
+    // Daily hours
+    var days = ['mon','tue','wed','thu','fri'];
+    days.forEach(function(d) {
+      document.getElementById('mf-wk1-' + d).value = p['wk1_' + d] || 0;
+      document.getElementById('mf-wk2-' + d).value = p['wk2_' + d] || 0;
+    });
+    updateWeekTotals();
     // We need to find the OID for this member
     document.getElementById('mf-name').readOnly = true;
     document.getElementById('mf-name').style.background = '#F3F4F6';
@@ -7412,28 +7763,96 @@ function openMemberForm(mode, name) {
     document.getElementById('mf-skill').value = '';
     document.getElementById('mf-proj-pct').value = '';
     document.getElementById('mf-schedule-type').value = '5/8';
-    document.getElementById('mf-week1-hours').value = '40';
-    document.getElementById('mf-week2-hours').value = '40';
     document.getElementById('mf-rdo-day').value = '';
+    // Default daily hours for 5/8
+    var days2 = ['mon','tue','wed','thu','fri'];
+    days2.forEach(function(d) {
+      document.getElementById('mf-wk1-' + d).value = 8;
+      document.getElementById('mf-wk2-' + d).value = 8;
+    });
+    updateWeekTotals();
     document.getElementById('mf-name').readOnly = false;
     document.getElementById('mf-name').style.background = '';
   }
   document.getElementById('member-form-backdrop').classList.add('open');
 }
 
-// Auto-fill hours when schedule type changes
+// Auto-fill daily hours when schedule type changes
 function onScheduleTypeChange() {
   var type = document.getElementById('mf-schedule-type').value;
+  var rdo = document.getElementById('mf-rdo-day').value;
+  var days = ['mon','tue','wed','thu','fri'];
+  var rdoIdx = rdo ? ['Monday','Tuesday','Wednesday','Thursday','Friday'].indexOf(rdo) : -1;
+
   if (type === '5/8') {
-    document.getElementById('mf-week1-hours').value = 40;
-    document.getElementById('mf-week2-hours').value = 40;
+    days.forEach(function(d) {
+      document.getElementById('mf-wk1-' + d).value = 8;
+      document.getElementById('mf-wk2-' + d).value = 8;
+    });
     document.getElementById('mf-rdo-day').value = '';
   } else if (type === '4/10') {
-    document.getElementById('mf-week1-hours').value = 40;
-    document.getElementById('mf-week2-hours').value = 40;
+    days.forEach(function(d, i) {
+      var hrs = (i === rdoIdx) ? 0 : 10;
+      document.getElementById('mf-wk1-' + d).value = hrs;
+      document.getElementById('mf-wk2-' + d).value = hrs;
+    });
   } else if (type === '9/80') {
-    document.getElementById('mf-week1-hours').value = 44;
-    document.getElementById('mf-week2-hours').value = 36;
+    // Week A: four 9-hour days + one 8-hour day (the day before RDO)
+    // Week B: four 9-hour days + RDO off
+    days.forEach(function(d, i) {
+      if (i === rdoIdx) {
+        document.getElementById('mf-wk1-' + d).value = 8;
+        document.getElementById('mf-wk2-' + d).value = 0;
+      } else {
+        document.getElementById('mf-wk1-' + d).value = 9;
+        document.getElementById('mf-wk2-' + d).value = 9;
+      }
+    });
+  }
+  updateWeekTotals();
+}
+
+function updateWeekTotals() {
+  var days = ['mon','tue','wed','thu','fri'];
+  var wk1 = 0, wk2 = 0;
+  days.forEach(function(d) {
+    wk1 += parseFloat(document.getElementById('mf-wk1-' + d).value) || 0;
+    wk2 += parseFloat(document.getElementById('mf-wk2-' + d).value) || 0;
+  });
+  document.getElementById('mf-wk1-total').textContent = wk1;
+  document.getElementById('mf-wk2-total').textContent = wk2;
+}
+
+async function toggleTimeTracking(name, enabled) {
+  try {
+    var existing = await agolQuery(ARCGIS_CONFIG.teamMembersUrl, "name='" + name.replace(/'/g, "''") + "'");
+    if (existing.length === 0) { alert('Could not find record for ' + name); return; }
+    var oid = existing[0].attributes.OBJECTID || existing[0].attributes.ObjectId || existing[0].attributes.objectid;
+    var attrs = { OBJECTID: oid };
+    // Use case-insensitive field name detection
+    if (RESOURCES_DATA && RESOURCES_DATA._memberFieldNames) {
+      var fieldNames = RESOURCES_DATA._memberFieldNames;
+      var fn = fieldNames.find(function(f) { return f.toLowerCase() === 'time_tracking'; });
+      if (fn) attrs[fn] = enabled ? 'true' : 'false';
+      else { console.warn('[Settings] time_tracking field not found on service'); return; }
+    } else {
+      attrs.time_tracking = enabled ? 'true' : 'false';
+    }
+    var result = await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, { updates: [{ attributes: attrs }] });
+    console.log('[Settings] Time tracking for', name, ':', enabled, result);
+    // Update local data
+    if (RESOURCES_DATA && RESOURCES_DATA.people[name]) {
+      RESOURCES_DATA.people[name].time_tracking = enabled;
+    }
+    // Reload time entries if toggling self
+    if (name === _userFullName) {
+      if (enabled) await loadTimeEntries();
+      else TIME_ENTRIES = [];
+      render();
+    }
+  } catch (err) {
+    console.error('[Settings] Toggle time tracking failed:', err);
+    alert('Failed to update time tracking: ' + err.message);
   }
 }
 
@@ -7448,10 +7867,21 @@ async function saveMemberForm() {
   var skill = document.getElementById('mf-skill').value.trim();
   var projPct = parseFloat(document.getElementById('mf-proj-pct').value) || 0;
   var scheduleType = document.getElementById('mf-schedule-type').value || '5/8';
-  var week1Hours = parseFloat(document.getElementById('mf-week1-hours').value) || 40;
-  var week2Hours = parseFloat(document.getElementById('mf-week2-hours').value) || 40;
   var rdoDay = document.getElementById('mf-rdo-day').value || null;
   var origName = document.getElementById('mf-name').dataset.origName || '';
+
+  // Collect daily hours and compute weekly totals
+  var days = ['mon','tue','wed','thu','fri'];
+  var dailyHours = {};
+  var week1Hours = 0, week2Hours = 0;
+  days.forEach(function(d) {
+    var v1 = parseFloat(document.getElementById('mf-wk1-' + d).value) || 0;
+    var v2 = parseFloat(document.getElementById('mf-wk2-' + d).value) || 0;
+    dailyHours['wk1_' + d] = v1;
+    dailyHours['wk2_' + d] = v2;
+    week1Hours += v1;
+    week2Hours += v2;
+  });
 
   if (!name) { alert('Name is required.'); return; }
   if (projPct < 0 || projPct > 100) { alert('Project % must be 0–100.'); return; }
@@ -7464,8 +7894,7 @@ async function saveMemberForm() {
     proj_pct: projPct / 100,
   };
 
-  // Only include schedule fields if the service supports them
-  // Check against field names stored during initial data load
+  // Only include schedule/daily fields if the service supports them
   if (RESOURCES_DATA && RESOURCES_DATA._memberFieldNames) {
     var fieldNames = RESOURCES_DATA._memberFieldNames;
     var fn = function(target) { return fieldNames.find(function(f) { return f.toLowerCase() === target.toLowerCase(); }) || null; };
@@ -7475,8 +7904,13 @@ async function saveMemberForm() {
       var w1 = fn('week1_hours'); if (w1) memberAttrs[w1] = week1Hours;
       var w2 = fn('week2_hours'); if (w2) memberAttrs[w2] = week2Hours;
       var rd = fn('rdo_day'); if (rd) memberAttrs[rd] = rdoDay;
+      // Daily hours fields
+      Object.keys(dailyHours).forEach(function(key) {
+        var field = fn(key);
+        if (field) memberAttrs[field] = dailyHours[key];
+      });
     } else {
-      console.warn('[Settings] Schedule fields not found on team_members service. Add schedule_type, week1_hours, week2_hours, rdo_day fields.');
+      console.warn('[Settings] Schedule fields not found on team_members service.');
     }
   }
 
@@ -7772,32 +8206,56 @@ async function absValueChanged(input) {
     <label class="mf-label">Project Time Allocation (%)</label>
     <input class="mf-input" id="mf-proj-pct" type="number" min="0" max="100" step="1" placeholder="e.g. 70">
     <label class="mf-label">Work Schedule</label>
-    <select class="mf-input" id="mf-schedule-type" onchange="onScheduleTypeChange()">
-      <option value="5/8">5/8 — Five 8-hour days (40h/week)</option>
-      <option value="4/10">4/10 — Four 10-hour days (40h/week)</option>
-      <option value="9/80">9/80 — 44h Week A / 36h Week B</option>
-    </select>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-      <div>
-        <label class="mf-label">Week A Hours</label>
-        <input class="mf-input" id="mf-week1-hours" type="number" min="0" max="60" step="1" placeholder="40">
-      </div>
-      <div>
-        <label class="mf-label">Week B Hours</label>
-        <input class="mf-input" id="mf-week2-hours" type="number" min="0" max="60" step="1" placeholder="40">
-      </div>
-      <div>
-        <label class="mf-label">RDO Day</label>
-        <select class="mf-input" id="mf-rdo-day">
-          <option value="">None</option>
-          <option value="Monday">Monday</option>
-          <option value="Tuesday">Tuesday</option>
-          <option value="Wednesday">Wednesday</option>
-          <option value="Thursday">Thursday</option>
-          <option value="Friday">Friday</option>
-        </select>
-      </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+      <select class="mf-input" id="mf-schedule-type" onchange="onScheduleTypeChange()" style="margin-bottom:0;">
+        <option value="5/8">5/8 — Five 8-hour days</option>
+        <option value="4/10">4/10 — Four 10-hour days</option>
+        <option value="9/80">9/80 — Alternating 44h/36h</option>
+      </select>
+      <select class="mf-input" id="mf-rdo-day" style="margin-bottom:0;">
+        <option value="">No RDO</option>
+        <option value="Monday">RDO: Monday</option>
+        <option value="Tuesday">RDO: Tuesday</option>
+        <option value="Wednesday">RDO: Wednesday</option>
+        <option value="Thursday">RDO: Thursday</option>
+        <option value="Friday">RDO: Friday</option>
+      </select>
     </div>
+    <label class="mf-label">Daily Work Hours</label>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">Enter the number of hours scheduled for each day. Totals update automatically.</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px;">
+      <thead>
+        <tr style="background:#F8F9FA;">
+          <th style="padding:6px 8px;text-align:left;font-weight:700;color:var(--navy);font-size:11px;"></th>
+          <th style="padding:6px 4px;text-align:center;font-weight:700;color:var(--navy);font-size:11px;">Mon</th>
+          <th style="padding:6px 4px;text-align:center;font-weight:700;color:var(--navy);font-size:11px;">Tue</th>
+          <th style="padding:6px 4px;text-align:center;font-weight:700;color:var(--navy);font-size:11px;">Wed</th>
+          <th style="padding:6px 4px;text-align:center;font-weight:700;color:var(--navy);font-size:11px;">Thu</th>
+          <th style="padding:6px 4px;text-align:center;font-weight:700;color:var(--navy);font-size:11px;">Fri</th>
+          <th style="padding:6px 8px;text-align:center;font-weight:800;color:var(--navy);font-size:11px;">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding:4px 8px;font-weight:700;color:var(--navy);font-size:11px;">Week A</td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk1-mon" type="number" min="0" max="12" step="0.5" oninput="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk1-tue" type="number" min="0" max="12" step="0.5" oninput="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk1-wed" type="number" min="0" max="12" step="0.5" oninput="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk1-thu" type="number" min="0" max="12" step="0.5" oninput="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk1-fri" type="number" min="0" max="12" step="0.5" oninput="updateWeekTotals()"></td>
+          <td style="padding:4px 8px;text-align:center;font-weight:800;color:var(--navy);" id="mf-wk1-total">0</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 8px;font-weight:700;color:var(--navy);font-size:11px;">Week B</td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk2-mon" type="number" min="0" max="12" step="0.5" oninput="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk2-tue" type="number" min="0" max="12" step="0.5" oninput="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk2-wed" type="number" min="0" max="12" step="0.5" oninput="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk2-thu" type="number" min="0" max="12" step="0.5" oninput="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk2-fri" type="number" min="0" max="12" step="0.5" oninput="updateWeekTotals()"></td>
+          <td style="padding:4px 8px;text-align:center;font-weight:800;color:var(--navy);" id="mf-wk2-total">0</td>
+        </tr>
+      </tbody>
+    </table>
     <div class="mf-actions">
       <button class="settings-btn settings-btn-secondary" onclick="closeMemberForm()">Cancel</button>
       <button class="settings-btn settings-btn-primary" onclick="saveMemberForm()">Save</button>
