@@ -2871,7 +2871,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.9.2.0000';
+const APP_VERSION = '0.9.2.0002';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -6947,6 +6947,13 @@ async function loadTimeEntries() {
     var features = await agolQuery(ARCGIS_CONFIG.timeEntriesUrl, "name='" + _userFullName.replace(/'/g, "''") + "'");
     TIME_ENTRIES = features.map(function(f) {
       var a = f.attributes;
+      // work_date is esriFieldTypeDateOnly — comes as "YYYY-MM-DD" string
+      var wd = a.work_date || '';
+      // If it came as epoch ms (some ArcGIS versions), convert to string
+      if (typeof wd === 'number') {
+        var d = new Date(wd);
+        wd = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      }
       return {
         oid: a.OBJECTID || a.ObjectId || a.objectid,
         name: a.name,
@@ -6955,7 +6962,7 @@ async function loadTimeEntries() {
         start_time: a.start_time, // epoch ms
         end_time: a.end_time,     // epoch ms or null
         hours: a.hours,
-        work_date: a.work_date,   // epoch ms
+        work_date: wd,            // "YYYY-MM-DD" string
         notes: a.notes || '',
       };
     });
@@ -6971,29 +6978,28 @@ function getActiveTimers() {
 }
 
 function getTodayEntries() {
-  var todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  var todayEnd = new Date(todayStart);
-  todayEnd.setDate(todayEnd.getDate() + 1);
+  var now = new Date();
+  var todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
   return TIME_ENTRIES.filter(function(e) {
-    var d = e.work_date || e.start_time;
-    return d >= todayStart.getTime() && d < todayEnd.getTime();
+    return e.work_date === todayStr;
   });
 }
 
 function getWeekEntries() {
   var now = new Date();
-  // Start of week (Monday)
   var dayOfWeek = now.getDay();
   var mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
   var weekStart = new Date(now);
   weekStart.setDate(weekStart.getDate() + mondayOffset);
   weekStart.setHours(0, 0, 0, 0);
-  var weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 7);
+  var dates = [];
+  for (var i = 0; i < 7; i++) {
+    var d = new Date(weekStart);
+    d.setDate(d.getDate() + i);
+    dates.push(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'));
+  }
   return TIME_ENTRIES.filter(function(e) {
-    var d = e.work_date || e.start_time;
-    return d >= weekStart.getTime() && d < weekEnd.getTime();
+    return dates.indexOf(e.work_date) >= 0;
   });
 }
 
@@ -7002,7 +7008,7 @@ async function startTimer(taskIdx) {
   var task = TASKS.find(function(t) { return t.idx === taskIdx; });
   if (!task) { alert('Task not found.'); return; }
   var now = new Date();
-  var workDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var workDateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
   try {
     var result = await agolApplyEdits(ARCGIS_CONFIG.timeEntriesUrl, {
       adds: [{ attributes: {
@@ -7012,7 +7018,7 @@ async function startTimer(taskIdx) {
         start_time: now.getTime(),
         end_time: null,
         hours: null,
-        work_date: workDate.getTime(),
+        work_date: workDateStr,
         notes: '',
       }}]
     });
@@ -7071,13 +7077,14 @@ async function saveTimeEntryEdit(oid) {
   var endMs = endEl && endEl.value ? new Date(endEl.value).getTime() : null;
   var hours = endMs ? Math.round((endMs - startMs) / 3600000 * 100) / 100 : null;
   if (hours !== null && hours < 0) { alert('End time must be after start time.'); return; }
-  var workDate = new Date(new Date(startVal).getFullYear(), new Date(startVal).getMonth(), new Date(startVal).getDate());
+  var startD = new Date(startVal);
+  var workDateStr = startD.getFullYear() + '-' + String(startD.getMonth()+1).padStart(2,'0') + '-' + String(startD.getDate()).padStart(2,'0');
   var attrs = {
     OBJECTID: oid,
     start_time: startMs,
     end_time: endMs,
     hours: hours,
-    work_date: workDate.getTime(),
+    work_date: workDateStr,
   };
   if (notesEl) attrs.notes = notesEl.value || '';
   try {
@@ -7833,8 +7840,12 @@ async function toggleTimeTracking(name, enabled) {
     if (RESOURCES_DATA && RESOURCES_DATA._memberFieldNames) {
       var fieldNames = RESOURCES_DATA._memberFieldNames;
       var fn = fieldNames.find(function(f) { return f.toLowerCase() === 'time_tracking'; });
-      if (fn) attrs[fn] = enabled ? 'true' : 'false';
-      else { console.warn('[Settings] time_tracking field not found on service'); return; }
+      if (fn) {
+        attrs[fn] = enabled ? 'true' : 'false';
+      } else {
+        alert('The time_tracking field has not been added to the team_members service yet. Please add it as a String field (length 10) in ArcGIS Online.');
+        return;
+      }
     } else {
       attrs.time_tracking = enabled ? 'true' : 'false';
     }
@@ -7844,15 +7855,24 @@ async function toggleTimeTracking(name, enabled) {
     if (RESOURCES_DATA && RESOURCES_DATA.people[name]) {
       RESOURCES_DATA.people[name].time_tracking = enabled;
     }
-    // Reload time entries if toggling self
-    if (name === _userFullName) {
-      if (enabled) await loadTimeEntries();
-      else TIME_ENTRIES = [];
-      render();
-    }
   } catch (err) {
     console.error('[Settings] Toggle time tracking failed:', err);
     alert('Failed to update time tracking: ' + err.message);
+    return;
+  }
+  // Reload time entries if toggling self (separate try/catch)
+  if (name === _userFullName) {
+    if (enabled) {
+      try {
+        await loadTimeEntries();
+      } catch (err2) {
+        console.warn('[Settings] Could not load time entries:', err2);
+        // Don't alert — the toggle saved, entries will load on next page refresh
+      }
+    } else {
+      TIME_ENTRIES = [];
+    }
+    render();
   }
 }
 
