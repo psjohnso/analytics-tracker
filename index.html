@@ -2866,7 +2866,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.9.1.0000';
+const APP_VERSION = '0.9.1.0002';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -4880,15 +4880,21 @@ async function loadResourcesData() {
     var a = f.attributes;
     var nm = a.name;
     if (!nm) return;
+    // Case-insensitive field lookup helper (ArcGIS may alter field name casing)
+    var keys = Object.keys(a);
+    var ci = function(target) {
+      var found = keys.find(function(k) { return k.toLowerCase() === target.toLowerCase(); });
+      return found ? a[found] : undefined;
+    };
     people[nm] = {
       role:             a.role || '',
       team:             a.team || '',
-      skill:            a.skill || '',
+      skill:            a.skill || ci('skill') || '',
       proj_pct:         a.proj_pct || 0,
-      schedule_type:    a.schedule_type || '5/8',
-      week1_hours:      (a.week1_hours != null) ? a.week1_hours : 40,
-      week2_hours:      (a.week2_hours != null) ? a.week2_hours : 40,
-      rdo_day:          a.rdo_day || null,
+      schedule_type:    ci('schedule_type') || '5/8',
+      week1_hours:      (ci('week1_hours') != null) ? ci('week1_hours') : 40,
+      week2_hours:      (ci('week2_hours') != null) ? ci('week2_hours') : 40,
+      rdo_day:          ci('rdo_day') || null,
       proj_cap:         new Array(N).fill(0),
       absences:         new Array(N).fill(0),
       allocations:      [],
@@ -4975,7 +4981,7 @@ async function loadResourcesData() {
     }
   });
 
-  RESOURCES_DATA = { weeks: weeks, people: people };
+  RESOURCES_DATA = { weeks: weeks, people: people, _memberFieldNames: memberFeatures.length ? Object.keys(memberFeatures[0].attributes) : [] };
   console.log('[Resources] Loaded:', memberFeatures.length, 'members,', absenceFeatures.length, 'absence records,',
     allocFeatures.length, 'allocation records');
 }
@@ -7456,11 +7462,23 @@ async function saveMemberForm() {
     team: team,
     skill: skill,
     proj_pct: projPct / 100,
-    schedule_type: scheduleType,
-    week1_hours: week1Hours,
-    week2_hours: week2Hours,
-    rdo_day: rdoDay,
   };
+
+  // Only include schedule fields if the service supports them
+  // Check against field names stored during initial data load
+  if (RESOURCES_DATA && RESOURCES_DATA._memberFieldNames) {
+    var fieldNames = RESOURCES_DATA._memberFieldNames;
+    var fn = function(target) { return fieldNames.find(function(f) { return f.toLowerCase() === target.toLowerCase(); }) || null; };
+    var stField = fn('schedule_type');
+    if (stField) {
+      memberAttrs[stField] = scheduleType;
+      var w1 = fn('week1_hours'); if (w1) memberAttrs[w1] = week1Hours;
+      var w2 = fn('week2_hours'); if (w2) memberAttrs[w2] = week2Hours;
+      var rd = fn('rdo_day'); if (rd) memberAttrs[rd] = rdoDay;
+    } else {
+      console.warn('[Settings] Schedule fields not found on team_members service. Add schedule_type, week1_hours, week2_hours, rdo_day fields.');
+    }
+  }
 
   var isEdit = origName !== '' && origName === name;
 
@@ -7469,9 +7487,9 @@ async function saveMemberForm() {
       // Find existing OID
       var existing = await agolQuery(ARCGIS_CONFIG.teamMembersUrl, "name='" + name.replace(/'/g, "''") + "'");
       if (existing.length === 0) { alert('Could not find existing record for ' + name); return; }
-      var oid = existing[0].attributes.ObjectId || existing[0].attributes.OBJECTID || existing[0].attributes.objectid || existing[0].attributes.FID;
-      memberAttrs.ObjectId = oid;
+      var oid = existing[0].attributes.OBJECTID || existing[0].attributes.ObjectId || existing[0].attributes.objectid || existing[0].attributes.FID;
       memberAttrs.OBJECTID = oid;
+      console.log('[Settings] Saving member update:', JSON.stringify(memberAttrs));
       var result = await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, {
         updates: [{ attributes: memberAttrs }]
       });
@@ -7482,6 +7500,7 @@ async function saveMemberForm() {
         alert('A team member named "' + name + '" already exists.');
         return;
       }
+      console.log('[Settings] Saving new member:', JSON.stringify(memberAttrs));
       var result = await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, {
         adds: [{ attributes: memberAttrs }]
       });
