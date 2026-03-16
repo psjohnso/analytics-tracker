@@ -2871,7 +2871,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.9.3.0001';
+const APP_VERSION = '0.9.3.0002';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -4905,14 +4905,17 @@ async function loadResourcesData() {
       var found = keys.find(function(k) { return k.toLowerCase() === target.toLowerCase(); });
       return found ? a[found] : undefined;
     };
-    // TimeOnly field helper: ArcGIS returns ms since midnight, convert to "HH:MM"
+    // TimeOnly field helper: ArcGIS may return ms since midnight OR "HH:MM:SS" string
     var toHHMM = function(val) {
       if (val == null || val === '') return null;
-      if (typeof val === 'string' && val.indexOf(':') >= 0) return val; // already "HH:MM"
-      var totalMin = Math.floor(val / 60000);
-      var h = Math.floor(totalMin / 60);
-      var m = totalMin % 60;
-      return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+      if (typeof val === 'string' && val.indexOf(':') >= 0) return val.slice(0, 5); // "HH:MM:SS" → "HH:MM"
+      if (typeof val === 'number') {
+        var totalMin = Math.floor(val / 60000);
+        var h = Math.floor(totalMin / 60);
+        var m = totalMin % 60;
+        return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+      }
+      return null;
     };
 
     var dayKeys = ['mon','tue','wed','thu','fri'];
@@ -8056,18 +8059,18 @@ async function saveMemberForm() {
 
   // Collect start/end times and convert "HH:MM" to ms since midnight for TimeOnly fields
   var days = ['mon','tue','wed','thu','fri'];
-  function hhmmToMs(val) {
+  function hhmmToTimeStr(val) {
     if (!val) return null;
-    var parts = val.split(':');
-    return (parseInt(parts[0]) * 3600000) + (parseInt(parts[1]) * 60000);
+    // HTML time inputs return "HH:MM" — append :00 for seconds
+    return val.length === 5 ? val + ':00' : val;
   }
   var scheduleFields = {};
   ['wk1','wk2'].forEach(function(wk) {
     days.forEach(function(d) {
       var startEl = document.getElementById('mf-' + wk + '-' + d + '-start');
       var endEl = document.getElementById('mf-' + wk + '-' + d + '-end');
-      scheduleFields[wk + '_' + d + '_start'] = startEl ? hhmmToMs(startEl.value) : null;
-      scheduleFields[wk + '_' + d + '_end'] = endEl ? hhmmToMs(endEl.value) : null;
+      scheduleFields[wk + '_' + d + '_start'] = startEl ? hhmmToTimeStr(startEl.value) : null;
+      scheduleFields[wk + '_' + d + '_end'] = endEl ? hhmmToTimeStr(endEl.value) : null;
     });
   });
 
