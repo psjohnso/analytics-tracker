@@ -2871,7 +2871,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.9.2.0004';
+const APP_VERSION = '0.9.2.0005';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -7497,7 +7497,10 @@ function renderMyWork(area) {
     weekAllocations.forEach(function(a) {
       var pct = weekCapHours > 0 ? (a.hours / weekCapHours * 100) : 0;
       var barColor = pct > 40 ? 'var(--navy)' : pct > 20 ? '#3B82F6' : '#93C5FD';
-      html += '<div class="mywork-compact-row" style="cursor:default;">';
+      var proj = PROJECTS.find(function(p) { return p.title === a.project; });
+      var onclick = proj ? ' onclick="openProject(' + proj.objectId + ')"' : '';
+      var cursor = proj ? 'pointer' : 'default';
+      html += '<div class="mywork-compact-row" style="cursor:' + cursor + ';"' + onclick + '>';
       html += '<span class="mywork-compact-title"><span style="font-size:10px;font-weight:700;color:var(--text-muted);margin-right:4px;">Project:</span>' + esc(a.project) + '</span>';
       html += '<span style="font-size:12px;font-weight:700;color:var(--navy);white-space:nowrap;min-width:50px;text-align:right;">' + a.hours + 'h</span>';
       html += '<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;min-width:35px;text-align:right;">' + Math.round(a.frac * 100) + '%</span>';
