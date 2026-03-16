@@ -2876,7 +2876,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.9.3.0006';
+const APP_VERSION = '0.9.3.0007';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -3993,7 +3993,13 @@ function openAllocEditor(name) {
     draftByName[proj.title] = { project: proj.title, status: proj.status, fracs: new Array(N2).fill(0) };
   });
   editorDraft[name] = Object.values(draftByName);
-  editorDraft[name].sort(function(a, b) { return a.project.localeCompare(b.project); });
+  var aeStatusOrder = { 'Active': 0, 'On Hold': 1, 'Scheduled': 2, 'Future': 3, 'Idea': 4 };
+  editorDraft[name].sort(function(a, b) {
+    var sa = aeStatusOrder[a.status] != null ? aeStatusOrder[a.status] : 9;
+    var sb = aeStatusOrder[b.status] != null ? aeStatusOrder[b.status] : 9;
+    if (sa !== sb) return sa - sb;
+    return a.project.localeCompare(b.project);
+  });
 
   document.getElementById('editor-person-title').textContent = name;
   document.getElementById('editor-person-role').textContent =
@@ -6079,7 +6085,8 @@ function renderProjectDetail(id) {
   const relTasks = TASKS.filter(t => t.project_id === p.id);
   const statusColor = STATUS_COLOR(p.status) || '#9CA3AF';
   const returnTab = currentDetail._returnTab || 'projects';
-  const backLabel = returnTab === 'mywork' ? '← Back to My Work' : '← Back to Projects';
+  const backLabels = { mywork: '← Back to My Work', resources: '← Back to Resources', tasks: '← Back to Tasks', forecast: '← Back to Forecast' };
+  const backLabel = backLabels[returnTab] || '← Back to Projects';
 
   const allMembers = (() => {
     const arr = [p.contact, ...(p.other_members||'').split(',').map(s=>s.trim())].filter(Boolean);
@@ -6170,8 +6177,9 @@ function renderTaskDetail(idx) {
   const proj = PROJECTS.find(x => x.id === t.project_id);
   const taskReturnTab = currentDetail._returnTab || 'tasks';
   const taskFromProject = currentDetail._fromProject;
+  const taskBackLabels = { mywork: '← Back to My Work', resources: '← Back to Resources', projects: '← Back to Projects', forecast: '← Back to Forecast' };
   const taskBackLabel = taskFromProject ? '← Back to Project'
-    : taskReturnTab === 'mywork' ? '← Back to My Work' : '← Back';
+    : taskBackLabels[taskReturnTab] || '← Back';
 
   return `<div class="detail-page">
     <div class="detail-hero task-hero" style="background:linear-gradient(135deg, var(--orange) 0%, #A03500 55%, ${statusColor}cc 100%);">
