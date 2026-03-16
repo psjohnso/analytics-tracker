@@ -2876,7 +2876,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.9.3.0004';
+const APP_VERSION = '0.9.3.0005';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -6961,7 +6961,7 @@ async function saveConfigKey(key, valueArray) {
   }
   try {
     await agolApplyEdits(ARCGIS_CONFIG.appConfigUrl, {
-      updates: [{ attributes: { ObjectId: oid, config_value: jsonValue } }]
+      updates: [{ attributes: { OBJECTID: oid, config_value: jsonValue } }]
     });
     console.log('[Config] Saved "' + key + '" to ArcGIS Online');
     return true;
@@ -8348,11 +8348,11 @@ async function absValueChanged(input) {
       "name='" + name.replace(/'/g, "''") + "' AND week_date='" + weekDate + "'");
 
     if (existing.length > 0) {
-      var oid = existing[0].attributes.ObjectId || existing[0].attributes.OBJECTID || existing[0].attributes.objectid || existing[0].attributes.FID;
+      var oid = existing[0].attributes.OBJECTID || existing[0].attributes.ObjectId || existing[0].attributes.objectid || existing[0].attributes.FID;
       if (hrs > 0) {
         // Update existing
         await agolApplyEdits(ARCGIS_CONFIG.absencesUrl, {
-          updates: [{ attributes: { ObjectId: oid, OBJECTID: oid, absence_hours: hrs } }]
+          updates: [{ attributes: { OBJECTID: oid, absence_hours: hrs } }]
         });
       } else {
         // Delete if zero
