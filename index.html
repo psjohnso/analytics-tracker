@@ -1958,6 +1958,39 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 #btn-save-file { transition: background 0.3s ease; }
 
 /* ── Settings Tab ───────────────────────────────── */
+
+/* ── My Work Tab ───────────────────────────────── */
+.mywork-page { padding:20px 0; max-width:1100px; }
+.mywork-greeting { font-size:22px; font-weight:800; color:var(--navy); margin-bottom:4px; }
+.mywork-subtitle { font-size:13px; color:var(--text-muted); margin-bottom:24px; }
+.mywork-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-bottom:28px; }
+.mywork-kpi { background:#fff; border:1px solid #E5E7EB; border-radius:10px; padding:16px; text-align:center; }
+.mywork-kpi-value { font-size:28px; font-weight:800; color:var(--navy); line-height:1.1; }
+.mywork-kpi-label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; margin-top:4px; }
+.mywork-kpi-value.alert { color:#EF4444; }
+.mywork-kpi-value.warn { color:#F59E0B; }
+.mywork-kpi-value.good { color:#22C55E; }
+.mywork-section { margin-bottom:28px; }
+.mywork-section-header { font-size:14px; font-weight:800; color:var(--navy); text-transform:uppercase; letter-spacing:0.06em;
+  margin-bottom:12px; padding-bottom:8px; border-bottom:2px solid #E5E7EB; display:flex; align-items:center; gap:8px; }
+.mywork-section-header .badge-count { background:var(--navy); color:#fff; font-size:10px; font-weight:700;
+  padding:2px 8px; border-radius:10px; }
+.mywork-alert-card { background:#fff; border:1px solid #E5E7EB; border-radius:10px; padding:14px 18px;
+  margin-bottom:8px; display:flex; align-items:flex-start; gap:12px; cursor:pointer; transition:all 0.15s; }
+.mywork-alert-card:hover { border-color:var(--navy); background:#F0F4FF; }
+.mywork-alert-icon { font-size:18px; flex-shrink:0; margin-top:1px; }
+.mywork-alert-body { flex:1; min-width:0; }
+.mywork-alert-title { font-size:13px; font-weight:700; color:var(--text); }
+.mywork-alert-meta { font-size:11px; color:var(--text-muted); margin-top:2px; }
+.mywork-alert-reason { font-size:11px; color:#EF4444; font-weight:600; margin-top:3px; }
+.mywork-compact-row { background:#fff; border:1px solid #E5E7EB; border-radius:8px; padding:10px 16px;
+  margin-bottom:6px; display:flex; align-items:center; gap:12px; cursor:pointer; transition:all 0.15s; }
+.mywork-compact-row:hover { border-color:var(--navy); background:#F0F4FF; }
+.mywork-compact-title { flex:1; font-size:13px; font-weight:600; color:var(--text); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mywork-compact-badge { font-size:11px; font-weight:600; padding:3px 10px; border-radius:12px; white-space:nowrap; }
+.mywork-alloc-bar { height:8px; border-radius:4px; background:#E5E7EB; overflow:hidden; flex:0 0 80px; }
+.mywork-alloc-fill { height:100%; border-radius:4px; }
+.mywork-empty { padding:20px; text-align:center; color:var(--text-muted); font-size:13px; background:#F9FAFB; border-radius:10px; }
 .settings-page { padding:20px 0; max-width:1100px; }
 .settings-section { margin-bottom:32px; }
 .settings-section-header { font-size:20px; font-weight:800; color:var(--navy); margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
@@ -2128,6 +2161,9 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
     <nav class="tab-bar">
       <button class="tab-btn active" onclick="switchTab('overview')" >
         Overview
+      </button>
+      <button class="tab-btn" id="tab-mywork" onclick="switchTab('mywork')" style="display:none;">
+        👤 My Work
       </button>
       <button class="tab-btn" onclick="switchTab('projects')">
         Projects <span class="tab-count" id="proj-tab-count">387</span>
@@ -2817,7 +2853,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.8.4.0003';
+const APP_VERSION = '0.9.0.0000';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -3010,15 +3046,15 @@ function switchTab(tab) {
   currentDetail = null;
   currentTab = tab;
   currentPage = 1;
-  const tabIds = ['overview','projects','tasks','resources','forecast','settings'];
+  const tabIds = ['overview','mywork','projects','tasks','resources','forecast','settings'];
   document.querySelectorAll('.tab-btn').forEach((b,i) => {
     b.classList.toggle('active', tabIds[i] === tab);
   });
-  document.getElementById('view-toggle').style.display = (tab === 'overview' || tab === 'resources' || tab === 'settings') ? 'none' : 'flex';
+  document.getElementById('view-toggle').style.display = (tab === 'overview' || tab === 'mywork' || tab === 'resources' || tab === 'settings') ? 'none' : 'flex';
   const addBtn = document.getElementById('btn-add-new');
   if (tab === 'tasks') { addBtn.style.display='flex'; addBtn.textContent='＋ New Task'; }
   else { addBtn.style.display='none'; }
-  document.getElementById('weekly-filter-btn').style.display = (tab === 'settings') ? 'none' : 'flex';
+  document.getElementById('weekly-filter-btn').style.display = (tab === 'settings' || tab === 'mywork') ? 'none' : 'flex';
   const ideaCount = PROJECTS.filter(p => p.status === 'Idea').length;
   const reviewBtn = document.getElementById('btn-review-ideas');
   if (reviewBtn) {
@@ -3026,13 +3062,13 @@ function switchTab(tab) {
     const badge = document.getElementById('idea-count-badge');
     if (badge) badge.textContent = ideaCount > 0 ? ideaCount : '';
   }
-  if (tab === 'forecast' || tab === 'settings') {
+  if (tab === 'forecast' || tab === 'settings' || tab === 'mywork') {
     document.getElementById('view-toggle').style.display = 'none';
     document.getElementById('btn-add-new').style.display = 'none';
   }
-  // Hide sidebar for settings tab
+  // Hide sidebar for settings and mywork tabs
   const sidebar = document.querySelector('.sidebar');
-  if (sidebar) sidebar.style.display = (tab === 'settings') ? 'none' : '';
+  if (sidebar) sidebar.style.display = (tab === 'settings' || tab === 'mywork') ? 'none' : '';
   const isTask = tab === 'tasks';
   reorderSidebarFilters(tab);
   if (isTask) { activeFilters.status = []; buildSidebarFilters(); }
@@ -3157,6 +3193,15 @@ function render() {
     renderResources(area);
     const pg = document.getElementById('pagination');
     if (pg) pg.remove();
+    return;
+  }
+
+  if (currentTab === 'mywork') {
+    document.querySelector('.app-body').classList.remove('detail-mode');
+    renderMyWork(area);
+    const pg = document.getElementById('pagination');
+    if (pg) pg.remove();
+    document.getElementById('result-count').textContent = '';
     return;
   }
 
@@ -4437,11 +4482,14 @@ function toggleAuth() {
     clearAgolToken();
     _isLoggedIn = false;
     _agolUsername = null;
+    _userFullName = null;
     _canPromoteIdeas = false;
     _isTeamLead = false;
     const settingsTab = document.getElementById('tab-settings');
     if (settingsTab) settingsTab.style.display = 'none';
-    if (currentTab === 'settings') switchTab('overview');
+    const myWorkTab = document.getElementById('tab-mywork');
+    if (myWorkTab) myWorkTab.style.display = 'none';
+    if (currentTab === 'settings' || currentTab === 'mywork') switchTab('overview');
     applyAuthState();
   } else {
     // Log in: redirect to ArcGIS Online OAuth
@@ -4504,6 +4552,7 @@ async function ensureAgolToken() {
  */
 
 let _agolUsername = null;       // ArcGIS Online username of the logged-in user
+let _userFullName = null;      // Full display name for matching to projects/tasks
 let _canPromoteIdeas = false;  // Whether the user is authorized to promote Ideas
 let _isTeamLead = false;       // Whether the user can access Settings tab
 
@@ -4524,6 +4573,7 @@ async function fetchAgolUserInfo(token) {
     const fullName = data.fullName || data.username || '';
     const username = data.username || '';
     _agolUsername = username;  // Store for permission checks
+    _userFullName = displayName; // Store for My Work tab matching
     const displayName = fullName || username;
     if (!displayName) return;
 
@@ -4545,6 +4595,9 @@ async function fetchAgolUserInfo(token) {
 
     document.getElementById('user-name').textContent = displayName;
     document.getElementById('user-display').style.display = 'flex';
+    // Show My Work tab for all logged-in users
+    const myWorkTab = document.getElementById('tab-mywork');
+    if (myWorkTab) myWorkTab.style.display = '';
 
     // Check group membership for Idea promotion access control
     if (IDEA_PROMOTE_GROUP_ID && username) {
@@ -6808,6 +6861,301 @@ async function removeListItem(listKey, idx) {
 
   // Save to ArcGIS Online
   await saveCustomLists(listKey);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  MY WORK TAB
+// ══════════════════════════════════════════════════════════════════════
+
+function getMyProjects() {
+  if (!_userFullName) return [];
+  const name = _userFullName;
+  return PROJECTS.filter(function(p) {
+    if (p.contact === name) return true;
+    if (p.other_members && p.other_members.split(',').map(function(s) { return s.trim(); }).includes(name)) return true;
+    return false;
+  });
+}
+
+function getMyTasks() {
+  if (!_userFullName) return [];
+  return TASKS.filter(function(t) { return t.assignee === _userFullName; });
+}
+
+function renderMyWork(area) {
+  if (!_userFullName) {
+    area.innerHTML = '<div class="empty-state">Sign in to see your personalized work view.</div>';
+    return;
+  }
+
+  const name = _userFullName;
+  const firstName = name.split(' ')[0];
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+
+  // ── Gather data ─────────────────────────────────────────────
+  const myProjects = getMyProjects();
+  const myTasks = getMyTasks();
+  const activeProjects = myProjects.filter(function(p) { return p.status === 'Active' || p.status === 'Scheduled'; });
+  const openTasks = myTasks.filter(function(t) { return t.status !== 'Complete' && t.status !== 'Canceled'; });
+  const overdueTasks = openTasks.filter(function(t) { return t.due && t.due < todayStr; });
+  const dueThisWeek = openTasks.filter(function(t) {
+    if (!t.due || t.due < todayStr) return false;
+    var dueDate = new Date(t.due + 'T00:00:00');
+    var daysOut = (dueDate - today) / (1000 * 60 * 60 * 24);
+    return daysOut <= 7;
+  });
+
+  // ── Resources data for utilization ──────────────────────────
+  var weekUtil = 0;
+  var weekAllocHours = 0;
+  var weekCapHours = 0;
+  var weekAllocations = [];
+  if (RESOURCES_DATA && RESOURCES_DATA.people[name]) {
+    var p = RESOURCES_DATA.people[name];
+    var cwIdx = typeof currentWeekIdx !== 'undefined' ? currentWeekIdx : 0;
+    weekCapHours = p.proj_cap[cwIdx] || 0;
+    weekAllocHours = p.weekly_allocated[cwIdx] || 0;
+    weekUtil = weekCapHours > 0 ? Math.round(weekAllocHours / weekCapHours * 100) : 0;
+    weekAllocations = (p.allocations || []).filter(function(a) {
+      return a.fracs && a.fracs[cwIdx] > 0;
+    }).map(function(a) {
+      var hours = (a.fracs[cwIdx] || 0) * (p.proj_cap[cwIdx] || 0);
+      return { project: a.project, hours: Math.round(hours * 10) / 10, frac: a.fracs[cwIdx] };
+    }).sort(function(a, b) { return b.hours - a.hours; });
+  }
+
+  // ── Incomplete data checks ──────────────────────────────────
+  var alerts = [];
+
+  // Overdue tasks
+  overdueTasks.forEach(function(t) {
+    var daysOver = Math.ceil((today - new Date(t.due + 'T00:00:00')) / (1000 * 60 * 60 * 24));
+    alerts.push({
+      icon: '🔴', type: 'task', id: t.idx,
+      title: t.title,
+      meta: 'Due ' + t.due,
+      reason: daysOver + ' day' + (daysOver !== 1 ? 's' : '') + ' overdue',
+      priority: 0,
+    });
+  });
+
+  // Due this week
+  dueThisWeek.forEach(function(t) {
+    var dueDate = new Date(t.due + 'T00:00:00');
+    var daysLeft = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+    alerts.push({
+      icon: '🟡', type: 'task', id: t.idx,
+      title: t.title,
+      meta: 'Due ' + t.due,
+      reason: daysLeft === 0 ? 'Due today' : 'Due in ' + daysLeft + ' day' + (daysLeft !== 1 ? 's' : ''),
+      priority: 1,
+    });
+  });
+
+  // Incomplete project data (where user is primary contact)
+  myProjects.filter(function(p) { return p.contact === name && p.status !== 'Complete' && p.status !== 'Canceled' && p.status !== 'Idea'; }).forEach(function(p) {
+    var missing = [];
+    if (!p.description) missing.push('description');
+    if (!p.end) missing.push('end date');
+    if (!p.category) missing.push('category');
+    if (!p.partner_dept) missing.push('partner department');
+    if (!p.problem_statement) missing.push('problem statement');
+    if (missing.length > 0) {
+      alerts.push({
+        icon: '📋', type: 'project', id: p.objectId,
+        title: p.title,
+        meta: 'Project · ' + (p.status || 'No status'),
+        reason: 'Missing: ' + missing.join(', '),
+        priority: 2,
+      });
+    }
+  });
+
+  // Incomplete task data
+  openTasks.forEach(function(t) {
+    var missing = [];
+    if (!t.description) missing.push('description');
+    if (!t.due) missing.push('due date');
+    if (!t.category) missing.push('category');
+    if (missing.length > 0) {
+      alerts.push({
+        icon: '📝', type: 'task', id: t.idx,
+        title: t.title,
+        meta: 'Task · ' + (t.status || 'No status'),
+        reason: 'Missing: ' + missing.join(', '),
+        priority: 3,
+      });
+    }
+  });
+
+  // Stale tasks — In Progress for 14+ days with no recent due date change
+  openTasks.filter(function(t) { return t.status === 'In Progress' && t.start; }).forEach(function(t) {
+    var startDate = new Date(t.start + 'T00:00:00');
+    var daysSinceStart = Math.ceil((today - startDate) / (1000 * 60 * 60 * 24));
+    if (daysSinceStart > 14) {
+      // Only add if not already flagged as overdue or due this week
+      var alreadyFlagged = alerts.some(function(a) { return a.type === 'task' && a.id === t.idx && a.priority <= 1; });
+      if (!alreadyFlagged) {
+        alerts.push({
+          icon: '⏱️', type: 'task', id: t.idx,
+          title: t.title,
+          meta: 'Started ' + t.start,
+          reason: 'In Progress for ' + daysSinceStart + ' days — needs update?',
+          priority: 4,
+        });
+      }
+    }
+  });
+
+  alerts.sort(function(a, b) { return a.priority - b.priority; });
+
+  // ── Build HTML ──────────────────────────────────────────────
+  var html = '<div class="mywork-page">';
+
+  // Greeting
+  html += '<div class="mywork-greeting">Good ' + (today.getHours() < 12 ? 'morning' : today.getHours() < 17 ? 'afternoon' : 'evening') + ', ' + esc(firstName) + '</div>';
+  html += '<div class="mywork-subtitle">' + today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) + '</div>';
+
+  // ── KPIs ────────────────────────────────────────────────────
+  var utilClass = weekUtil > 100 ? 'alert' : weekUtil > 85 ? 'warn' : 'good';
+  html += '<div class="mywork-kpis">';
+  html += '<div class="mywork-kpi"><div class="mywork-kpi-value">' + activeProjects.length + '</div><div class="mywork-kpi-label">Active Projects</div></div>';
+  html += '<div class="mywork-kpi"><div class="mywork-kpi-value">' + openTasks.length + '</div><div class="mywork-kpi-label">Open Tasks</div></div>';
+  html += '<div class="mywork-kpi"><div class="mywork-kpi-value' + (overdueTasks.length > 0 ? ' alert' : '') + '">' + overdueTasks.length + '</div><div class="mywork-kpi-label">Overdue</div></div>';
+  html += '<div class="mywork-kpi"><div class="mywork-kpi-value' + (dueThisWeek.length > 0 ? ' warn' : '') + '">' + dueThisWeek.length + '</div><div class="mywork-kpi-label">Due This Week</div></div>';
+  html += '<div class="mywork-kpi"><div class="mywork-kpi-value ' + utilClass + '">' + weekUtil + '%</div><div class="mywork-kpi-label">Utilization</div></div>';
+  html += '</div>';
+
+  // ── Action Items ────────────────────────────────────────────
+  html += '<div class="mywork-section">';
+  html += '<div class="mywork-section-header">⚡ Attention Needed <span class="badge-count">' + alerts.length + '</span></div>';
+  if (alerts.length === 0) {
+    html += '<div class="mywork-empty">All caught up! No items need your attention right now.</div>';
+  } else {
+    alerts.slice(0, 15).forEach(function(a) {
+      var onclick = a.type === 'project' ? 'openProject(' + a.id + ')' : 'openTask(' + a.id + ')';
+      html += '<div class="mywork-alert-card" onclick="' + onclick + '">';
+      html += '<div class="mywork-alert-icon">' + a.icon + '</div>';
+      html += '<div class="mywork-alert-body">';
+      html += '<div class="mywork-alert-title">' + esc(a.title) + '</div>';
+      html += '<div class="mywork-alert-meta">' + esc(a.meta) + '</div>';
+      html += '<div class="mywork-alert-reason">' + esc(a.reason) + '</div>';
+      html += '</div></div>';
+    });
+    if (alerts.length > 15) {
+      html += '<div class="mywork-empty">And ' + (alerts.length - 15) + ' more items…</div>';
+    }
+  }
+  html += '</div>';
+
+  // ── My Projects ─────────────────────────────────────────────
+  html += '<div class="mywork-section">';
+  html += '<div class="mywork-section-header">📁 My Projects <span class="badge-count">' + myProjects.length + '</span></div>';
+  var statusOrder = ['Active', 'Scheduled', 'On Hold', 'Future', 'Idea', 'Complete', 'Canceled'];
+  var projByStatus = {};
+  myProjects.forEach(function(p) {
+    var s = p.status || 'Unknown';
+    if (!projByStatus[s]) projByStatus[s] = [];
+    projByStatus[s].push(p);
+  });
+  var hasProjects = false;
+  statusOrder.forEach(function(status) {
+    var list = projByStatus[status];
+    if (!list || !list.length) return;
+    hasProjects = true;
+    var statusColor = STATUS_COLOR(status);
+    html += '<div style="margin-bottom:4px;margin-top:12px;font-size:11px;font-weight:700;color:' + statusColor + ';text-transform:uppercase;letter-spacing:0.06em;">' + esc(status) + ' (' + list.length + ')</div>';
+    list.forEach(function(p) {
+      var taskCount = TASKS.filter(function(t) { return t.project_id === p.id; });
+      var doneCount = taskCount.filter(function(t) { return t.status === 'Complete'; }).length;
+      var totalCount = taskCount.length;
+      var taskLabel = totalCount > 0 ? doneCount + '/' + totalCount + ' tasks done' : 'No tasks';
+      var isContact = p.contact === name;
+      html += '<div class="mywork-compact-row" onclick="openProject(' + p.objectId + ')">';
+      html += '<span class="mywork-compact-badge" style="background:' + statusColor + '22;color:' + statusColor + ';">' + esc(status) + '</span>';
+      html += '<span class="mywork-compact-title">' + esc(p.title) + '</span>';
+      html += '<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">' + taskLabel + '</span>';
+      if (isContact) html += '<span style="font-size:10px;font-weight:700;color:var(--navy);background:#EEF2FF;padding:2px 8px;border-radius:8px;white-space:nowrap;">Lead</span>';
+      html += '</div>';
+    });
+  });
+  if (!hasProjects) html += '<div class="mywork-empty">No projects assigned to you.</div>';
+  html += '</div>';
+
+  // ── My Tasks ────────────────────────────────────────────────
+  html += '<div class="mywork-section">';
+  html += '<div class="mywork-section-header">✅ My Tasks <span class="badge-count">' + myTasks.length + '</span></div>';
+  var taskStatusOrder = ['In Progress', 'Pending', 'Waiting for Response', 'On Hold', 'Complete', 'Canceled'];
+  var tasksByStatus = {};
+  myTasks.forEach(function(t) {
+    var s = t.status || 'Unknown';
+    if (!tasksByStatus[s]) tasksByStatus[s] = [];
+    tasksByStatus[s].push(t);
+  });
+  var hasTasks = false;
+  taskStatusOrder.forEach(function(status) {
+    var list = tasksByStatus[status];
+    if (!list || !list.length) return;
+    hasTasks = true;
+    // Sort by due date within each status group
+    list.sort(function(a, b) { return (a.due || '9999').localeCompare(b.due || '9999'); });
+    var statusColor = STATUS_COLOR(status);
+    var isCollapsed = status === 'Complete' || status === 'Canceled';
+    html += '<div style="margin-bottom:4px;margin-top:12px;font-size:11px;font-weight:700;color:' + statusColor + ';text-transform:uppercase;letter-spacing:0.06em;">' + esc(status) + ' (' + list.length + ')' + (isCollapsed ? ' <span style="font-weight:400;color:var(--text-muted);text-transform:none;letter-spacing:0;">— click a task to view</span>' : '') + '</div>';
+    var showList = isCollapsed ? list.slice(0, 3) : list;
+    showList.forEach(function(t) {
+      var isOverdue = t.due && t.due < todayStr && status !== 'Complete' && status !== 'Canceled';
+      var projTitle = '';
+      if (t.project_id) {
+        var proj = PROJECTS.find(function(x) { return x.id == t.project_id; });
+        if (proj) projTitle = proj.title;
+      }
+      if (!projTitle) projTitle = t.project || '';
+      html += '<div class="mywork-compact-row" onclick="openTask(' + t.idx + ')">';
+      html += '<span class="mywork-compact-badge" style="background:' + statusColor + '22;color:' + statusColor + ';">' + esc(status) + '</span>';
+      html += '<span class="mywork-compact-title">' + esc(t.title) + '</span>';
+      if (projTitle) html += '<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;">' + esc(projTitle) + '</span>';
+      if (t.due) {
+        html += '<span style="font-size:11px;font-weight:600;white-space:nowrap;color:' + (isOverdue ? '#EF4444' : 'var(--text-muted)') + ';">' + (isOverdue ? '⚠ ' : '') + t.due + '</span>';
+      }
+      html += '</div>';
+    });
+    if (isCollapsed && list.length > 3) {
+      html += '<div class="mywork-empty" style="font-size:11px;padding:8px;">+ ' + (list.length - 3) + ' more ' + status.toLowerCase() + '</div>';
+    }
+  });
+  if (!hasTasks) html += '<div class="mywork-empty">No tasks assigned to you.</div>';
+  html += '</div>';
+
+  // ── My Week (Allocation Breakdown) ──────────────────────────
+  html += '<div class="mywork-section">';
+  html += '<div class="mywork-section-header">📅 My Week</div>';
+  if (!RESOURCES_DATA || !RESOURCES_DATA.people[name]) {
+    html += '<div class="mywork-empty">Resource data not available. Sign in and ensure your name matches the team roster.</div>';
+  } else if (weekAllocations.length === 0) {
+    html += '<div class="mywork-empty">No allocations recorded for this week.</div>';
+  } else {
+    var availableHours = Math.max(0, weekCapHours - weekAllocHours);
+    html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">';
+    html += '<strong>' + Math.round(weekAllocHours * 10) / 10 + 'h</strong> allocated of <strong>' + Math.round(weekCapHours * 10) / 10 + 'h</strong> capacity';
+    html += ' · <strong style="color:' + (availableHours > 0 ? '#22C55E' : '#EF4444') + ';">' + Math.round(availableHours * 10) / 10 + 'h</strong> available';
+    html += '</div>';
+    weekAllocations.forEach(function(a) {
+      var pct = weekCapHours > 0 ? (a.hours / weekCapHours * 100) : 0;
+      var barColor = pct > 40 ? 'var(--navy)' : pct > 20 ? '#3B82F6' : '#93C5FD';
+      html += '<div class="mywork-compact-row" style="cursor:default;">';
+      html += '<span class="mywork-compact-title">' + esc(a.project) + '</span>';
+      html += '<span style="font-size:12px;font-weight:700;color:var(--navy);white-space:nowrap;min-width:50px;text-align:right;">' + a.hours + 'h</span>';
+      html += '<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;min-width:35px;text-align:right;">' + Math.round(a.frac * 100) + '%</span>';
+      html += '<div class="mywork-alloc-bar"><div class="mywork-alloc-fill" style="width:' + Math.min(100, pct) + '%;background:' + barColor + ';"></div></div>';
+      html += '</div>';
+    });
+  }
+  html += '</div>';
+
+  html += '</div>'; // close mywork-page
+  area.innerHTML = html;
 }
 
 function renderSettingsPage(area) {
