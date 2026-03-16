@@ -2871,7 +2871,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.9.2.0005';
+const APP_VERSION = '0.9.3.0000';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -4905,19 +4905,65 @@ async function loadResourcesData() {
       var found = keys.find(function(k) { return k.toLowerCase() === target.toLowerCase(); });
       return found ? a[found] : undefined;
     };
+    // TimeOnly field helper: ArcGIS returns ms since midnight, convert to "HH:MM"
+    var toHHMM = function(val) {
+      if (val == null || val === '') return null;
+      if (typeof val === 'string' && val.indexOf(':') >= 0) return val; // already "HH:MM"
+      var totalMin = Math.floor(val / 60000);
+      var h = Math.floor(totalMin / 60);
+      var m = totalMin % 60;
+      return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+    };
+
+    var dayKeys = ['mon','tue','wed','thu','fri'];
+    var lunchMin = ci('lunch_minutes');
+    var lunch = (lunchMin != null) ? lunchMin : 60;
+
+    // Read start/end times for both weeks
+    var schedule = {};
+    ['wk1','wk2'].forEach(function(wk) {
+      dayKeys.forEach(function(d) {
+        schedule[wk + '_' + d + '_start'] = toHHMM(ci(wk + '_' + d + '_start'));
+        schedule[wk + '_' + d + '_end']   = toHHMM(ci(wk + '_' + d + '_end'));
+      });
+    });
+
+    // Compute daily hours from start/end/lunch
+    function computeDayHours(startStr, endStr, lunchMins) {
+      if (!startStr || !endStr) return 0;
+      var sp = startStr.split(':'), ep = endStr.split(':');
+      var startMins = parseInt(sp[0]) * 60 + parseInt(sp[1]);
+      var endMins = parseInt(ep[0]) * 60 + parseInt(ep[1]);
+      var worked = (endMins - startMins) / 60 - (lunchMins / 60);
+      return Math.max(0, Math.round(worked * 100) / 100);
+    }
+
+    var dailyHours = {};
+    var week1_hours = 0, week2_hours = 0;
+    ['wk1','wk2'].forEach(function(wk) {
+      dayKeys.forEach(function(d) {
+        var hrs = computeDayHours(schedule[wk+'_'+d+'_start'], schedule[wk+'_'+d+'_end'], lunch);
+        dailyHours[wk + '_' + d] = hrs;
+        if (wk === 'wk1') week1_hours += hrs;
+        else week2_hours += hrs;
+      });
+    });
+
     people[nm] = {
       role:             a.role || '',
       team:             a.team || '',
       skill:            a.skill || ci('skill') || '',
       proj_pct:         a.proj_pct || 0,
       schedule_type:    ci('schedule_type') || '5/8',
-      week1_hours:      (ci('week1_hours') != null) ? ci('week1_hours') : 40,
-      week2_hours:      (ci('week2_hours') != null) ? ci('week2_hours') : 40,
+      week1_hours:      week1_hours,
+      week2_hours:      week2_hours,
       rdo_day:          ci('rdo_day') || null,
-      wk1_mon: ci('wk1_mon') || 0, wk1_tue: ci('wk1_tue') || 0, wk1_wed: ci('wk1_wed') || 0,
-      wk1_thu: ci('wk1_thu') || 0, wk1_fri: ci('wk1_fri') || 0,
-      wk2_mon: ci('wk2_mon') || 0, wk2_tue: ci('wk2_tue') || 0, wk2_wed: ci('wk2_wed') || 0,
-      wk2_thu: ci('wk2_thu') || 0, wk2_fri: ci('wk2_fri') || 0,
+      lunch_minutes:    lunch,
+      schedule:         schedule,       // raw start/end strings
+      wk1_mon: dailyHours.wk1_mon, wk1_tue: dailyHours.wk1_tue, wk1_wed: dailyHours.wk1_wed,
+      wk1_thu: dailyHours.wk1_thu, wk1_fri: dailyHours.wk1_fri,
+      wk2_mon: dailyHours.wk2_mon, wk2_tue: dailyHours.wk2_tue, wk2_wed: dailyHours.wk2_wed,
+      wk2_thu: dailyHours.wk2_thu, wk2_fri: dailyHours.wk2_fri,
       time_tracking:    (ci('time_tracking') === 'true' || ci('time_tracking') === true) ? true : false,
       proj_cap:         new Array(N).fill(0),
       absences:         new Array(N).fill(0),
@@ -4925,6 +4971,51 @@ async function loadResourcesData() {
       weekly_allocated: new Array(N).fill(0),
       utilization:      new Array(N).fill(0),
     };
+
+    // Auto-derive schedule from schedule_type when all start/end fields are null
+    var p = people[nm];
+    var hasAnySchedule = Object.values(p.schedule).some(function(v) { return v != null; });
+    if (!hasAnySchedule) {
+      var sched = p.schedule_type || '5/8';
+      var rdoIdx = p.rdo_day ? ['Monday','Tuesday','Wednesday','Thursday','Friday'].indexOf(p.rdo_day) : -1;
+      var defaultSchedules = {
+        '5/8':  { start: '08:00', end: '17:00', wkAShort: null, wkBOff: false },
+        '4/10': { start: '07:00', end: '18:00', wkAShort: null, wkBOff: false },
+        '9/80': { start: '07:00', end: '17:00', wkAShort: '07:00-16:00', wkBOff: true },
+      };
+      var def = defaultSchedules[sched] || defaultSchedules['5/8'];
+      ['wk1','wk2'].forEach(function(wk) {
+        dayKeys.forEach(function(d, i) {
+          if (sched === '4/10' && i === rdoIdx) {
+            p.schedule[wk+'_'+d+'_start'] = null;
+            p.schedule[wk+'_'+d+'_end'] = null;
+          } else if (sched === '9/80' && i === rdoIdx) {
+            if (wk === 'wk1') {
+              // Week A: short day (8h) on RDO day
+              p.schedule[wk+'_'+d+'_start'] = '07:00';
+              p.schedule[wk+'_'+d+'_end'] = '16:00';
+            } else {
+              // Week B: day off
+              p.schedule[wk+'_'+d+'_start'] = null;
+              p.schedule[wk+'_'+d+'_end'] = null;
+            }
+          } else {
+            p.schedule[wk+'_'+d+'_start'] = def.start;
+            p.schedule[wk+'_'+d+'_end'] = sched === '9/80' ? '17:00' : def.end;
+          }
+        });
+      });
+      // Recompute daily hours and week totals
+      p.week1_hours = 0; p.week2_hours = 0;
+      ['wk1','wk2'].forEach(function(wk) {
+        dayKeys.forEach(function(d) {
+          var hrs = computeDayHours(p.schedule[wk+'_'+d+'_start'], p.schedule[wk+'_'+d+'_end'], p.lunch_minutes);
+          p[wk + '_' + d] = hrs;
+          if (wk === 'wk1') p.week1_hours += hrs;
+          else p.week2_hours += hrs;
+        });
+      });
+    }
   });
 
   // Fill absences
@@ -7355,6 +7446,13 @@ function renderMyWork(area) {
       Thu: p[prefix + 'thu'] || 0,
       Fri: p[prefix + 'fri'] || 0,
     };
+    var myDailyTimes = {};
+    ['Mon','Tue','Wed','Thu','Fri'].forEach(function(day) {
+      var d = day.toLowerCase().slice(0, 3);
+      var s = p.schedule ? p.schedule[prefix + d + '_start'] : null;
+      var e = p.schedule ? p.schedule[prefix + d + '_end'] : null;
+      myDailyTimes[day] = { start: s, end: e };
+    });
     weekAllocations = (p.allocations || []).filter(function(a) {
       return a.fracs && a.fracs[cwIdx] > 0;
     }).map(function(a) {
@@ -7473,15 +7571,32 @@ function renderMyWork(area) {
 
     // Daily hours bar
     if (typeof myDailyHours !== 'undefined') {
+      function formatTimeCompact(t) {
+        if (!t) return '';
+        var parts = t.split(':');
+        var h = parseInt(parts[0]);
+        var m = parseInt(parts[1]);
+        var ampm = h >= 12 ? 'p' : 'a';
+        h = h % 12 || 12;
+        return m > 0 ? h + ':' + (m < 10 ? '0' : '') + m + ampm : h + ampm;
+      }
       html += '<div style="display:flex;gap:6px;margin-bottom:12px;">';
       ['Mon','Tue','Wed','Thu','Fri'].forEach(function(day) {
         var hrs = myDailyHours[day] || 0;
+        var times = myDailyTimes ? myDailyTimes[day] : null;
         var isOff = hrs === 0;
         var bg = isOff ? '#F3F4F6' : 'var(--navy)';
         var color = isOff ? 'var(--text-muted)' : '#fff';
-        var label = isOff ? 'OFF' : hrs + 'h';
+        var timeLabel = '';
+        if (!isOff && times && times.start && times.end) {
+          timeLabel = formatTimeCompact(times.start) + '–' + formatTimeCompact(times.end);
+        }
+        var hrsLabel = isOff ? 'OFF' : hrs + 'h';
         html += '<div style="flex:1;text-align:center;padding:6px 4px;background:' + bg + ';color:' + color + ';border-radius:6px;font-size:11px;font-weight:700;">';
-        html += '<div style="font-size:10px;font-weight:600;opacity:0.7;margin-bottom:2px;">' + day + '</div>' + label + '</div>';
+        html += '<div style="font-size:10px;font-weight:600;opacity:0.7;margin-bottom:2px;">' + day + '</div>';
+        html += hrsLabel;
+        if (timeLabel) html += '<div style="font-size:9px;font-weight:500;opacity:0.7;margin-top:1px;">' + timeLabel + '</div>';
+        html += '</div>';
       });
       html += '</div>';
     }
@@ -7770,11 +7885,16 @@ function openMemberForm(mode, name) {
     document.getElementById('mf-proj-pct').value = Math.round(p.proj_pct * 100);
     document.getElementById('mf-schedule-type').value = p.schedule_type || '5/8';
     document.getElementById('mf-rdo-day').value = p.rdo_day || '';
-    // Daily hours
+    document.getElementById('mf-lunch').value = String(p.lunch_minutes != null ? p.lunch_minutes : 60);
+    // Daily start/end times
     var days = ['mon','tue','wed','thu','fri'];
-    days.forEach(function(d) {
-      document.getElementById('mf-wk1-' + d).value = p['wk1_' + d] || 0;
-      document.getElementById('mf-wk2-' + d).value = p['wk2_' + d] || 0;
+    ['wk1','wk2'].forEach(function(wk) {
+      days.forEach(function(d) {
+        var startEl = document.getElementById('mf-' + wk + '-' + d + '-start');
+        var endEl = document.getElementById('mf-' + wk + '-' + d + '-end');
+        if (startEl) startEl.value = p.schedule[wk + '_' + d + '_start'] || '';
+        if (endEl) endEl.value = p.schedule[wk + '_' + d + '_end'] || '';
+      });
     });
     updateWeekTotals();
     // We need to find the OID for this member
@@ -7789,11 +7909,16 @@ function openMemberForm(mode, name) {
     document.getElementById('mf-proj-pct').value = '';
     document.getElementById('mf-schedule-type').value = '5/8';
     document.getElementById('mf-rdo-day').value = '';
-    // Default daily hours for 5/8
+    document.getElementById('mf-lunch').value = '60';
+    // Default 5/8: 8am-5pm every day
     var days2 = ['mon','tue','wed','thu','fri'];
-    days2.forEach(function(d) {
-      document.getElementById('mf-wk1-' + d).value = 8;
-      document.getElementById('mf-wk2-' + d).value = 8;
+    ['wk1','wk2'].forEach(function(wk) {
+      days2.forEach(function(d) {
+        var startEl = document.getElementById('mf-' + wk + '-' + d + '-start');
+        var endEl = document.getElementById('mf-' + wk + '-' + d + '-end');
+        if (startEl) startEl.value = '08:00';
+        if (endEl) endEl.value = '17:00';
+      });
     });
     updateWeekTotals();
     document.getElementById('mf-name').readOnly = false;
@@ -7802,35 +7927,44 @@ function openMemberForm(mode, name) {
   document.getElementById('member-form-backdrop').classList.add('open');
 }
 
-// Auto-fill daily hours when schedule type changes
+// Auto-fill start/end times when schedule type changes
 function onScheduleTypeChange() {
   var type = document.getElementById('mf-schedule-type').value;
   var rdo = document.getElementById('mf-rdo-day').value;
   var days = ['mon','tue','wed','thu','fri'];
   var rdoIdx = rdo ? ['Monday','Tuesday','Wednesday','Thursday','Friday'].indexOf(rdo) : -1;
 
+  function setDay(wk, d, start, end) {
+    var s = document.getElementById('mf-' + wk + '-' + d + '-start');
+    var e = document.getElementById('mf-' + wk + '-' + d + '-end');
+    if (s) s.value = start || '';
+    if (e) e.value = end || '';
+  }
+
   if (type === '5/8') {
-    days.forEach(function(d) {
-      document.getElementById('mf-wk1-' + d).value = 8;
-      document.getElementById('mf-wk2-' + d).value = 8;
-    });
     document.getElementById('mf-rdo-day').value = '';
+    days.forEach(function(d) {
+      setDay('wk1', d, '08:00', '17:00');
+      setDay('wk2', d, '08:00', '17:00');
+    });
   } else if (type === '4/10') {
     days.forEach(function(d, i) {
-      var hrs = (i === rdoIdx) ? 0 : 10;
-      document.getElementById('mf-wk1-' + d).value = hrs;
-      document.getElementById('mf-wk2-' + d).value = hrs;
+      if (i === rdoIdx) {
+        setDay('wk1', d, '', '');
+        setDay('wk2', d, '', '');
+      } else {
+        setDay('wk1', d, '07:00', '18:00');
+        setDay('wk2', d, '07:00', '18:00');
+      }
     });
   } else if (type === '9/80') {
-    // Week A: four 9-hour days + one 8-hour day (the day before RDO)
-    // Week B: four 9-hour days + RDO off
     days.forEach(function(d, i) {
       if (i === rdoIdx) {
-        document.getElementById('mf-wk1-' + d).value = 8;
-        document.getElementById('mf-wk2-' + d).value = 0;
+        setDay('wk1', d, '07:00', '16:00'); // Week A: short day
+        setDay('wk2', d, '', '');             // Week B: day off
       } else {
-        document.getElementById('mf-wk1-' + d).value = 9;
-        document.getElementById('mf-wk2-' + d).value = 9;
+        setDay('wk1', d, '07:00', '17:00');
+        setDay('wk2', d, '07:00', '17:00');
       }
     });
   }
@@ -7839,13 +7973,24 @@ function onScheduleTypeChange() {
 
 function updateWeekTotals() {
   var days = ['mon','tue','wed','thu','fri'];
+  var lunch = parseInt(document.getElementById('mf-lunch').value) || 0;
   var wk1 = 0, wk2 = 0;
-  days.forEach(function(d) {
-    wk1 += parseFloat(document.getElementById('mf-wk1-' + d).value) || 0;
-    wk2 += parseFloat(document.getElementById('mf-wk2-' + d).value) || 0;
+  ['wk1','wk2'].forEach(function(wk) {
+    days.forEach(function(d) {
+      var s = document.getElementById('mf-' + wk + '-' + d + '-start');
+      var e = document.getElementById('mf-' + wk + '-' + d + '-end');
+      if (s && e && s.value && e.value) {
+        var sp = s.value.split(':'), ep = e.value.split(':');
+        var startMins = parseInt(sp[0]) * 60 + parseInt(sp[1]);
+        var endMins = parseInt(ep[0]) * 60 + parseInt(ep[1]);
+        var hrs = Math.max(0, (endMins - startMins) / 60 - lunch / 60);
+        if (wk === 'wk1') wk1 += hrs;
+        else wk2 += hrs;
+      }
+    });
   });
-  document.getElementById('mf-wk1-total').textContent = wk1;
-  document.getElementById('mf-wk2-total').textContent = wk2;
+  document.getElementById('mf-wk1-total').textContent = Math.round(wk1 * 100) / 100 + 'h';
+  document.getElementById('mf-wk2-total').textContent = Math.round(wk2 * 100) / 100 + 'h';
 }
 
 async function toggleTimeTracking(name, enabled) {
@@ -7906,19 +8051,24 @@ async function saveMemberForm() {
   var projPct = parseFloat(document.getElementById('mf-proj-pct').value) || 0;
   var scheduleType = document.getElementById('mf-schedule-type').value || '5/8';
   var rdoDay = document.getElementById('mf-rdo-day').value || null;
+  var lunchMinutes = parseInt(document.getElementById('mf-lunch').value) || 60;
   var origName = document.getElementById('mf-name').dataset.origName || '';
 
-  // Collect daily hours and compute weekly totals
+  // Collect start/end times and convert "HH:MM" to ms since midnight for TimeOnly fields
   var days = ['mon','tue','wed','thu','fri'];
-  var dailyHours = {};
-  var week1Hours = 0, week2Hours = 0;
-  days.forEach(function(d) {
-    var v1 = parseFloat(document.getElementById('mf-wk1-' + d).value) || 0;
-    var v2 = parseFloat(document.getElementById('mf-wk2-' + d).value) || 0;
-    dailyHours['wk1_' + d] = v1;
-    dailyHours['wk2_' + d] = v2;
-    week1Hours += v1;
-    week2Hours += v2;
+  function hhmmToMs(val) {
+    if (!val) return null;
+    var parts = val.split(':');
+    return (parseInt(parts[0]) * 3600000) + (parseInt(parts[1]) * 60000);
+  }
+  var scheduleFields = {};
+  ['wk1','wk2'].forEach(function(wk) {
+    days.forEach(function(d) {
+      var startEl = document.getElementById('mf-' + wk + '-' + d + '-start');
+      var endEl = document.getElementById('mf-' + wk + '-' + d + '-end');
+      scheduleFields[wk + '_' + d + '_start'] = startEl ? hhmmToMs(startEl.value) : null;
+      scheduleFields[wk + '_' + d + '_end'] = endEl ? hhmmToMs(endEl.value) : null;
+    });
   });
 
   if (!name) { alert('Name is required.'); return; }
@@ -7932,20 +8082,19 @@ async function saveMemberForm() {
     proj_pct: projPct / 100,
   };
 
-  // Only include schedule/daily fields if the service supports them
+  // Only include schedule fields if the service supports them
   if (RESOURCES_DATA && RESOURCES_DATA._memberFieldNames) {
     var fieldNames = RESOURCES_DATA._memberFieldNames;
     var fn = function(target) { return fieldNames.find(function(f) { return f.toLowerCase() === target.toLowerCase(); }) || null; };
     var stField = fn('schedule_type');
     if (stField) {
       memberAttrs[stField] = scheduleType;
-      var w1 = fn('week1_hours'); if (w1) memberAttrs[w1] = week1Hours;
-      var w2 = fn('week2_hours'); if (w2) memberAttrs[w2] = week2Hours;
       var rd = fn('rdo_day'); if (rd) memberAttrs[rd] = rdoDay;
-      // Daily hours fields
-      Object.keys(dailyHours).forEach(function(key) {
+      var lm = fn('lunch_minutes'); if (lm) memberAttrs[lm] = lunchMinutes;
+      // Start/end time fields
+      Object.keys(scheduleFields).forEach(function(key) {
         var field = fn(key);
-        if (field) memberAttrs[field] = dailyHours[key];
+        if (field) memberAttrs[field] = scheduleFields[key];
       });
     } else {
       console.warn('[Settings] Schedule fields not found on team_members service.');
@@ -8259,8 +8408,17 @@ async function absValueChanged(input) {
         <option value="Friday">RDO: Friday</option>
       </select>
     </div>
-    <label class="mf-label">Daily Work Hours</label>
-    <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">Enter the number of hours scheduled for each day. Totals update automatically.</div>
+    <label class="mf-label">Daily Schedule</label>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">Set start and end times for each work day. Leave both blank for a day off. Hours are computed automatically.</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;">
+      <label style="font-size:11px;font-weight:700;color:var(--navy);white-space:nowrap;">Lunch break:</label>
+      <select class="mf-input" id="mf-lunch" style="width:auto;margin-bottom:0;" onchange="updateWeekTotals()">
+        <option value="30">30 min</option>
+        <option value="60" selected>60 min</option>
+        <option value="45">45 min</option>
+        <option value="0">No lunch</option>
+      </select>
+    </div>
     <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px;">
       <thead>
         <tr style="background:#F8F9FA;">
@@ -8270,27 +8428,44 @@ async function absValueChanged(input) {
           <th style="padding:6px 4px;text-align:center;font-weight:700;color:var(--navy);font-size:11px;">Wed</th>
           <th style="padding:6px 4px;text-align:center;font-weight:700;color:var(--navy);font-size:11px;">Thu</th>
           <th style="padding:6px 4px;text-align:center;font-weight:700;color:var(--navy);font-size:11px;">Fri</th>
-          <th style="padding:6px 8px;text-align:center;font-weight:800;color:var(--navy);font-size:11px;">Total</th>
+          <th style="padding:6px 8px;text-align:center;font-weight:800;color:var(--navy);font-size:11px;">Hours</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td style="padding:4px 8px;font-weight:700;color:var(--navy);font-size:11px;">Week A</td>
-          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk1-mon" type="number" min="0" max="12" step="0.5" oninput="updateWeekTotals()"></td>
-          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk1-tue" type="number" min="0" max="12" step="0.5" oninput="updateWeekTotals()"></td>
-          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk1-wed" type="number" min="0" max="12" step="0.5" oninput="updateWeekTotals()"></td>
-          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk1-thu" type="number" min="0" max="12" step="0.5" oninput="updateWeekTotals()"></td>
-          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk1-fri" type="number" min="0" max="12" step="0.5" oninput="updateWeekTotals()"></td>
-          <td style="padding:4px 8px;text-align:center;font-weight:800;color:var(--navy);" id="mf-wk1-total">0</td>
+          <td style="padding:4px 8px;font-weight:700;color:var(--navy);font-size:10px;">Wk A Start</td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk1-mon-start" type="time" onchange="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk1-tue-start" type="time" onchange="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk1-wed-start" type="time" onchange="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk1-thu-start" type="time" onchange="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk1-fri-start" type="time" onchange="updateWeekTotals()"></td>
+          <td rowspan="2" style="padding:4px 8px;text-align:center;font-weight:800;color:var(--navy);vertical-align:middle;" id="mf-wk1-total">0</td>
         </tr>
         <tr>
-          <td style="padding:4px 8px;font-weight:700;color:var(--navy);font-size:11px;">Week B</td>
-          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk2-mon" type="number" min="0" max="12" step="0.5" oninput="updateWeekTotals()"></td>
-          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk2-tue" type="number" min="0" max="12" step="0.5" oninput="updateWeekTotals()"></td>
-          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk2-wed" type="number" min="0" max="12" step="0.5" oninput="updateWeekTotals()"></td>
-          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk2-thu" type="number" min="0" max="12" step="0.5" oninput="updateWeekTotals()"></td>
-          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk2-fri" type="number" min="0" max="12" step="0.5" oninput="updateWeekTotals()"></td>
-          <td style="padding:4px 8px;text-align:center;font-weight:800;color:var(--navy);" id="mf-wk2-total">0</td>
+          <td style="padding:4px 8px;font-weight:700;color:var(--navy);font-size:10px;">Wk A End</td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk1-mon-end" type="time" onchange="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk1-tue-end" type="time" onchange="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk1-wed-end" type="time" onchange="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk1-thu-end" type="time" onchange="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk1-fri-end" type="time" onchange="updateWeekTotals()"></td>
+        </tr>
+        <tr><td colspan="7" style="height:6px;"></td></tr>
+        <tr>
+          <td style="padding:4px 8px;font-weight:700;color:var(--navy);font-size:10px;">Wk B Start</td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk2-mon-start" type="time" onchange="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk2-tue-start" type="time" onchange="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk2-wed-start" type="time" onchange="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk2-thu-start" type="time" onchange="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk2-fri-start" type="time" onchange="updateWeekTotals()"></td>
+          <td rowspan="2" style="padding:4px 8px;text-align:center;font-weight:800;color:var(--navy);vertical-align:middle;" id="mf-wk2-total">0</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 8px;font-weight:700;color:var(--navy);font-size:10px;">Wk B End</td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk2-mon-end" type="time" onchange="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk2-tue-end" type="time" onchange="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk2-wed-end" type="time" onchange="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk2-thu-end" type="time" onchange="updateWeekTotals()"></td>
+          <td style="padding:2px;"><input class="mf-input mf-daily-hr" id="mf-wk2-fri-end" type="time" onchange="updateWeekTotals()"></td>
         </tr>
       </tbody>
     </table>
