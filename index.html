@@ -2876,7 +2876,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.9.3.0010';
+const APP_VERSION = '0.9.3.0011';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -7293,7 +7293,11 @@ async function stopTimer(oid) {
   var entry = TIME_ENTRIES.find(function(e) { return e.oid === oid; });
   if (!entry) return;
   var now = new Date();
-  var hours = Math.round((now.getTime() - entry.start_time) / 3600000 * 100) / 100;
+  var hours = calculateWorkHours(entry.start_time, now.getTime());
+  var rawHours = Math.round((now.getTime() - entry.start_time) / 3600000 * 100) / 100;
+  if (hours !== rawHours) {
+    console.log('[TimeTracking] Capped hours from', rawHours, 'to', hours, '(schedule-aware)');
+  }
   try {
     await agolApplyEdits(ARCGIS_CONFIG.timeEntriesUrl, {
       updates: [{ attributes: {
@@ -7309,6 +7313,89 @@ async function stopTimer(oid) {
     console.error('[TimeTracking] Stop timer failed:', err);
     alert('Failed to stop timer: ' + err.message);
   }
+}
+
+/**
+ * Calculate actual work hours between startMs and endMs,
+ * using the logged-in employee's daily schedule.
+ * Only counts hours within the work window each day, minus lunch.
+ */
+function calculateWorkHours(startMs, endMs) {
+  if (!_userFullName || !RESOURCES_DATA || !RESOURCES_DATA.people[_userFullName]) {
+    // No schedule data — fall back to raw calculation
+    return Math.round((endMs - startMs) / 3600000 * 100) / 100;
+  }
+  var person = RESOURCES_DATA.people[_userFullName];
+  var lunchHrs = (person.lunch_minutes || 60) / 60;
+  var PAY_REF = new Date('2025-12-28T00:00:00');
+  var dayNames = ['sun','mon','tue','wed','thu','fri','sat'];
+
+  var totalHours = 0;
+  var current = new Date(startMs);
+  var end = new Date(endMs);
+
+  // Iterate through each calendar day the timer spans
+  while (current <= end) {
+    var dow = current.getDay(); // 0=Sun, 1=Mon, ... 6=Sat
+    if (dow >= 1 && dow <= 5) { // Weekdays only
+      var dayKey = dayNames[dow]; // mon, tue, etc.
+
+      // Determine pay period week (A or B) for this day's week start (Sunday)
+      var dayCopy = new Date(current);
+      dayCopy.setDate(dayCopy.getDate() - dow); // back to Sunday
+      var diffDays = Math.round((dayCopy - PAY_REF) / (1000 * 60 * 60 * 24));
+      var weekPrefix = (Math.floor(diffDays / 7) % 2 === 0) ? 'wk1_' : 'wk2_';
+
+      // Get work start/end for this day
+      var schedStart = person.schedule ? person.schedule[weekPrefix + dayKey + '_start'] : null;
+      var schedEnd = person.schedule ? person.schedule[weekPrefix + dayKey + '_end'] : null;
+
+      if (schedStart && schedEnd) {
+        // Parse schedule times to minutes since midnight
+        var sp = schedStart.split(':');
+        var ep = schedEnd.split(':');
+        var workStartMin = parseInt(sp[0]) * 60 + parseInt(sp[1]);
+        var workEndMin = parseInt(ep[0]) * 60 + parseInt(ep[1]);
+
+        // Timer window for this day (clamp to day boundaries)
+        var dayStart = new Date(current);
+        dayStart.setHours(0, 0, 0, 0);
+        var dayEnd = new Date(dayStart);
+        dayEnd.setDate(dayEnd.getDate() + 1);
+
+        var timerStartOnDay = Math.max(startMs, dayStart.getTime());
+        var timerEndOnDay = Math.min(endMs, dayEnd.getTime());
+
+        // Convert timer window to minutes since midnight
+        var tStartDate = new Date(timerStartOnDay);
+        var timerStartMin = tStartDate.getHours() * 60 + tStartDate.getMinutes();
+        var tEndDate = new Date(timerEndOnDay);
+        var timerEndMin = tEndDate.getHours() * 60 + tEndDate.getMinutes();
+        // If timer ends at midnight (next day), treat as end of day
+        if (timerEndOnDay >= dayEnd.getTime()) timerEndMin = 24 * 60;
+
+        // Calculate overlap between timer window and work window
+        var overlapStart = Math.max(timerStartMin, workStartMin);
+        var overlapEnd = Math.min(timerEndMin, workEndMin);
+
+        if (overlapEnd > overlapStart) {
+          var dayHours = (overlapEnd - overlapStart) / 60;
+          // Subtract lunch only if the overlap spans a significant part of the day
+          var scheduledDayHours = (workEndMin - workStartMin) / 60;
+          if (dayHours >= scheduledDayHours * 0.5) {
+            dayHours = Math.max(0, dayHours - lunchHrs);
+          }
+          totalHours += dayHours;
+        }
+      }
+    }
+
+    // Move to next day
+    current.setDate(current.getDate() + 1);
+    current.setHours(0, 0, 0, 0);
+  }
+
+  return Math.round(totalHours * 100) / 100;
 }
 
 async function pauseTimer(oid, taskIdx) {
@@ -7338,7 +7425,7 @@ async function saveTimeEntryEdit(oid) {
   if (!startVal) { alert('Start time is required.'); return; }
   var startMs = new Date(startVal).getTime();
   var endMs = endEl && endEl.value ? new Date(endEl.value).getTime() : null;
-  var hours = endMs ? Math.round((endMs - startMs) / 3600000 * 100) / 100 : null;
+  var hours = endMs ? calculateWorkHours(startMs, endMs) : null;
   if (hours !== null && hours < 0) { alert('End time must be after start time.'); return; }
   var startD = new Date(startVal);
   var workDateStr = startD.getFullYear() + '-' + String(startD.getMonth()+1).padStart(2,'0') + '-' + String(startD.getDate()).padStart(2,'0');
