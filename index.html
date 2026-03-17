@@ -2876,7 +2876,27 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.9.3.0014';
+// ── Browser back-button guard (runs synchronously before anything else) ──
+// After OAuth, the ArcGIS login page sits in browser history. We can't remove
+// cross-origin entries, but we can push buffer entries so the back button cycles
+// through our entries. The popstate handler re-pushes on every back-click.
+(function() {
+  // Detect auth: token already stored, OR just returned from OAuth (hash has access_token)
+  var hasToken = sessionStorage.getItem('agol_token');
+  var hashHasToken = window.location.hash && window.location.hash.indexOf('access_token') >= 0;
+  if (hasToken || hashHasToken) {
+    var url = window.location.pathname + window.location.search;
+    // Replace current entry first, then push buffers on top
+    history.replaceState({ _appPage: true }, '', url);
+    for (var i = 0; i < 5; i++) history.pushState({ _appPage: true }, '', url);
+    window.addEventListener('popstate', function() {
+      // Always push forward — never let the browser reach the OAuth pages
+      history.pushState({ _appPage: true }, '', window.location.pathname + window.location.search);
+    });
+  }
+})();
+
+const APP_VERSION = '0.9.3.0017';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -6073,18 +6093,6 @@ async function markTaskComplete(taskIdx) {
   // Mark as logged in and update UI
   _isLoggedIn = true;
   applyAuthState();
-
-  // Prevent browser back button from navigating to dead OAuth login pages.
-  // After OAuth redirect, the ArcGIS login page sits in browser history.
-  // We push a clean state and intercept popstate to keep the user in the app.
-  history.replaceState({ tracker: true }, '', window.location.pathname + window.location.search);
-  history.pushState({ tracker: true }, '', window.location.pathname + window.location.search);
-  window.addEventListener('popstate', function(e) {
-    if (!e.state || !e.state.tracker) {
-      // User hit back into OAuth history — push them forward
-      history.pushState({ tracker: true }, '', window.location.pathname + window.location.search);
-    }
-  });
 
   // Show My Work tab immediately for all logged-in users
   const myWorkTabEarly = document.getElementById('tab-mywork');
