@@ -2908,7 +2908,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0019';
+const APP_VERSION = '0.9.3.0020';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -7907,6 +7907,25 @@ function renderMyWork(area) {
         meta: 'Task · ' + (t.status || 'No status'),
         reason: 'Missing: ' + missing.join(', '),
         priority: 3,
+      });
+    }
+  });
+
+  // Stale projects — Active projects not updated in over 14 days
+  var staleThreshold = 14 * 24 * 60 * 60 * 1000; // 14 days in ms
+  myProjects.filter(function(p) { return p.status === 'Active'; }).forEach(function(p) {
+    var editDate = p.EditDate || p.editDate || p.edit_date || null;
+    if (!editDate) return; // no edit tracking — skip
+    var daysSinceUpdate = Math.floor((Date.now() - editDate) / (1000 * 60 * 60 * 24));
+    if (daysSinceUpdate > 14) {
+      var lastUpdated = new Date(editDate);
+      var dateStr = lastUpdated.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      alerts.push({
+        icon: '⏳', type: 'project', id: p.objectId,
+        title: p.title,
+        meta: 'Project · Active',
+        reason: 'No updates in ' + daysSinceUpdate + ' days (last: ' + dateStr + ')',
+        priority: 2,
       });
     }
   });
