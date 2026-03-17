@@ -2876,7 +2876,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.9.3.0011';
+const APP_VERSION = '0.9.3.0012';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -7594,8 +7594,82 @@ function buildTimeTrackingPanel() {
     });
   }
 
+  // Recent entries (past 7 days, excluding today) — collapsible
+  var todayStr2 = (function() {
+    var n = new Date();
+    return n.getFullYear() + '-' + String(n.getMonth()+1).padStart(2,'0') + '-' + String(n.getDate()).padStart(2,'0');
+  })();
+  var recentEntries = TIME_ENTRIES.filter(function(e) {
+    if (!e.end_time) return false;
+    if (e.work_date === todayStr2) return false; // already in today's log
+    // Last 7 days
+    var now = new Date();
+    var weekAgo = new Date(now);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    weekAgo.setHours(0, 0, 0, 0);
+    var entryDate = new Date(e.work_date + 'T00:00:00');
+    return entryDate >= weekAgo;
+  }).sort(function(a, b) { return b.start_time - a.start_time; });
+
+  if (recentEntries.length > 0) {
+    html += '<div id="te-recent-section" style="display:none;">';
+    html += '<div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;margin-top:14px;">Recent (Past 7 Days)</div>';
+    var lastDate = '';
+    recentEntries.forEach(function(e) {
+      var task = TASKS.find(function(t) { return t.idx === e.task_idx; });
+      var taskTitle = task ? task.title : 'Task #' + e.task_idx;
+      var hrs = e.hours ? (Math.round(e.hours * 100) / 100) + 'h' : '—';
+      // Date separator
+      if (e.work_date !== lastDate) {
+        var dateObj = new Date(e.work_date + 'T00:00:00');
+        var dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        html += '<div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-top:10px;margin-bottom:4px;">' + dateLabel + '</div>';
+        lastDate = e.work_date;
+      }
+      html += '<div class="te-entry-row" id="te-row-' + e.oid + '">';
+      html += '<div style="flex:1;min-width:0;">';
+      html += '<div style="font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(taskTitle) + '</div>';
+      html += '<div style="font-size:11px;color:var(--text-muted);">' + formatTimeShort(e.start_time) + ' → ' + formatTimeShort(e.end_time) + '</div>';
+      if (e.notes) html += '<div style="font-size:10px;color:var(--text-muted);font-style:italic;">' + esc(e.notes) + '</div>';
+      html += '</div>';
+      html += '<div style="font-size:14px;font-weight:800;color:var(--navy);white-space:nowrap;">' + hrs + '</div>';
+      html += '<button onclick="toggleEditTimeEntry(' + e.oid + ')" style="background:none;border:none;cursor:pointer;font-size:12px;padding:4px;">✏️</button>';
+      html += '<button onclick="deleteTimeEntry(' + e.oid + ')" style="background:none;border:none;cursor:pointer;font-size:12px;padding:4px;color:#EF4444;">🗑</button>';
+      html += '</div>';
+      // Inline edit form
+      html += '<div id="te-edit-' + e.oid + '" style="display:none;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:10px 12px;margin-bottom:8px;">';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end;">';
+      html += '<div><label style="font-size:10px;font-weight:700;color:var(--text-muted);">START</label><input type="datetime-local" id="te-start-' + e.oid + '" class="mf-input" style="font-size:12px;margin-bottom:0;" value="' + toDatetimeLocal(e.start_time) + '"></div>';
+      html += '<div><label style="font-size:10px;font-weight:700;color:var(--text-muted);">END</label><input type="datetime-local" id="te-end-' + e.oid + '" class="mf-input" style="font-size:12px;margin-bottom:0;" value="' + toDatetimeLocal(e.end_time) + '"></div>';
+      html += '<div><label style="font-size:10px;font-weight:700;color:var(--text-muted);">NOTES</label><input type="text" id="te-notes-' + e.oid + '" class="mf-input" style="font-size:12px;margin-bottom:0;" value="' + esc(e.notes || '') + '" placeholder="Work description"></div>';
+      html += '</div>';
+      html += '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">';
+      html += '<button onclick="toggleEditTimeEntry(' + e.oid + ')" style="background:#F3F4F6;border:1px solid #D1D5DB;border-radius:6px;padding:4px 12px;font-size:11px;cursor:pointer;">Cancel</button>';
+      html += '<button onclick="saveTimeEntryEdit(' + e.oid + ')" style="background:var(--navy);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;">Save</button>';
+      html += '</div></div>';
+    });
+    html += '</div>';
+    html += '<button class="mywork-expand-btn" onclick="toggleRecentEntries()">' +
+      'Show recent entries (' + recentEntries.length + ')' +
+    '</button>';
+  }
+
   html += '</div>';
   return html;
+}
+
+function toggleRecentEntries() {
+  var panel = document.getElementById('te-recent-section');
+  var btn = event.target;
+  if (!panel) return;
+  var isHidden = panel.style.display === 'none';
+  panel.style.display = isHidden ? '' : 'none';
+  if (isHidden) {
+    btn.dataset.origLabel = btn.textContent;
+    btn.textContent = 'Hide recent entries';
+  } else {
+    btn.textContent = btn.dataset.origLabel || 'Show recent entries';
+  }
 }
 
 function toggleEditTimeEntry(oid) {
