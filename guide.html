@@ -106,7 +106,7 @@ li strong { color: var(--navy); }
 <header class="guide-header">
   <div>
     <h1>Analytics Project Tracker <span class="subtitle">User Guide</span></h1>
-    <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:4px;">Updated for v0.9.3.0021</div>
+    <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:4px;">Updated for v0.9.3.0022</div>
   </div>
   <a href="index.html" class="back-btn">← Back to Tracker</a>
 </header>
@@ -263,6 +263,15 @@ li strong { color: var(--navy); }
 <p>Projects follow this lifecycle:</p>
 <p><strong>Idea → Active → On Hold / Complete / Canceled</strong></p>
 <p>The "Future" status is also available for planned work not yet started.</p>
+
+<h3>Project &amp; Task Dates</h3>
+<p>Both projects and tasks use a three-date model to track schedule changes over time:</p>
+<ul>
+  <li><strong>Original End / Due Date</strong> — Set when the project or task is first created. This is the baseline and should not change once established — it represents the initial commitment.</li>
+  <li><strong>Working Due Date</strong> — The current target completion date. Updated as scope or timelines shift. All overdue calculations, alerts, and deadline displays throughout the app use this date. On creation, it is automatically set to match the original due date.</li>
+  <li><strong>Actual End Date</strong> — Automatically set to today's date when the status changes to "Complete." Represents when the work was actually finished.</li>
+</ul>
+<p>Detail pages show all three dates side by side, with a red <strong>(moved)</strong> indicator when the working due date differs from the original. List views and cards show the working due date since that's the current target.</p>
 
 <!-- ═══════════════════════════════════════════════════ -->
 <h2 id="tasks-tab">Tasks Tab</h2>

@@ -2908,7 +2908,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0021';
+const APP_VERSION = '0.9.3.0022';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -3323,7 +3323,7 @@ function renderProjectGrid(data) {
 function projectCard(p) {
   const statusColor = STATUS_COLOR(p.status) || '#9CA3AF';
   const initials = (p.contact || '?').split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
-  const endDate = p.status === 'Complete' && p.actual_end ? p.actual_end : (p.end || '—');
+  const endDate = p.status === 'Complete' && p.actual_end ? p.actual_end : (p.working_due || p.end || '—');
   return `
   <div class="project-card" onclick="openProject(${p.objectId})">
     <div class="project-card-accent" style="background:var(--navy)"></div>
@@ -3377,7 +3377,7 @@ function renderProjectList(data) {
       <div class="task-cell"><span class="priority-badge priority-${p.priority||'null'}">${p.priority||'—'}</span></div>
       <div class="task-cell">${esc(p.contact||'—')}</div>
       <div class="task-cell">${p.start||'—'}</div>
-      <div class="task-cell">${p.end||'—'}</div>
+      <div class="task-cell">${p.working_due||p.end||'—'}</div>
     </div>`;
   }).join('');
   return `<div class="task-table task-table--projects">
@@ -3417,7 +3417,7 @@ function renderTaskGrid(data) {
           <div class="assignee-avatar">${initials}</div>
           ${esc(t.assignee || 'Unassigned')}
         </div>
-        <div class="date-info">${getTaskHours(t.idx) > 0 ? '<span style="font-weight:700;color:var(--navy);margin-right:8px;">⏱ ' + hoursLabel(getTaskHours(t.idx), getMyTaskHours(t.idx)) + '</span>' : ''}${t.due || '—'}</div>
+        <div class="date-info">${getTaskHours(t.idx) > 0 ? '<span style="font-weight:700;color:var(--navy);margin-right:8px;">⏱ ' + hoursLabel(getTaskHours(t.idx), getMyTaskHours(t.idx)) + '</span>' : ''}${t.working_due || t.due || '—'}</div>
       </div>
     </div>`;
   }).join('')}</div>`;
@@ -3445,7 +3445,7 @@ function renderTaskList(data) {
       <div class="task-cell"><span class="status-pill" style="background:${statusColor}22;color:${statusColor};"><span style="width:5px;height:5px;border-radius:50%;background:${statusColor};display:inline-block;"></span>${t.status||'—'}</span></div>
       <div class="task-cell"><span class="priority-badge priority-${t.priority||'null'}">${t.priority||'—'}</span></div>
       <div class="task-cell">${esc(t.assignee||'—')}</div>
-      <div class="task-cell">${t.due||'—'}</div>
+      <div class="task-cell">${t.working_due||t.due||'—'}</div>
       <div class="task-cell" style="font-weight:700;color:var(--navy);">${tHrs > 0 ? hoursLabel(tHrs, mHrs) : '—'}</div>
     </div>`;
   }).join('');
@@ -4049,7 +4049,7 @@ function openAllocEditor(name) {
   // Build project date map for range highlighting
   aeProjectDates = {};
   PROJECTS.forEach(function(proj) {
-    aeProjectDates[proj.title] = { start: proj.start || null, end: proj.actual_end || proj.end || null };
+    aeProjectDates[proj.title] = { start: proj.start || null, end: proj.actual_end || proj.working_due || proj.end || null };
   });
 
   aeRenderGrid();
@@ -5260,6 +5260,8 @@ const DataStore = {
     try {
       const id = Math.max(0, ...PROJECTS.map(function(p) { return p.id; })) + 1;
       fields.id = id;
+      // Auto-set working_due to match original end date on creation
+      if (fields.end && !fields.working_due) fields.working_due = fields.end;
       const attrs = localToAgolProject(fields);
       const result = await agolApplyEdits(ARCGIS_CONFIG.projectsUrl, {
         adds: [{ attributes: attrs }]
@@ -5287,6 +5289,11 @@ const DataStore = {
   async updateProject(id, fields) {
     const i = PROJECTS.findIndex(function(p) { return p.objectId == id; });
     if (i < 0) return null;
+    // Auto-set actual_end when status changes to Complete
+    if (fields.status === 'Complete' && !fields.actual_end && !PROJECTS[i].actual_end) {
+      var today = new Date();
+      fields.actual_end = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+    }
     const oldTitle = PROJECTS[i].title;
     const newTitle = fields.title;
     Object.assign(PROJECTS[i], fields);
@@ -5351,6 +5358,8 @@ const DataStore = {
       const taskIdx = Math.max(0, ...TASKS.map(function(t) { return t.idx; })) + 1;
       fields.id  = id;
       fields.idx = taskIdx;
+      // Auto-set working_due to match original due date on creation
+      if (fields.due && !fields.working_due) fields.working_due = fields.due;
       if (fields.project) {
         const proj = PROJECTS.find(function(p) { return p.title === fields.project; });
         fields.project_id = proj ? proj.id : null;
@@ -5384,6 +5393,11 @@ const DataStore = {
   async updateTask(taskIdx, fields) {
     const i = TASKS.findIndex(function(t) { return t.idx == taskIdx; });
     if (i < 0) return null;
+    // Auto-set actual_end when status changes to Complete
+    if (fields.status === 'Complete' && !fields.actual_end && !TASKS[i].actual_end) {
+      var today = new Date();
+      fields.actual_end = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+    }
     if (fields.project) {
       const proj = PROJECTS.find(function(p) { return p.title === fields.project; });
       fields.project_id = proj ? proj.id : null;
@@ -5875,7 +5889,8 @@ function buildProjectForm(p) {
     '<div class="fm-section-label">Timeline</div>' +
     '<div class="fm-grid">' +
       fmField('Start Date', fmInput('fm-start', v('start'), '', 'date')) +
-      fmField('Target End Date', fmInput('fm-end', v('end'), '', 'date')) +
+      fmField('Original End Date', fmInput('fm-end', v('end'), '', 'date')) +
+      fmField('Working Due Date', fmInput('fm-working-due', v('working_due'), '', 'date')) +
     '</div>' +
     '<div class="fm-section-label">Details</div>' +
     '<div class="fm-grid">' +
@@ -5909,7 +5924,8 @@ function buildTaskForm(t) {
     '<div class="fm-section-label">Timeline</div>' +
     '<div class="fm-grid">' +
       fmField('Start Date', fmInput('fm-start', v('start'), '', 'date')) +
-      fmField('Due Date', fmInput('fm-due', v('due'), '', 'date')) +
+      fmField('Original Due Date', fmInput('fm-due', v('due'), '', 'date')) +
+      fmField('Working Due Date', fmInput('fm-working-due', v('working_due'), '', 'date')) +
     '</div>';
 }
 
@@ -5963,6 +5979,7 @@ function collectProjectFields() {
     category:          getVal('fm-category')     || null,
     start:             getVal('fm-start')        || null,
     end:               getVal('fm-end')          || null,
+    working_due:       getVal('fm-working-due')  || null,
     problem_statement: getVal('fm-problem')      || null,
     description:       getVal('fm-description')  || null,
   };
@@ -5985,6 +6002,7 @@ function collectTaskFields() {
     category:    getVal('fm-category')   || null,
     start:       getVal('fm-start')      || null,
     due:         getVal('fm-due')        || null,
+    working_due: getVal('fm-working-due')|| null,
     description: getVal('fm-description')|| null,
   };
 }
@@ -6170,7 +6188,7 @@ function renderProjectDetail(id) {
       <div class="detail-task-cell"><span class="status-pill" style="background:${sc}22;color:${sc};"><span style="width:5px;height:5px;border-radius:50%;background:${sc};display:inline-block;"></span>${t.status||'—'}</span></div>
       <div class="detail-task-cell"><span class="priority-badge priority-${t.priority||'null'}">${t.priority||'—'}</span></div>
       <div class="detail-task-cell" style="color:var(--text-muted);">${esc(t.assignee||'—')}</div>
-      <div class="detail-task-cell" style="color:var(--text-muted);">${t.due||'—'}</div>
+      <div class="detail-task-cell" style="color:var(--text-muted);">${t.working_due||t.due||'—'}</div>
       <div class="detail-task-cell" style="font-weight:700;color:var(--navy);">${hrsDisplay}</div>
       <div class="detail-task-cell" style="text-align:center;">${canComplete ? `<button onclick="event.stopPropagation();markTaskComplete(${t.idx})" style="background:#22C55E;color:#fff;border:none;border-radius:4px;width:26px;height:26px;font-size:14px;cursor:pointer;line-height:1;" title="Mark as Complete">✓</button>` : ''}</div>
     </div>`;
@@ -6215,7 +6233,8 @@ function renderProjectDetail(id) {
           <div class="detail-meta-item"><label>ITD Team</label><p>${esc(p.itd_team||'—')}</p></div>
           <div class="detail-meta-item"><label>Category</label><p>${esc(p.category||'—')}</p></div>
           <div class="detail-meta-item"><label>Start Date</label><p>${p.start||'—'}</p></div>
-          <div class="detail-meta-item"><label>Target End Date</label><p>${p.end||'—'}</p></div>
+          <div class="detail-meta-item"><label>Original End Date</label><p>${p.end||'—'}</p></div>
+          <div class="detail-meta-item"><label>Working Due Date</label><p>${p.working_due ? p.working_due + (p.end && p.working_due !== p.end ? ' <span style="font-size:10px;color:#EF4444;">(moved)</span>' : '') : '—'}</p></div>
           ${p.actual_end ? `<div class="detail-meta-item"><label>Actual End</label><p>${p.actual_end}</p></div>` : ''}
         </div>
       </div>
@@ -6292,9 +6311,10 @@ function renderTaskDetail(idx) {
           <div class="detail-meta-item"><label>Category</label><p>${esc(t.category||'—')}</p></div>
           <div class="detail-meta-item"><label>Tool</label><p>${esc(t.tool||'—')}</p></div>
           <div class="detail-meta-item"><label>Start Date</label><p>${t.start||'—'}</p></div>
-          <div class="detail-meta-item"><label>Due Date</label><p>${t.due||'—'}</p></div>
+          <div class="detail-meta-item"><label>Original Due Date</label><p>${t.due||'—'}</p></div>
+          <div class="detail-meta-item"><label>Working Due Date</label><p>${t.working_due ? t.working_due + (t.due && t.working_due !== t.due ? ' <span style="font-size:10px;color:#EF4444;">(moved)</span>' : '') : '—'}</p></div>
           <div class="detail-meta-item"><label>Hours Logged</label><p>${getTaskHours(t.idx) > 0 ? hoursLabel(getTaskHours(t.idx), getMyTaskHours(t.idx)) : '—'}</p></div>
-          ${t.actual_end ? `<div class="detail-meta-item"><label>Completed</label><p>${t.actual_end}</p></div>` : ''}
+          ${t.actual_end ? `<div class="detail-meta-item"><label>Actual End</label><p>${t.actual_end}</p></div>` : ''}
           ${t.Hours_Worked ? `<div class="detail-meta-item"><label>Hours Worked</label><p>${t.Hours_Worked}</p></div>` : ''}
         </div>
       </div>
@@ -6388,7 +6408,7 @@ function fcAvailData() {
   // Build project end-date lookup by project id
   const projEndMap = {};
   PROJECTS.forEach(proj => {
-    projEndMap[proj.id] = dateToWeekIdx(proj.actual_end || proj.end);
+    projEndMap[proj.id] = dateToWeekIdx(proj.actual_end || proj.working_due || proj.end);
   });
 
   const result = {};
@@ -7788,12 +7808,17 @@ function renderMyWork(area) {
   // ── Gather data ─────────────────────────────────────────────
   const myProjects = getMyProjects();
   const myTasks = getMyTasks();
+  // Helper: effective due date uses working_due when available, falls back to original due
+  function effectiveDue(t) { return t.working_due || t.due || null; }
+  function effectiveEnd(p) { return p.working_due || p.end || null; }
+
   const activeProjects = myProjects.filter(function(p) { return p.status === 'Active' || p.status === 'Scheduled'; });
   const openTasks = myTasks.filter(function(t) { return ['In Progress', 'On Hold', 'Waiting for Response'].includes(t.status); });
-  const overdueTasks = openTasks.filter(function(t) { return t.due && t.due < todayStr; });
+  const overdueTasks = openTasks.filter(function(t) { var d = effectiveDue(t); return d && d < todayStr; });
   const dueThisWeek = openTasks.filter(function(t) {
-    if (!t.due || t.due < todayStr) return false;
-    var dueDate = new Date(t.due + 'T00:00:00');
+    var d = effectiveDue(t);
+    if (!d || d < todayStr) return false;
+    var dueDate = new Date(d + 'T00:00:00');
     var daysOut = (dueDate - today) / (1000 * 60 * 60 * 24);
     return daysOut <= 7;
   });
@@ -7852,11 +7877,12 @@ function renderMyWork(area) {
 
   // Overdue open tasks (In Progress, On Hold, Waiting for Response)
   overdueTasks.forEach(function(t) {
-    var daysOver = Math.ceil((today - new Date(t.due + 'T00:00:00')) / (1000 * 60 * 60 * 24));
+    var d = effectiveDue(t);
+    var daysOver = Math.ceil((today - new Date(d + 'T00:00:00')) / (1000 * 60 * 60 * 24));
     alerts.push({
       icon: '🔴', type: 'task', id: t.idx,
       title: t.title,
-      meta: 'Due ' + t.due,
+      meta: 'Due ' + d + (t.working_due && t.working_due !== t.due ? ' (orig: ' + t.due + ')' : ''),
       reason: daysOver + ' day' + (daysOver !== 1 ? 's' : '') + ' overdue',
       priority: 0,
     });
@@ -7864,12 +7890,13 @@ function renderMyWork(area) {
 
   // Open tasks due this week
   dueThisWeek.forEach(function(t) {
-    var dueDate = new Date(t.due + 'T00:00:00');
+    var d = effectiveDue(t);
+    var dueDate = new Date(d + 'T00:00:00');
     var daysLeft = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
     alerts.push({
       icon: '🟡', type: 'task', id: t.idx,
       title: t.title,
-      meta: 'Due ' + t.due,
+      meta: 'Due ' + d,
       reason: daysLeft === 0 ? 'Due today' : 'Due in ' + daysLeft + ' day' + (daysLeft !== 1 ? 's' : ''),
       priority: 1,
     });
@@ -8162,7 +8189,8 @@ function renderMyWork(area) {
     var statusColor = STATUS_COLOR(status);
     html += '<div style="margin-bottom:4px;margin-top:12px;font-size:11px;font-weight:700;color:' + statusColor + ';text-transform:uppercase;letter-spacing:0.06em;">' + esc(status) + ' (' + list.length + ')</div>';
     list.forEach(function(t) {
-      var isOverdue = t.due && t.due < todayStr;
+      var eDue = effectiveDue(t);
+      var isOverdue = eDue && eDue < todayStr;
       var tHrs = getTaskHours(t.idx);
       var mHrs = getMyTaskHours(t.idx);
       var canComplete = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
@@ -8172,8 +8200,8 @@ function renderMyWork(area) {
       if (tHrs > 0) {
         html += '<span style="font-size:10px;font-weight:700;color:var(--navy);white-space:nowrap;background:#EEF2FF;padding:2px 7px;border-radius:8px;">⏱ ' + hoursLabel(tHrs, mHrs) + '</span>';
       }
-      if (t.due) {
-        html += '<span style="font-size:11px;font-weight:600;white-space:nowrap;color:' + (isOverdue ? '#EF4444' : 'var(--text-muted)') + ';">' + (isOverdue ? '⚠ ' : '') + t.due + '</span>';
+      if (eDue) {
+        html += '<span style="font-size:11px;font-weight:600;white-space:nowrap;color:' + (isOverdue ? '#EF4444' : 'var(--text-muted)') + ';">' + (isOverdue ? '⚠ ' : '') + eDue + '</span>';
       }
       if (canComplete) {
         html += '<button onclick="event.stopPropagation();markTaskComplete(' + t.idx + ')" style="background:#22C55E;color:#fff;border:none;border-radius:4px;width:24px;height:24px;font-size:13px;cursor:pointer;line-height:1;flex-shrink:0;" title="Mark as Complete">✓</button>';
@@ -8201,7 +8229,8 @@ function renderMyWork(area) {
       html += '<div style="margin-bottom:4px;margin-top:12px;font-size:11px;font-weight:700;color:' + statusColor + ';text-transform:uppercase;letter-spacing:0.06em;">' + esc(status) + ' (' + list.length + ')</div>';
       var showList = isCollapsed ? list.slice(0, 3) : list;
       showList.forEach(function(t) {
-        var isOverdue = t.due && t.due < todayStr && status !== 'Complete' && status !== 'Canceled';
+        var eDue = effectiveDue(t);
+        var isOverdue = eDue && eDue < todayStr && status !== 'Complete' && status !== 'Canceled';
         var tHrs = getTaskHours(t.idx);
         var mHrs = getMyTaskHours(t.idx);
         var canComplete = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
@@ -8211,8 +8240,8 @@ function renderMyWork(area) {
         if (tHrs > 0) {
           html += '<span style="font-size:10px;font-weight:700;color:var(--navy);white-space:nowrap;background:#EEF2FF;padding:2px 7px;border-radius:8px;">⏱ ' + hoursLabel(tHrs, mHrs) + '</span>';
         }
-        if (t.due) {
-          html += '<span style="font-size:11px;font-weight:600;white-space:nowrap;color:' + (isOverdue ? '#EF4444' : 'var(--text-muted)') + ';">' + (isOverdue ? '⚠ ' : '') + t.due + '</span>';
+        if (eDue) {
+          html += '<span style="font-size:11px;font-weight:600;white-space:nowrap;color:' + (isOverdue ? '#EF4444' : 'var(--text-muted)') + ';">' + (isOverdue ? '⚠ ' : '') + eDue + '</span>';
         }
         if (canComplete) {
           html += '<button onclick="event.stopPropagation();markTaskComplete(' + t.idx + ')" style="background:#22C55E;color:#fff;border:none;border-radius:4px;width:24px;height:24px;font-size:13px;cursor:pointer;line-height:1;flex-shrink:0;" title="Mark as Complete">✓</button>';
