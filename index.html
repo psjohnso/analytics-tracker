@@ -668,10 +668,10 @@ body {
   cursor: pointer;
 }
 
-/* Task table: Project | Task | Status | Priority | Assignee | Due */
+/* Task table: Project | Task | Status | Priority | Assignee | Due | Hours */
 .task-table--tasks .task-table-header,
 .task-table--tasks .task-row {
-  grid-template-columns: 1.6fr 2.4fr 1fr 0.8fr 1.2fr 0.9fr;
+  grid-template-columns: 1.5fr 2.2fr 1fr 0.8fr 1.2fr 0.9fr 0.7fr;
 }
 
 /* Project list table: Title | Status | Priority | Contact | Start | Due */
@@ -2876,7 +2876,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.9.3.0008';
+const APP_VERSION = '0.9.3.0010';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -2886,6 +2886,8 @@ let TASKS = [];
 let RESOURCES_DATA = null;
 let TIME_ENTRIES = [];          // Array of time entry records for the current user
 let _timeEntryTimerInterval = null; // Interval for updating running timers
+let TASK_HOURS = {};            // { task_idx: totalHours } — aggregated across all users
+let TASK_HOURS_BY_PERSON = {};  // { task_idx: { name: hours } } — per person
 
 let currentTab = 'overview';
 let currentDetail = null; // {type:'project'|'task', id}
@@ -3383,7 +3385,7 @@ function renderTaskGrid(data) {
           <div class="assignee-avatar">${initials}</div>
           ${esc(t.assignee || 'Unassigned')}
         </div>
-        <div class="date-info">${t.due || '—'}</div>
+        <div class="date-info">${getTaskHours(t.idx) > 0 ? '<span style="font-weight:700;color:var(--navy);margin-right:8px;">⏱ ' + hoursLabel(getTaskHours(t.idx), getMyTaskHours(t.idx)) + '</span>' : ''}${t.due || '—'}</div>
       </div>
     </div>`;
   }).join('')}</div>`;
@@ -3403,6 +3405,8 @@ function renderTaskList(data) {
   const th = (label, key) => `<div class="th-sortable" onclick="setTaskSort('${key}')" style="cursor:pointer;user-select:none;">${label}<span style="opacity:${taskSortKey===key?'1':'0.35'};font-size:10px;">${arrow(key)}</span></div>`;
   const rows = data.map(t => {
     const statusColor = STATUS_COLOR(t.status) || '#9CA3AF';
+    const tHrs = getTaskHours(t.idx);
+    const mHrs = getMyTaskHours(t.idx);
     return `<div class="task-row" onclick="openTask(${t.idx})">
       <div class="task-cell" title="${esc(resolveProjectTitle(t))}"><strong style="color:var(--text-dark);">${esc(resolveProjectTitle(t)||'—')}</strong></div>
       <div class="task-title-cell">${esc(t.title)}</div>
@@ -3410,11 +3414,12 @@ function renderTaskList(data) {
       <div class="task-cell"><span class="priority-badge priority-${t.priority||'null'}">${t.priority||'—'}</span></div>
       <div class="task-cell">${esc(t.assignee||'—')}</div>
       <div class="task-cell">${t.due||'—'}</div>
+      <div class="task-cell" style="font-weight:700;color:var(--navy);">${tHrs > 0 ? hoursLabel(tHrs, mHrs) : '—'}</div>
     </div>`;
   }).join('');
   return `<div class="task-table task-table--tasks">
     <div class="task-table-header">
-      ${th('Project','project')}${th('Task','title')}${th('Status','status')}${th('Priority','priority')}${th('Assignee','assignee')}${th('Due','end')}
+      ${th('Project','project')}${th('Task','title')}${th('Status','status')}${th('Priority','priority')}${th('Assignee','assignee')}${th('Due','end')}<div style="font-weight:700;">Hours</div>
     </div>
     ${rows}
   </div>`;
@@ -3559,12 +3564,14 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// Resolve the correct project title for a task by looking up project_id in PROJECTS.
-// Falls back to t.project (the stored string) only if project_id has no match.
-// This is the authoritative way to get a task's project name — t.project can be
-// stale if the project was renamed, or simply wrong due to data entry differences.
+// Resolve the correct project title for a task by looking up project title first
+// (since project names are unique), then falling back to project_id.
 function resolveProjectTitle(t) {
-  if (t.project_id) {
+  if (t.project) {
+    const p = PROJECTS.find(x => x.title === t.project);
+    if (p) return p.title;
+  }
+  if (t.project_id != null) {
     const p = PROJECTS.find(x => x.id == t.project_id);
     if (p) return p.title;
   }
@@ -6070,11 +6077,14 @@ function confirmDeleteTask(taskIdx) {
     render();
   }
 
-  // Step 3: Load time entries (requires _userFullName from step 1)
+  // Step 3: Load aggregated task hours (visible to all users)
+  await loadTaskHours();
+
+  // Step 4: Load personal time entries (requires _userFullName from step 1)
   if (_userFullName && isTimeTrackingEnabled()) {
     await loadTimeEntries();
-    render(); // re-render with time data
   }
+  render(); // re-render with time data
 })();
 
 
@@ -6082,7 +6092,13 @@ function confirmDeleteTask(taskIdx) {
 function renderProjectDetail(id) {
   const p = PROJECTS.find(x => x.objectId == id);
   if (!p) return '<div class="empty-state">Project not found.</div>';
-  const relTasks = TASKS.filter(t => t.project_id === p.id);
+  const relTasks = TASKS.filter(function(t) {
+    // Primary: match on project title (unique, most reliable)
+    if (t.project && t.project === p.title) return true;
+    // Fallback: match on project_id only if task has no project title
+    if (!t.project && t.project_id != null && t.project_id == p.id) return true;
+    return false;
+  });
   const statusColor = STATUS_COLOR(p.status) || '#9CA3AF';
   const returnTab = currentDetail._returnTab || 'projects';
   const backLabels = { mywork: '← Back to My Work', resources: '← Back to Resources', tasks: '← Back to Tasks', forecast: '← Back to Forecast' };
@@ -6101,14 +6117,27 @@ function renderProjectDetail(id) {
 
   const taskRows = relTasks.length ? relTasks.map(t => {
     const sc = STATUS_COLOR(t.status) || '#9CA3AF';
+    const taskHrs = getTaskHours(t.idx);
+    const myHrs = getMyTaskHours(t.idx);
+    const hrsDisplay = taskHrs > 0 ? hoursLabel(taskHrs, myHrs) : '—';
     return `<div class="detail-task-row" onclick="openTaskFromProject(${t.idx})">
       <div class="detail-task-title">${esc(t.title)}</div>
       <div class="detail-task-cell"><span class="status-pill" style="background:${sc}22;color:${sc};"><span style="width:5px;height:5px;border-radius:50%;background:${sc};display:inline-block;"></span>${t.status||'—'}</span></div>
       <div class="detail-task-cell"><span class="priority-badge priority-${t.priority||'null'}">${t.priority||'—'}</span></div>
       <div class="detail-task-cell" style="color:var(--text-muted);">${esc(t.assignee||'—')}</div>
       <div class="detail-task-cell" style="color:var(--text-muted);">${t.due||'—'}</div>
+      <div class="detail-task-cell" style="font-weight:700;color:var(--navy);">${hrsDisplay}</div>
     </div>`;
   }).join('') : `<div style="padding:32px;text-align:center;color:var(--text-muted);font-style:italic;">No tasks linked to this project.</div>`;
+
+  // Project hours total
+  const projTotalHrs = getProjectHours(p.title);
+  const projMyHrs = getMyProjectHours(p.title);
+  const projHrsRow = relTasks.length && projTotalHrs > 0 ? `<div class="detail-task-row" style="background:#F0F4FF;cursor:default;font-weight:700;">
+    <div class="detail-task-title" style="font-weight:800;color:var(--navy);">Total</div>
+    <div class="detail-task-cell"></div><div class="detail-task-cell"></div><div class="detail-task-cell"></div><div class="detail-task-cell"></div>
+    <div class="detail-task-cell" style="font-weight:800;color:var(--navy);">${hoursLabel(projTotalHrs, projMyHrs)}</div>
+  </div>` : '';
 
   return `<div class="detail-page">
     <div class="detail-hero" style="background:linear-gradient(135deg, var(--navy) 0%, #003580 55%, ${statusColor}cc 100%);">
@@ -6125,6 +6154,7 @@ function renderProjectDetail(id) {
         <span class="priority-badge priority-${p.priority||'null'}">${p.priority||'—'}</span>
         ${p.category ? `<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;">${esc(p.category)}</span>` : ''}
         ${p.itd_team ? `<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;">${esc(p.itd_team)}</span>` : ''}
+        ${projTotalHrs > 0 ? `<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;">⏱ ${hoursLabel(projTotalHrs, projMyHrs)}</span>` : ''}
       </div>
       ${allMembers.length ? `<div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:6px;">${memberChips}</div>` : ''}
     </div>
@@ -6155,14 +6185,15 @@ function renderProjectDetail(id) {
 
       <div class="detail-section">
         <div class="detail-section-label" style="display:flex;align-items:center;justify-content:space-between;">
-          <span>Tasks (${relTasks.length})</span>
+          <span>Tasks (${relTasks.length})${relTasks.length ? ` · <span style="font-weight:400;font-size:12px;color:var(--text-muted);">${getProjectHours(p.title)}h logged</span>` : ''}</span>
           <button onclick="addTaskToProject(${p.objectId}, '${esc(p.title).replace(/'/g, "\\'")}')" style="background:var(--navy);color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:Lato,sans-serif;">＋ Add Task</button>
         </div>
         <div class="detail-tasks-table">
           ${relTasks.length ? `<div class="detail-tasks-header">
-            <div>Task</div><div>Status</div><div>Priority</div><div>Assignee</div><div>Due Date</div>
+            <div>Task</div><div>Status</div><div>Priority</div><div>Assignee</div><div>Due Date</div><div>Hours</div>
           </div>` : ''}
           ${taskRows}
+          ${projHrsRow}
         </div>
       </div>
     </div>
@@ -6174,7 +6205,7 @@ function renderTaskDetail(idx) {
   const t = TASKS.find(x => x.idx === idx);
   if (!t) return '<div class="empty-state">Task not found.</div>';
   const statusColor = STATUS_COLOR(t.status) || '#9CA3AF';
-  const proj = PROJECTS.find(x => x.id === t.project_id);
+  const proj = t.project ? PROJECTS.find(function(x) { return x.title === t.project; }) : PROJECTS.find(function(x) { return x.id == t.project_id; });
   const taskReturnTab = currentDetail._returnTab || 'tasks';
   const taskFromProject = currentDetail._fromProject;
   const taskBackLabels = { mywork: '← Back to My Work', resources: '← Back to Resources', projects: '← Back to Projects', forecast: '← Back to Forecast' };
@@ -6196,6 +6227,7 @@ function renderTaskDetail(idx) {
         </span>
         <span class="priority-badge priority-${t.priority||'null'}">${t.priority||'—'}</span>
         ${t.assignee ? `<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;">${esc(t.assignee)}</span>` : ''}
+        ${getTaskHours(t.idx) > 0 ? `<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;">⏱ ${hoursLabel(getTaskHours(t.idx), getMyTaskHours(t.idx))}</span>` : ''}
       </div>
     </div>
 
@@ -6211,6 +6243,7 @@ function renderTaskDetail(idx) {
           <div class="detail-meta-item"><label>Tool</label><p>${esc(t.tool||'—')}</p></div>
           <div class="detail-meta-item"><label>Start Date</label><p>${t.start||'—'}</p></div>
           <div class="detail-meta-item"><label>Due Date</label><p>${t.due||'—'}</p></div>
+          <div class="detail-meta-item"><label>Hours Logged</label><p>${getTaskHours(t.idx) > 0 ? hoursLabel(getTaskHours(t.idx), getMyTaskHours(t.idx)) : '—'}</p></div>
           ${t.actual_end ? `<div class="detail-meta-item"><label>Completed</label><p>${t.actual_end}</p></div>` : ''}
           ${t.Hours_Worked ? `<div class="detail-meta-item"><label>Hours Worked</label><p>${t.Hours_Worked}</p></div>` : ''}
         </div>
@@ -7095,6 +7128,77 @@ function isTimeTrackingEnabled() {
   return RESOURCES_DATA.people[_userFullName].time_tracking === true;
 }
 
+async function loadTaskHours() {
+  try {
+    // Query all completed time entries and aggregate hours by task_idx and by person
+    var features = await agolQuery(ARCGIS_CONFIG.timeEntriesUrl, 'hours IS NOT NULL');
+    TASK_HOURS = {};        // { task_idx: totalHours } — team total
+    TASK_HOURS_BY_PERSON = {}; // { task_idx: { name: hours } }
+    features.forEach(function(f) {
+      var a = f.attributes;
+      var idx = a.task_idx;
+      var hrs = a.hours || 0;
+      var who = a.name || '';
+      if (idx != null && hrs > 0) {
+        TASK_HOURS[idx] = (TASK_HOURS[idx] || 0) + hrs;
+        if (!TASK_HOURS_BY_PERSON[idx]) TASK_HOURS_BY_PERSON[idx] = {};
+        TASK_HOURS_BY_PERSON[idx][who] = (TASK_HOURS_BY_PERSON[idx][who] || 0) + hrs;
+      }
+    });
+    console.log('[TimeTracking] Loaded hours for', Object.keys(TASK_HOURS).length, 'tasks');
+  } catch (err) {
+    console.warn('[TimeTracking] Could not load task hours:', err);
+    TASK_HOURS = {};
+    TASK_HOURS_BY_PERSON = {};
+  }
+}
+
+async function reloadAllTimeData() {
+  await loadTaskHours();
+  await loadTimeEntries();
+}
+
+function getTaskHours(taskIdx) {
+  return TASK_HOURS[taskIdx] ? Math.round(TASK_HOURS[taskIdx] * 100) / 100 : 0;
+}
+
+function getProjectHours(projectTitle) {
+  var total = 0;
+  TASKS.forEach(function(t) {
+    if (t.project === projectTitle || (!t.project && t.project_id != null)) {
+      total += TASK_HOURS[t.idx] || 0;
+    }
+  });
+  return Math.round(total * 100) / 100;
+}
+
+function getMyTaskHours(taskIdx) {
+  if (!_userFullName || !TASK_HOURS_BY_PERSON[taskIdx]) return 0;
+  return Math.round((TASK_HOURS_BY_PERSON[taskIdx][_userFullName] || 0) * 100) / 100;
+}
+
+function getMyProjectHours(projectTitle) {
+  if (!_userFullName) return 0;
+  var total = 0;
+  TASKS.forEach(function(t) {
+    if (t.project === projectTitle) {
+      var byPerson = TASK_HOURS_BY_PERSON[t.idx];
+      if (byPerson && byPerson[_userFullName]) total += byPerson[_userFullName];
+    }
+  });
+  return Math.round(total * 100) / 100;
+}
+
+// Build a compact hours label like "12.5h (me: 4.5h)"
+function hoursLabel(teamHrs, myHrs) {
+  if (!teamHrs && !myHrs) return '';
+  var parts = [];
+  if (teamHrs) parts.push(teamHrs + 'h');
+  if (myHrs && myHrs !== teamHrs) parts.push('me: ' + myHrs + 'h');
+  else if (myHrs && myHrs === teamHrs) return myHrs + 'h';
+  return parts.join(' · ');
+}
+
 async function loadTimeEntries() {
   if (!_userFullName || !isTimeTrackingEnabled()) { TIME_ENTRIES = []; return; }
   try {
@@ -7177,7 +7281,7 @@ async function startTimer(taskIdx) {
       }}]
     });
     console.log('[TimeTracking] Started timer for task', taskIdx, result);
-    await loadTimeEntries();
+    await reloadAllTimeData();
     renderMyWork(document.getElementById('content-area'));
   } catch (err) {
     console.error('[TimeTracking] Start timer failed:', err);
@@ -7199,7 +7303,7 @@ async function stopTimer(oid) {
       }}]
     });
     console.log('[TimeTracking] Stopped timer', oid, hours, 'hours');
-    await loadTimeEntries();
+    await reloadAllTimeData();
     renderMyWork(document.getElementById('content-area'));
   } catch (err) {
     console.error('[TimeTracking] Stop timer failed:', err);
@@ -7217,7 +7321,7 @@ async function deleteTimeEntry(oid) {
   try {
     await agolApplyEdits(ARCGIS_CONFIG.timeEntriesUrl, { deletes: [oid] });
     console.log('[TimeTracking] Deleted entry', oid);
-    await loadTimeEntries();
+    await reloadAllTimeData();
     renderMyWork(document.getElementById('content-area'));
   } catch (err) {
     console.error('[TimeTracking] Delete failed:', err);
@@ -7249,7 +7353,7 @@ async function saveTimeEntryEdit(oid) {
   try {
     await agolApplyEdits(ARCGIS_CONFIG.timeEntriesUrl, { updates: [{ attributes: attrs }] });
     console.log('[TimeTracking] Updated entry', oid);
-    await loadTimeEntries();
+    await reloadAllTimeData();
     renderMyWork(document.getElementById('content-area'));
   } catch (err) {
     console.error('[TimeTracking] Edit failed:', err);
@@ -7310,8 +7414,10 @@ function buildTimeTrackingPanel() {
       var task = TASKS.find(function(t) { return t.idx === e.task_idx; });
       var taskTitle = task ? task.title : 'Task #' + e.task_idx;
       var projTitle = '';
-      if (task && task.project_id) {
-        var proj = PROJECTS.find(function(p) { return p.id === task.project_id; });
+      if (task && task.project) {
+        projTitle = task.project;
+      } else if (task && task.project_id) {
+        var proj = PROJECTS.find(function(p) { return p.id == task.project_id; });
         if (proj) projTitle = proj.title;
       }
       var elapsed = formatDuration(Date.now() - e.start_time);
@@ -7320,7 +7426,8 @@ function buildTimeTrackingPanel() {
       html += '<div style="flex:1;min-width:0;">';
       html += '<div style="font-size:13px;font-weight:700;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(taskTitle) + '</div>';
       if (projTitle) html += '<div style="font-size:11px;color:var(--text-muted);">' + esc(projTitle) + '</div>';
-      html += '<div style="font-size:11px;color:var(--text-muted);">Started ' + formatTimeShort(e.start_time) + '</div>';
+      var cumulHrs = getTaskHours(e.task_idx);
+      html += '<div style="font-size:11px;color:var(--text-muted);">Started ' + formatTimeShort(e.start_time) + (cumulHrs > 0 ? ' · Total: ' + cumulHrs + 'h' : '') + '</div>';
       html += '</div>';
       html += '<div style="font-size:20px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;" id="timer-elapsed-' + e.oid + '">' + elapsed + '</div>';
       html += '<button onclick="pauseTimer(' + e.oid + ',' + e.task_idx + ')" style="background:#F59E0B;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">⏸ Pause</button>';
@@ -7339,8 +7446,10 @@ function buildTimeTrackingPanel() {
   html += '<option value="">Select a task to start timing…</option>';
   availableTasks.forEach(function(t) {
     var projLabel = '';
-    if (t.project_id) {
-      var proj = PROJECTS.find(function(p) { return p.id === t.project_id; });
+    if (t.project) {
+      projLabel = ' — ' + t.project;
+    } else if (t.project_id) {
+      var proj = PROJECTS.find(function(p) { return p.id == t.project_id; });
       if (proj) projLabel = ' — ' + proj.title;
     }
     html += '<option value="' + t.idx + '">' + esc(t.title + projLabel) + '</option>';
@@ -7368,11 +7477,12 @@ function buildTimeTrackingPanel() {
       var task = TASKS.find(function(t) { return t.idx === e.task_idx; });
       var taskTitle = task ? task.title : 'Task #' + e.task_idx;
       var hrs = e.hours ? (Math.round(e.hours * 100) / 100) + 'h' : '—';
+      var cumulHrs = getTaskHours(e.task_idx);
       var canResume = !activeTaskIds[e.task_idx] && !resumeShown[e.task_idx];
       html += '<div class="te-entry-row" id="te-row-' + e.oid + '">';
       html += '<div style="flex:1;min-width:0;">';
       html += '<div style="font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(taskTitle) + '</div>';
-      html += '<div style="font-size:11px;color:var(--text-muted);">' + formatTimeShort(e.start_time) + ' → ' + formatTimeShort(e.end_time) + '</div>';
+      html += '<div style="font-size:11px;color:var(--text-muted);">' + formatTimeShort(e.start_time) + ' → ' + formatTimeShort(e.end_time) + (cumulHrs > 0 ? ' · Total: ' + cumulHrs + 'h' : '') + '</div>';
       if (e.notes) html += '<div style="font-size:10px;color:var(--text-muted);font-style:italic;">' + esc(e.notes) + '</div>';
       html += '</div>';
       html += '<div style="font-size:14px;font-weight:800;color:var(--navy);white-space:nowrap;">' + hrs + '</div>';
@@ -7734,7 +7844,7 @@ function renderMyWork(area) {
     var statusColor = STATUS_COLOR(status);
     var out = '<div style="margin-bottom:4px;margin-top:12px;font-size:11px;font-weight:700;color:' + statusColor + ';text-transform:uppercase;letter-spacing:0.06em;">' + esc(status) + ' (' + list.length + ')</div>';
     list.forEach(function(p) {
-      var taskCount = TASKS.filter(function(t) { return t.project_id === p.id; });
+      var taskCount = TASKS.filter(function(t) { return t.project === p.title || (!t.project && t.project_id == p.id); });
       var doneCount = taskCount.filter(function(t) { return t.status === 'Complete'; }).length;
       var totalCount = taskCount.length;
       var taskLabel = totalCount > 0 ? doneCount + '/' + totalCount + ' tasks done' : 'No tasks';
@@ -7807,9 +7917,14 @@ function renderMyWork(area) {
     html += '<div style="margin-bottom:4px;margin-top:12px;font-size:11px;font-weight:700;color:' + statusColor + ';text-transform:uppercase;letter-spacing:0.06em;">' + esc(status) + ' (' + list.length + ')</div>';
     list.forEach(function(t) {
       var isOverdue = t.due && t.due < todayStr;
+      var tHrs = getTaskHours(t.idx);
+      var mHrs = getMyTaskHours(t.idx);
       html += '<div class="mywork-compact-row" onclick="openTask(' + t.idx + ')">';
       html += '<span class="mywork-compact-badge" style="background:' + statusColor + '22;color:' + statusColor + ';">' + esc(status) + '</span>';
       html += '<span class="mywork-compact-title">' + esc(t.title) + '</span>';
+      if (tHrs > 0) {
+        html += '<span style="font-size:10px;font-weight:700;color:var(--navy);white-space:nowrap;background:#EEF2FF;padding:2px 7px;border-radius:8px;">⏱ ' + hoursLabel(tHrs, mHrs) + '</span>';
+      }
       if (t.due) {
         html += '<span style="font-size:11px;font-weight:600;white-space:nowrap;color:' + (isOverdue ? '#EF4444' : 'var(--text-muted)') + ';">' + (isOverdue ? '⚠ ' : '') + t.due + '</span>';
       }
@@ -7837,9 +7952,14 @@ function renderMyWork(area) {
       var showList = isCollapsed ? list.slice(0, 3) : list;
       showList.forEach(function(t) {
         var isOverdue = t.due && t.due < todayStr && status !== 'Complete' && status !== 'Canceled';
+        var tHrs = getTaskHours(t.idx);
+        var mHrs = getMyTaskHours(t.idx);
         html += '<div class="mywork-compact-row" onclick="openTask(' + t.idx + ')">';
         html += '<span class="mywork-compact-badge" style="background:' + statusColor + '22;color:' + statusColor + ';">' + esc(status) + '</span>';
         html += '<span class="mywork-compact-title">' + esc(t.title) + '</span>';
+        if (tHrs > 0) {
+          html += '<span style="font-size:10px;font-weight:700;color:var(--navy);white-space:nowrap;background:#EEF2FF;padding:2px 7px;border-radius:8px;">⏱ ' + hoursLabel(tHrs, mHrs) + '</span>';
+        }
         if (t.due) {
           html += '<span style="font-size:11px;font-weight:600;white-space:nowrap;color:' + (isOverdue ? '#EF4444' : 'var(--text-muted)') + ';">' + (isOverdue ? '⚠ ' : '') + t.due + '</span>';
         }
@@ -8092,7 +8212,7 @@ async function toggleTimeTracking(name, enabled) {
   if (name === _userFullName) {
     if (enabled) {
       try {
-        await loadTimeEntries();
+        await reloadAllTimeData();
       } catch (err2) {
         console.warn('[Settings] Could not load time entries:', err2);
         // Don't alert — the toggle saved, entries will load on next page refresh
