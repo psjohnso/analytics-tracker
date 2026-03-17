@@ -2876,7 +2876,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.9.3.0013';
+const APP_VERSION = '0.9.3.0014';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -4555,8 +4555,8 @@ function toggleAuth() {
     if (currentTab === 'settings' || currentTab === 'mywork') switchTab('overview');
     applyAuthState();
   } else {
-    // Log in: redirect to ArcGIS Online OAuth
-    window.location.href = agolAuthorizeUrl();
+    // Log in: redirect to ArcGIS Online OAuth (replace to avoid back-button loop)
+    window.location.replace(agolAuthorizeUrl());
   }
 }
 
@@ -4604,7 +4604,7 @@ async function ensureAgolToken() {
   _agolToken = getStoredToken();
   if (_agolToken) return _agolToken;
   // 4. No valid token — redirect to ArcGIS Online login
-  window.location.href = agolAuthorizeUrl();
+  window.location.replace(agolAuthorizeUrl());
   return null; // page will redirect; execution stops here
 }
 
@@ -6073,6 +6073,19 @@ async function markTaskComplete(taskIdx) {
   // Mark as logged in and update UI
   _isLoggedIn = true;
   applyAuthState();
+
+  // Prevent browser back button from navigating to dead OAuth login pages.
+  // After OAuth redirect, the ArcGIS login page sits in browser history.
+  // We push a clean state and intercept popstate to keep the user in the app.
+  history.replaceState({ tracker: true }, '', window.location.pathname + window.location.search);
+  history.pushState({ tracker: true }, '', window.location.pathname + window.location.search);
+  window.addEventListener('popstate', function(e) {
+    if (!e.state || !e.state.tracker) {
+      // User hit back into OAuth history — push them forward
+      history.pushState({ tracker: true }, '', window.location.pathname + window.location.search);
+    }
+  });
+
   // Show My Work tab immediately for all logged-in users
   const myWorkTabEarly = document.getElementById('tab-mywork');
   if (myWorkTabEarly) myWorkTabEarly.style.display = '';
