@@ -2908,7 +2908,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0018';
+const APP_VERSION = '0.9.3.0019';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -4014,7 +4014,7 @@ function openAllocEditor(name) {
     // Look up the CURRENT project status (not the stale status from allocation records)
     const proj = PROJECTS.find(function(px) { return px.title === key; });
     const currentStatus = proj ? proj.status : a.status;
-    if (currentStatus === 'Canceled' || currentStatus === 'Complete') return;
+    if (currentStatus !== 'Active') return;
     if (!draftByName[key]) {
       draftByName[key] = { project: key, status: currentStatus, fracs: [...a.fracs] };
     } else {
@@ -4025,7 +4025,7 @@ function openAllocEditor(name) {
   // Inject projects where this person is contact or other_members but has no allocation yet
   const N2 = RESOURCES_DATA.weeks.length;
   PROJECTS.forEach(function(proj) {
-    if (proj.status === 'Canceled' || proj.status === 'Complete') return;
+    if (proj.status !== 'Active') return;
     if (draftByName[proj.title]) return;
     const members = (proj.other_members || '').split(',').map(s => s.trim()).filter(Boolean);
     if (proj.contact !== name && !members.includes(name)) return;
@@ -4115,7 +4115,7 @@ function aeRenderGrid() {
   // Project rows
   let tbody = '';
   if (!allocs.length) {
-    tbody = '<tr><td colspan="' + (AE_COLS + 1) + '" style="text-align:center;color:var(--text-muted);padding:40px;font-size:13px;">No active projects for this person. Canceled and Complete projects are hidden.</td></tr>';
+    tbody = '<tr><td colspan="' + (AE_COLS + 1) + '" style="text-align:center;color:var(--text-muted);padding:40px;font-size:13px;">No active projects for this person.</td></tr>';
     document.getElementById('ae-tbody').innerHTML = tbody;
     return;
   }
