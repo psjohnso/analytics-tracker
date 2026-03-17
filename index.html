@@ -2908,7 +2908,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0020';
+const APP_VERSION = '0.9.3.0021';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -7911,9 +7911,9 @@ function renderMyWork(area) {
     }
   });
 
-  // Stale projects — Active projects not updated in over 14 days
-  var staleThreshold = 14 * 24 * 60 * 60 * 1000; // 14 days in ms
-  myProjects.filter(function(p) { return p.status === 'Active'; }).forEach(function(p) {
+  // Stale projects — Active, On Hold, or Waiting for Response projects not updated in over 14 days
+  var staleStatuses = ['Active', 'On Hold', 'Waiting for Response'];
+  myProjects.filter(function(p) { return staleStatuses.indexOf(p.status) >= 0; }).forEach(function(p) {
     var editDate = p.EditDate || p.editDate || p.edit_date || null;
     if (!editDate) return; // no edit tracking — skip
     var daysSinceUpdate = Math.floor((Date.now() - editDate) / (1000 * 60 * 60 * 24));
@@ -7923,9 +7923,25 @@ function renderMyWork(area) {
       alerts.push({
         icon: '⏳', type: 'project', id: p.objectId,
         title: p.title,
-        meta: 'Project · Active',
+        meta: 'Project · ' + p.status,
         reason: 'No updates in ' + daysSinceUpdate + ' days (last: ' + dateStr + ')',
         priority: 2,
+      });
+    }
+  });
+
+  // Future/Scheduled projects past their start date — should be moved to Active
+  myProjects.filter(function(p) { return p.status === 'Future' || p.status === 'Scheduled'; }).forEach(function(p) {
+    if (!p.start) return;
+    var startDate = new Date(p.start + 'T00:00:00');
+    if (startDate <= today) {
+      var daysPast = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+      alerts.push({
+        icon: '🚀', type: 'project', id: p.objectId,
+        title: p.title,
+        meta: 'Project · ' + p.status,
+        reason: daysPast === 0 ? 'Start date is today — ready to activate' : 'Start date was ' + daysPast + ' day' + (daysPast !== 1 ? 's' : '') + ' ago — should be Active',
+        priority: 1,
       });
     }
   });
