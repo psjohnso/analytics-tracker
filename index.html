@@ -2881,22 +2881,34 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 // cross-origin entries, but we can push buffer entries so the back button cycles
 // through our entries. The popstate handler re-pushes on every back-click.
 (function() {
-  // Detect auth: token already stored, OR just returned from OAuth (hash has access_token)
   var hasToken = sessionStorage.getItem('agol_token');
-  var hashHasToken = window.location.hash && window.location.hash.indexOf('access_token') >= 0;
-  if (hasToken || hashHasToken) {
-    var url = window.location.pathname + window.location.search;
-    // Replace current entry first, then push buffers on top
-    history.replaceState({ _appPage: true }, '', url);
-    for (var i = 0; i < 5; i++) history.pushState({ _appPage: true }, '', url);
+  var hash = window.location.hash.substring(1);
+  var hashHasToken = hash && hash.indexOf('access_token') >= 0;
+
+  // If returning from OAuth with token in hash, extract and store it NOW
+  // before pushState changes the URL and wipes the hash.
+  if (hashHasToken) {
+    var params = new URLSearchParams(hash);
+    var token = params.get('access_token');
+    var expiresIn = params.get('expires_in');
+    if (token) {
+      sessionStorage.setItem('agol_token', token);
+      sessionStorage.setItem('agol_token_expires', String(Date.now() + (parseInt(expiresIn, 10) * 1000)));
+      hasToken = true;
+    }
+  }
+
+  if (hasToken) {
+    var cleanUrl = window.location.pathname + window.location.search;
+    history.replaceState({ _appPage: true }, '', cleanUrl);
+    for (var i = 0; i < 5; i++) history.pushState({ _appPage: true }, '', cleanUrl);
     window.addEventListener('popstate', function() {
-      // Always push forward — never let the browser reach the OAuth pages
       history.pushState({ _appPage: true }, '', window.location.pathname + window.location.search);
     });
   }
 })();
 
-const APP_VERSION = '0.9.3.0017';
+const APP_VERSION = '0.9.3.0018';
 
 let PROJECTS = [];
 let TASKS = [];
