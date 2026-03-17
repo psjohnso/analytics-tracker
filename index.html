@@ -227,7 +227,7 @@ body {
 
 .detail-tasks-header {
   display: grid;
-  grid-template-columns: 2.5fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 2.5fr 1fr 0.8fr 1fr 0.9fr 0.7fr 40px;
   background: var(--navy);
   color: #fff;
   font-size: 10px;
@@ -240,7 +240,7 @@ body {
 
 .detail-task-row {
   display: grid;
-  grid-template-columns: 2.5fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 2.5fr 1fr 0.8fr 1fr 0.9fr 0.7fr 40px;
   padding: 12px 16px;
   gap: 12px;
   border-top: 1px solid var(--border);
@@ -2876,7 +2876,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 </div>
 
 <script>
-const APP_VERSION = '0.9.3.0012';
+const APP_VERSION = '0.9.3.0013';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -6043,6 +6043,17 @@ function confirmDeleteTask(taskIdx) {
   handleFormDelete();
 }
 
+async function markTaskComplete(taskIdx) {
+  if (!_isLoggedIn) { alert('You must be signed in.'); return; }
+  var task = TASKS.find(function(t) { return t.idx === taskIdx; });
+  if (!task) return;
+  if (!confirm('Mark "' + task.title + '" as Complete?')) return;
+  var today = new Date();
+  var todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+  await DataStore.updateTask(taskIdx, { status: 'Complete', actual_end: todayStr });
+  render();
+}
+
 // ── Bootstrap ──
 // ── Application Init: Authenticate, then load ArcGIS Online data ──
 (async function appInit() {
@@ -6120,6 +6131,7 @@ function renderProjectDetail(id) {
     const taskHrs = getTaskHours(t.idx);
     const myHrs = getMyTaskHours(t.idx);
     const hrsDisplay = taskHrs > 0 ? hoursLabel(taskHrs, myHrs) : '—';
+    const canComplete = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
     return `<div class="detail-task-row" onclick="openTaskFromProject(${t.idx})">
       <div class="detail-task-title">${esc(t.title)}</div>
       <div class="detail-task-cell"><span class="status-pill" style="background:${sc}22;color:${sc};"><span style="width:5px;height:5px;border-radius:50%;background:${sc};display:inline-block;"></span>${t.status||'—'}</span></div>
@@ -6127,6 +6139,7 @@ function renderProjectDetail(id) {
       <div class="detail-task-cell" style="color:var(--text-muted);">${esc(t.assignee||'—')}</div>
       <div class="detail-task-cell" style="color:var(--text-muted);">${t.due||'—'}</div>
       <div class="detail-task-cell" style="font-weight:700;color:var(--navy);">${hrsDisplay}</div>
+      <div class="detail-task-cell" style="text-align:center;">${canComplete ? `<button onclick="event.stopPropagation();markTaskComplete(${t.idx})" style="background:#22C55E;color:#fff;border:none;border-radius:4px;width:26px;height:26px;font-size:14px;cursor:pointer;line-height:1;" title="Mark as Complete">✓</button>` : ''}</div>
     </div>`;
   }).join('') : `<div style="padding:32px;text-align:center;color:var(--text-muted);font-style:italic;">No tasks linked to this project.</div>`;
 
@@ -6137,6 +6150,7 @@ function renderProjectDetail(id) {
     <div class="detail-task-title" style="font-weight:800;color:var(--navy);">Total</div>
     <div class="detail-task-cell"></div><div class="detail-task-cell"></div><div class="detail-task-cell"></div><div class="detail-task-cell"></div>
     <div class="detail-task-cell" style="font-weight:800;color:var(--navy);">${hoursLabel(projTotalHrs, projMyHrs)}</div>
+    <div class="detail-task-cell"></div>
   </div>` : '';
 
   return `<div class="detail-page">
@@ -6190,7 +6204,7 @@ function renderProjectDetail(id) {
         </div>
         <div class="detail-tasks-table">
           ${relTasks.length ? `<div class="detail-tasks-header">
-            <div>Task</div><div>Status</div><div>Priority</div><div>Assignee</div><div>Due Date</div><div>Hours</div>
+            <div>Task</div><div>Status</div><div>Priority</div><div>Assignee</div><div>Due Date</div><div>Hours</div><div></div>
           </div>` : ''}
           ${taskRows}
           ${projHrsRow}
@@ -6212,9 +6226,12 @@ function renderTaskDetail(idx) {
   const taskBackLabel = taskFromProject ? '← Back to Project'
     : taskBackLabels[taskReturnTab] || '← Back';
 
+  var isCompletable = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
+
   return `<div class="detail-page">
-    <div class="detail-hero task-hero" style="background:linear-gradient(135deg, var(--orange) 0%, #A03500 55%, ${statusColor}cc 100%);">
+    <div class="detail-hero task-hero" style="background:#B45309;">
       <div class="detail-hero-actions">
+        ${isCompletable ? `<button class="modal-edit-btn" style="background:rgba(34,197,94,0.25);border-color:rgba(34,197,94,0.5);" onclick="event.stopPropagation();markTaskComplete(${t.idx})">✓ Complete</button>` : ''}
         <button class="modal-edit-btn" onclick="openFormModal('edit-task',${t.idx})">✏ Edit</button>
         <button class="modal-del-btn" onclick="confirmDeleteTask(${t.idx})">🗑 Delete</button>
       </div>
@@ -8080,6 +8097,7 @@ function renderMyWork(area) {
       var isOverdue = t.due && t.due < todayStr;
       var tHrs = getTaskHours(t.idx);
       var mHrs = getMyTaskHours(t.idx);
+      var canComplete = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
       html += '<div class="mywork-compact-row" onclick="openTask(' + t.idx + ')">';
       html += '<span class="mywork-compact-badge" style="background:' + statusColor + '22;color:' + statusColor + ';">' + esc(status) + '</span>';
       html += '<span class="mywork-compact-title">' + esc(t.title) + '</span>';
@@ -8088,6 +8106,9 @@ function renderMyWork(area) {
       }
       if (t.due) {
         html += '<span style="font-size:11px;font-weight:600;white-space:nowrap;color:' + (isOverdue ? '#EF4444' : 'var(--text-muted)') + ';">' + (isOverdue ? '⚠ ' : '') + t.due + '</span>';
+      }
+      if (canComplete) {
+        html += '<button onclick="event.stopPropagation();markTaskComplete(' + t.idx + ')" style="background:#22C55E;color:#fff;border:none;border-radius:4px;width:24px;height:24px;font-size:13px;cursor:pointer;line-height:1;flex-shrink:0;" title="Mark as Complete">✓</button>';
       }
       html += '</div>';
     });
@@ -8115,6 +8136,7 @@ function renderMyWork(area) {
         var isOverdue = t.due && t.due < todayStr && status !== 'Complete' && status !== 'Canceled';
         var tHrs = getTaskHours(t.idx);
         var mHrs = getMyTaskHours(t.idx);
+        var canComplete = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
         html += '<div class="mywork-compact-row" onclick="openTask(' + t.idx + ')">';
         html += '<span class="mywork-compact-badge" style="background:' + statusColor + '22;color:' + statusColor + ';">' + esc(status) + '</span>';
         html += '<span class="mywork-compact-title">' + esc(t.title) + '</span>';
@@ -8123,6 +8145,9 @@ function renderMyWork(area) {
         }
         if (t.due) {
           html += '<span style="font-size:11px;font-weight:600;white-space:nowrap;color:' + (isOverdue ? '#EF4444' : 'var(--text-muted)') + ';">' + (isOverdue ? '⚠ ' : '') + t.due + '</span>';
+        }
+        if (canComplete) {
+          html += '<button onclick="event.stopPropagation();markTaskComplete(' + t.idx + ')" style="background:#22C55E;color:#fff;border:none;border-radius:4px;width:24px;height:24px;font-size:13px;cursor:pointer;line-height:1;flex-shrink:0;" title="Mark as Complete">✓</button>';
         }
         html += '</div>';
       });
