@@ -2908,7 +2908,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0027';
+const APP_VERSION = '0.9.3.0028';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -7818,6 +7818,15 @@ function toggleMyWorkProjects() {
   }
 }
 
+function toggleGantt() {
+  var panel = document.getElementById('mywork-gantt');
+  var arrow = document.getElementById('gantt-arrow');
+  if (!panel) return;
+  var isHidden = panel.style.display === 'none';
+  panel.style.display = isHidden ? '' : 'none';
+  if (arrow) arrow.textContent = isHidden ? '▼' : '▶';
+}
+
 function renderMyWork(area) {
   if (!_userFullName) {
     area.innerHTML = '<div class="empty-state">Sign in to see your personalized work view.</div>';
@@ -8253,7 +8262,8 @@ function renderMyWork(area) {
     var todayPct = ganttPct(todayStr);
 
     html += '<div class="mywork-section mywork-full-width">';
-    html += '<div class="mywork-section-header">📊 Timeline</div>';
+    html += '<div class="mywork-section-header" style="cursor:pointer;user-select:none;" onclick="toggleGantt()"><span id="gantt-arrow">▶</span> 📊 Timeline <span style="font-size:11px;font-weight:400;color:var(--text-muted);">(' + ganttItems.length + ' projects)</span></div>';
+    html += '<div id="mywork-gantt" style="display:none;">';
     html += '<div style="overflow-x:auto;">';
     html += '<div style="min-width:700px;position:relative;">';
 
@@ -8308,6 +8318,7 @@ function renderMyWork(area) {
 
     html += '</div>'; // min-width wrapper
     html += '</div>'; // overflow wrapper
+    html += '</div>'; // collapsible wrapper
     html += '</div>'; // section
 
   }
