@@ -2908,7 +2908,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0022';
+const APP_VERSION = '0.9.3.0023';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -6128,8 +6128,9 @@ async function markTaskComplete(taskIdx) {
   const myWorkTabEarly = document.getElementById('tab-mywork');
   if (myWorkTabEarly) myWorkTabEarly.style.display = '';
 
-  // Fetch and display the logged-in user's name (non-blocking)
-  fetchAgolUserInfo(token);
+  // Fetch and display the logged-in user's name (must complete before render
+  // so _isTeamLead and _userFullName are available for My Work tab)
+  await fetchAgolUserInfo(token);
 
   // Step 2: Load data from ArcGIS Online
   const loaded = await loadArcGISData();
@@ -7242,29 +7243,32 @@ function getProjectHours(projectTitle) {
   return Math.round(total * 100) / 100;
 }
 
-function getMyTaskHours(taskIdx) {
-  if (!_userFullName || !TASK_HOURS_BY_PERSON[taskIdx]) return 0;
-  return Math.round((TASK_HOURS_BY_PERSON[taskIdx][_userFullName] || 0) * 100) / 100;
+function getMyTaskHours(taskIdx, forUser) {
+  var who = forUser || _userFullName;
+  if (!who || !TASK_HOURS_BY_PERSON[taskIdx]) return 0;
+  return Math.round((TASK_HOURS_BY_PERSON[taskIdx][who] || 0) * 100) / 100;
 }
 
-function getMyProjectHours(projectTitle) {
-  if (!_userFullName) return 0;
+function getMyProjectHours(projectTitle, forUser) {
+  var who = forUser || _userFullName;
+  if (!who) return 0;
   var total = 0;
   TASKS.forEach(function(t) {
     if (t.project === projectTitle) {
       var byPerson = TASK_HOURS_BY_PERSON[t.idx];
-      if (byPerson && byPerson[_userFullName]) total += byPerson[_userFullName];
+      if (byPerson && byPerson[who]) total += byPerson[who];
     }
   });
   return Math.round(total * 100) / 100;
 }
 
-// Build a compact hours label like "12.5h (me: 4.5h)"
-function hoursLabel(teamHrs, myHrs) {
+// Build a compact hours label like "12.5h · me: 4.5h"
+function hoursLabel(teamHrs, myHrs, label) {
   if (!teamHrs && !myHrs) return '';
+  var tag = label || 'me';
   var parts = [];
   if (teamHrs) parts.push(teamHrs + 'h');
-  if (myHrs && myHrs !== teamHrs) parts.push('me: ' + myHrs + 'h');
+  if (myHrs && myHrs !== teamHrs) parts.push(tag + ': ' + myHrs + 'h');
   else if (myHrs && myHrs === teamHrs) return myHrs + 'h';
   return parts.join(' · ');
 }
@@ -7751,9 +7755,11 @@ function toggleEditTimeEntry(oid) {
 //  MY WORK TAB
 // ══════════════════════════════════════════════════════════════════════
 
-function getMyProjects() {
-  if (!_userFullName) return [];
-  const name = _userFullName;
+let _myWorkViewUser = null; // Admin view-as override; null = view own work
+
+function getMyProjects(viewName) {
+  var name = viewName || _userFullName;
+  if (!name) return [];
   return PROJECTS.filter(function(p) {
     if (p.contact === name) return true;
     if (p.other_members && p.other_members.split(',').map(function(s) { return s.trim(); }).includes(name)) return true;
@@ -7761,9 +7767,16 @@ function getMyProjects() {
   });
 }
 
-function getMyTasks() {
-  if (!_userFullName) return [];
-  return TASKS.filter(function(t) { return t.assignee === _userFullName; });
+function getMyTasks(viewName) {
+  var name = viewName || _userFullName;
+  if (!name) return [];
+  return TASKS.filter(function(t) { return t.assignee === name; });
+}
+
+function switchMyWorkUser(selectEl) {
+  var val = selectEl.value;
+  _myWorkViewUser = (val === _userFullName) ? null : val;
+  renderMyWork(document.getElementById('content-area'));
 }
 
 function toggleMyWorkTasks() {
@@ -7800,17 +7813,23 @@ function renderMyWork(area) {
     return;
   }
 
-  const name = _userFullName;
+  const viewUser = _myWorkViewUser || _userFullName;
+  const isViewingSelf = viewUser === _userFullName;
+  const name = viewUser;
   const firstName = name.split(' ')[0];
   const today = new Date();
   const todayStr = today.toISOString().slice(0, 10);
 
   // ── Gather data ─────────────────────────────────────────────
-  const myProjects = getMyProjects();
-  const myTasks = getMyTasks();
+  const myProjects = getMyProjects(name);
+  const myTasks = getMyTasks(name);
   // Helper: effective due date uses working_due when available, falls back to original due
   function effectiveDue(t) { return t.working_due || t.due || null; }
   function effectiveEnd(p) { return p.working_due || p.end || null; }
+  // Hours helpers scoped to viewed user
+  var hrsLabel = isViewingSelf ? 'me' : firstName;
+  function viewUserTaskHrs(idx) { return getMyTaskHours(idx, name); }
+  function viewUserProjHrs(title) { return getMyProjectHours(title, name); }
 
   const activeProjects = myProjects.filter(function(p) { return p.status === 'Active' || p.status === 'Scheduled'; });
   const openTasks = myTasks.filter(function(t) { return ['In Progress', 'On Hold', 'Waiting for Response'].includes(t.status); });
@@ -7979,8 +7998,31 @@ function renderMyWork(area) {
   var html = '<div class="mywork-page">';
 
   // Greeting
-  html += '<div class="mywork-greeting">Good ' + (today.getHours() < 12 ? 'morning' : today.getHours() < 17 ? 'afternoon' : 'evening') + ', ' + esc(firstName) + '</div>';
-  html += '<div class="mywork-subtitle">' + today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) + '</div>';
+  if (isViewingSelf) {
+    html += '<div class="mywork-greeting">Good ' + (today.getHours() < 12 ? 'morning' : today.getHours() < 17 ? 'afternoon' : 'evening') + ', ' + esc(firstName) + '</div>';
+  } else {
+    html += '<div class="mywork-greeting">Viewing ' + esc(name) + '\'s Work</div>';
+  }
+
+  // Admin user selector
+  if (_isTeamLead && RESOURCES_DATA && RESOURCES_DATA.people) {
+    var memberNames = Object.keys(RESOURCES_DATA.people).sort();
+    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">';
+    html += '<div class="mywork-subtitle" style="margin-bottom:0;">' + today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) + '</div>';
+    html += '<select onchange="switchMyWorkUser(this)" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--navy);font-weight:600;cursor:pointer;">';
+    memberNames.forEach(function(n) {
+      var selected = (n === name) ? ' selected' : '';
+      var label = (n === _userFullName) ? n + ' (me)' : n;
+      html += '<option value="' + esc(n) + '"' + selected + '>' + esc(label) + '</option>';
+    });
+    html += '</select>';
+    if (!isViewingSelf) {
+      html += '<button onclick="switchMyWorkUser({value:\'' + esc(_userFullName).replace(/'/g, "\\'") + '\'})" style="font-size:11px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:#F3F4F6;cursor:pointer;font-weight:600;">← Back to My Work</button>';
+    }
+    html += '</div>';
+  } else {
+    html += '<div class="mywork-subtitle">' + today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) + '</div>';
+  }
 
   // ── All sections in one grid ─────────────────────────────────
   html += '<div class="mywork-columns">';
@@ -7995,8 +8037,8 @@ function renderMyWork(area) {
   html += '<div class="mywork-kpi"><div class="mywork-kpi-value ' + utilClass + '">' + weekUtil + '%</div><div class="mywork-kpi-label">Utilization</div></div>';
   html += '</div>';
 
-  // ── Time Tracking panel (if enabled for this user) ─────────
-  if (isTimeTrackingEnabled()) {
+  // ── Time Tracking panel (only shown when viewing own work) ─────────
+  if (isViewingSelf && isTimeTrackingEnabled()) {
     html += buildTimeTrackingPanel();
     startTimerTick();
   }
@@ -8192,13 +8234,13 @@ function renderMyWork(area) {
       var eDue = effectiveDue(t);
       var isOverdue = eDue && eDue < todayStr;
       var tHrs = getTaskHours(t.idx);
-      var mHrs = getMyTaskHours(t.idx);
+      var mHrs = viewUserTaskHrs(t.idx);
       var canComplete = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
       html += '<div class="mywork-compact-row" onclick="openTask(' + t.idx + ')">';
       html += '<span class="mywork-compact-badge" style="background:' + statusColor + '22;color:' + statusColor + ';">' + esc(status) + '</span>';
       html += '<span class="mywork-compact-title">' + esc(t.title) + '</span>';
       if (tHrs > 0) {
-        html += '<span style="font-size:10px;font-weight:700;color:var(--navy);white-space:nowrap;background:#EEF2FF;padding:2px 7px;border-radius:8px;">⏱ ' + hoursLabel(tHrs, mHrs) + '</span>';
+        html += '<span style="font-size:10px;font-weight:700;color:var(--navy);white-space:nowrap;background:#EEF2FF;padding:2px 7px;border-radius:8px;">⏱ ' + hoursLabel(tHrs, mHrs, hrsLabel) + '</span>';
       }
       if (eDue) {
         html += '<span style="font-size:11px;font-weight:600;white-space:nowrap;color:' + (isOverdue ? '#EF4444' : 'var(--text-muted)') + ';">' + (isOverdue ? '⚠ ' : '') + eDue + '</span>';
