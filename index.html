@@ -102,18 +102,23 @@ body {
 
 /* LAYOUT */
 .app-body {
-  display: grid;
-  grid-template-columns: 1fr;
   padding-top: var(--header-h);
   min-height: 100vh;
 }
+.app-body-inner {
+  display: flex;
+  min-height: calc(100vh - var(--header-h) - 49px);
+}
 .main-content {
-  display: contents;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 /* ── DETAIL PAGE ─────────────────────────────────────────────────── */
 .app-body.detail-mode .sidebar { display: none; }
-.app-body.detail-mode .tab-bar { grid-column: 1; }
-.app-body.detail-mode .content-area { grid-column: 1; }
+.app-body.detail-mode .main-content { flex: 1; }
+.app-body.detail-mode .app-body-inner { display: block; }
 
 .detail-page {
   padding: 0;
@@ -271,29 +276,25 @@ body {
 
 /* SIDEBAR */
 .sidebar {
-  order: 2;
-  width: 100%;
+  width: var(--sidebar-w);
+  flex-shrink: 0;
   background: var(--white);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0;
-  align-items: flex-start;
-  padding: 8px 16px;
-  overflow-x: auto;
+  border-right: 1px solid var(--border);
+  height: calc(100vh - var(--header-h) - 49px);
   position: sticky;
   top: calc(var(--header-h) + 49px);
-  z-index: 45;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar-section {
-  padding: 6px 12px;
-  border-bottom: none;
-  flex-shrink: 0;
+  padding: 16px;
+  border-bottom: 1px solid var(--gray-light);
 }
 
 .sidebar-group-header {
-  padding: 6px 12px 4px;
+  padding: 10px 16px 6px;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -309,8 +310,7 @@ body {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-muted);
-  margin-bottom: 4px;
-  white-space: nowrap;
+  margin-bottom: 10px;
 }
 
 .search-box {
@@ -318,11 +318,11 @@ body {
 }
 
 .search-box input {
-  width: 200px;
-  padding: 6px 10px 6px 28px;
+  width: 100%;
+  padding: 8px 12px 8px 32px;
   border: 1px solid var(--border);
-  border-radius: 14px;
-  font-size: 12px;
+  border-radius: 6px;
+  font-size: 13px;
   font-family: 'Lato', sans-serif;
   background: var(--surface);
   color: var(--text-body);
@@ -345,25 +345,24 @@ body {
 
 .filter-group {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 4px;
 }
 
 .filter-btn {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
+  justify-content: space-between;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: none;
   background: transparent;
   cursor: pointer;
   font-family: 'Lato', sans-serif;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-body);
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s;
   text-align: left;
-  white-space: nowrap;
 }
 
 .filter-btn:hover {
@@ -376,12 +375,12 @@ body {
 }
 
 .filter-btn .badge {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  background: rgba(0,0,0,0.08);
-  border-radius: 8px;
-  padding: 0px 5px;
-  min-width: 18px;
+  background: rgba(0,0,0,0.1);
+  border-radius: 10px;
+  padding: 1px 7px;
+  min-width: 24px;
   text-align: center;
 }
 
@@ -390,10 +389,11 @@ body {
 }
 
 .status-dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
+  margin-right: 8px;
 }
 
 /* MAIN */
@@ -412,7 +412,6 @@ body {
   position: sticky;
   top: var(--header-h);
   z-index: 50;
-  order: 1;
 }
 
 .tab-btn {
@@ -460,7 +459,6 @@ body {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
-  order: 3;
 }
 
 .sort-select {
@@ -486,7 +484,6 @@ body {
 .content-area {
   padding: 20px 24px;
   flex: 1;
-  order: 4;
 }
 [id^="mw-"] { scroll-margin-top: 160px; }
 
@@ -2163,6 +2160,42 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 
 <!-- BODY -->
 <div class="app-body">
+  <!-- TAB BAR — full width above sidebar + content -->
+  <nav class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('overview')" >
+        Overview
+      </button>
+      <button class="tab-btn" id="tab-mywork" onclick="switchTab('mywork')" style="display:none;">
+        👤 My Work
+      </button>
+      <button class="tab-btn" onclick="switchTab('projects')">
+        Projects <span class="tab-count" id="proj-tab-count">387</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('tasks')">
+        Tasks <span class="tab-count" id="task-tab-count">1936</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('resources')">
+        Resources
+      </button>
+      <button class="tab-btn" onclick="switchTab('forecast')">
+        📊 Forecast
+      </button>
+      <button class="tab-btn" id="tab-settings" onclick="switchTab('settings')" style="display:none;">
+        ⚙️ Settings
+      </button>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px;padding:0 4px 0 0;align-self:center;">
+        <span id="unsaved-dot" title="Unsaved changes" class="show"></span>
+        <button id="btn-submit-idea" onclick="openIdeaForm()" style="display:flex;align-items:center;gap:5px;padding:7px 14px;background:#FFDB22;color:#92400E;border:none;border-radius:6px;font-size:12px;font-weight:800;font-family:Lato,sans-serif;cursor:pointer;letter-spacing:0.03em;transition:background 0.15s;" onmouseover="this.style.background='#F0CC00'" onmouseout="this.style.background='#FFDB22'">
+          💡 Submit Idea
+        </button>
+        <button id="btn-save-file" onclick="saveAllData()" title="Refresh data from ArcGIS Online" class="">
+          🔄 Refresh
+        </button>
+        <a href="guide.html" target="_blank" id="btn-help" title="User Guide & Help">About / Help</a>
+      </div>
+    </nav>
+
+  <div class="app-body-inner">
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-section">
@@ -2219,39 +2252,6 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 
   <!-- MAIN -->
   <main class="main-content">
-    <nav class="tab-bar">
-      <button class="tab-btn active" onclick="switchTab('overview')" >
-        Overview
-      </button>
-      <button class="tab-btn" id="tab-mywork" onclick="switchTab('mywork')" style="display:none;">
-        👤 My Work
-      </button>
-      <button class="tab-btn" onclick="switchTab('projects')">
-        Projects <span class="tab-count" id="proj-tab-count">387</span>
-      </button>
-      <button class="tab-btn" onclick="switchTab('tasks')">
-        Tasks <span class="tab-count" id="task-tab-count">1936</span>
-      </button>
-      <button class="tab-btn" onclick="switchTab('resources')">
-        Resources
-      </button>
-      <button class="tab-btn" onclick="switchTab('forecast')">
-        📊 Forecast
-      </button>
-      <button class="tab-btn" id="tab-settings" onclick="switchTab('settings')" style="display:none;">
-        ⚙️ Settings
-      </button>
-      <div style="margin-left:auto;display:flex;align-items:center;gap:8px;padding:0 4px 0 0;align-self:center;">
-        <span id="unsaved-dot" title="Unsaved changes" class="show"></span>
-        <button id="btn-submit-idea" onclick="openIdeaForm()" style="display:flex;align-items:center;gap:5px;padding:7px 14px;background:#FFDB22;color:#92400E;border:none;border-radius:6px;font-size:12px;font-weight:800;font-family:Lato,sans-serif;cursor:pointer;letter-spacing:0.03em;transition:background 0.15s;" onmouseover="this.style.background='#F0CC00'" onmouseout="this.style.background='#FFDB22'">
-          💡 Submit Idea
-        </button>
-        <button id="btn-save-file" onclick="saveAllData()" title="Refresh data from ArcGIS Online" class="">
-          🔄 Refresh
-        </button>
-        <a href="guide.html" target="_blank" id="btn-help" title="User Guide & Help">About / Help</a>
-      </div>
-    </nav>
 
     <!-- TOOLBAR -->
     <div class="toolbar">
@@ -2880,6 +2880,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
       </div>
     </div></div><div id="pagination" class="pagination"><button class="page-btn" disabled="" onclick="goPage(0)">‹</button><button class="page-btn active" onclick="goPage(1)">1</button><button class="page-btn " onclick="goPage(2)">2</button><button class="page-btn " onclick="goPage(3)">3</button><span style="color:var(--text-muted);font-size:13px;padding:0 2px;">…</span><button class="page-btn " onclick="goPage(81)">81</button><button class="page-btn" onclick="goPage(2)">›</button></div></div>
   </main>
+  </div><!-- close app-body-inner -->
 </div>
 
 <!-- MODAL -->
@@ -2946,7 +2947,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0037';
+const APP_VERSION = '0.9.3.0038';
 
 let PROJECTS = [];
 let TASKS = [];
