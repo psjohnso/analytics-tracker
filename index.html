@@ -485,7 +485,7 @@ body {
   padding: 20px 24px;
   flex: 1;
 }
-[id^="mw-"] { scroll-margin-top: 160px; }
+[id^="mw-"] { scroll-margin-top: 210px; }
 
 .mywork-jump-nav {
   display: flex;
@@ -2950,7 +2950,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0043';
+const APP_VERSION = '0.9.3.0044';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -8304,7 +8304,7 @@ function renderMyWork(area) {
   html += '<div class="mywork-jump-nav">';
   html += '<a href="#" class="mywork-jump-link" onclick="event.preventDefault();window.scrollTo({top:0,behavior:\'smooth\'});">↑ Top</a>';
   jumpLinks.forEach(function(link) {
-    html += '<a href="#' + link.id + '" class="mywork-jump-link" onclick="event.preventDefault();var el=document.getElementById(\'' + link.id + '\');if(el){var y=el.getBoundingClientRect().top+window.pageYOffset-160;window.scrollTo({top:y,behavior:\'smooth\'});}">' + link.label + '</a>';
+    html += '<a href="#' + link.id + '" class="mywork-jump-link" onclick="event.preventDefault();var el=document.getElementById(\'' + link.id + '\');if(el){var y=el.getBoundingClientRect().top+window.pageYOffset-210;window.scrollTo({top:y,behavior:\'smooth\'});}">' + link.label + '</a>';
   });
   html += '</div>';
 
