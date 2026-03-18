@@ -2908,7 +2908,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0024';
+const APP_VERSION = '0.9.3.0025';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -7834,6 +7834,11 @@ function renderMyWork(area) {
   const activeProjects = myProjects.filter(function(p) { return p.status === 'Active' || p.status === 'Scheduled'; });
   const openTasks = myTasks.filter(function(t) { return ['In Progress', 'On Hold', 'Waiting for Response'].includes(t.status); });
   const overdueTasks = openTasks.filter(function(t) { var d = effectiveDue(t); return d && d < todayStr; });
+  const overdueProjects = myProjects.filter(function(p) {
+    if (['Active', 'On Hold', 'Waiting for Response'].indexOf(p.status) < 0) return false;
+    var d = effectiveEnd(p);
+    return d && d < todayStr;
+  });
   const dueThisWeek = openTasks.filter(function(t) {
     var d = effectiveDue(t);
     if (!d || d < todayStr) return false;
@@ -7957,6 +7962,38 @@ function renderMyWork(area) {
     }
   });
 
+  // Overdue projects — Active or On Hold projects past their working due / end date
+  var overdueProjectStatuses = ['Active', 'On Hold', 'Waiting for Response'];
+  myProjects.filter(function(p) { return overdueProjectStatuses.indexOf(p.status) >= 0; }).forEach(function(p) {
+    var d = effectiveEnd(p);
+    if (!d || d >= todayStr) return;
+    var daysOver = Math.ceil((today - new Date(d + 'T00:00:00')) / (1000 * 60 * 60 * 24));
+    alerts.push({
+      icon: '🔴', type: 'project', id: p.objectId,
+      title: p.title,
+      meta: 'Due ' + d + (p.working_due && p.working_due !== p.end ? ' (orig: ' + p.end + ')' : ''),
+      reason: daysOver + ' day' + (daysOver !== 1 ? 's' : '') + ' overdue',
+      priority: 0,
+    });
+  });
+
+  // Projects due this week — Active or On Hold projects with working due within 7 days
+  myProjects.filter(function(p) { return overdueProjectStatuses.indexOf(p.status) >= 0; }).forEach(function(p) {
+    var d = effectiveEnd(p);
+    if (!d || d < todayStr) return; // already overdue or no date
+    var dueDate = new Date(d + 'T00:00:00');
+    var daysLeft = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+    if (daysLeft <= 7) {
+      alerts.push({
+        icon: '🟡', type: 'project', id: p.objectId,
+        title: p.title,
+        meta: 'Due ' + d,
+        reason: daysLeft === 0 ? 'Due today' : 'Due in ' + daysLeft + ' day' + (daysLeft !== 1 ? 's' : ''),
+        priority: 1,
+      });
+    }
+  });
+
   // Stale projects — Active, On Hold, or Waiting for Response projects not updated in over 14 days
   var staleStatuses = ['Active', 'On Hold', 'Waiting for Response'];
   myProjects.filter(function(p) { return staleStatuses.indexOf(p.status) >= 0; }).forEach(function(p) {
@@ -8032,7 +8069,8 @@ function renderMyWork(area) {
   html += '<div class="mywork-kpis mywork-full-width">';
   html += '<div class="mywork-kpi"><div class="mywork-kpi-value">' + activeProjects.length + '</div><div class="mywork-kpi-label">Active Projects</div></div>';
   html += '<div class="mywork-kpi"><div class="mywork-kpi-value">' + openTasks.length + '</div><div class="mywork-kpi-label">Open Tasks</div></div>';
-  html += '<div class="mywork-kpi"><div class="mywork-kpi-value' + (overdueTasks.length > 0 ? ' alert' : '') + '">' + overdueTasks.length + '</div><div class="mywork-kpi-label">Overdue</div></div>';
+  var totalOverdue = overdueTasks.length + overdueProjects.length;
+  html += '<div class="mywork-kpi"><div class="mywork-kpi-value' + (totalOverdue > 0 ? ' alert' : '') + '">' + totalOverdue + '</div><div class="mywork-kpi-label">Overdue</div></div>';
   html += '<div class="mywork-kpi"><div class="mywork-kpi-value' + (dueThisWeek.length > 0 ? ' warn' : '') + '">' + dueThisWeek.length + '</div><div class="mywork-kpi-label">Due This Week</div></div>';
   html += '<div class="mywork-kpi"><div class="mywork-kpi-value ' + utilClass + '">' + weekUtil + '%</div><div class="mywork-kpi-label">Utilization</div></div>';
   html += '</div>';
