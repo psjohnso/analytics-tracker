@@ -2908,7 +2908,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0025';
+const APP_VERSION = '0.9.3.0026';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -5944,6 +5944,17 @@ function openFormModal(mode, id) {
   document.getElementById('fm-delete-btn').style.display = isEdit ? 'inline-block' : 'none';
   document.getElementById('fm-save-btn').textContent     = isEdit ? 'Save Changes' : 'Create';
   document.getElementById('fm-body').innerHTML           = isProject ? buildProjectForm(record) : buildTaskForm(record);
+  // Lock original due date fields on edit — baseline should not change after creation
+  if (isEdit) {
+    var origDateField = document.getElementById(isProject ? 'fm-end' : 'fm-due');
+    if (origDateField) {
+      origDateField.disabled = true;
+      origDateField.style.background = '#F3F4F6';
+      origDateField.style.color = '#6B7280';
+      origDateField.style.cursor = 'not-allowed';
+      origDateField.title = 'Original date is locked after creation. Use Working Due Date to adjust the timeline.';
+    }
+  }
   document.getElementById('form-modal-backdrop').classList.add('open');
   // Initialize searchable dropdowns (category field uses searchable select in both forms)
   initSearchableSelect('fm-category');
