@@ -2908,7 +2908,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0033';
+const APP_VERSION = '0.9.3.0034';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -7579,7 +7579,7 @@ function buildTimeTrackingPanel() {
   var todayHours = todayEntries.reduce(function(s, e) { return s + (e.hours || 0); }, 0);
   var weekHours = weekEntries.reduce(function(s, e) { return s + (e.hours || 0); }, 0);
 
-  var html = '<div class="mywork-section mywork-full-width">';
+  var html = '<div class="mywork-section mywork-full-width" id="mw-time-tracking">';
   html += '<div class="mywork-section-header">⏱️ Time Tracking</div>';
 
   // Active timers
@@ -8238,6 +8238,26 @@ function renderMyWork(area) {
     html += '<div class="mywork-subtitle">' + today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) + '</div>';
   }
 
+  // Quick preview: count gantt-eligible projects for nav link visibility
+  var ganttItems_preview = myProjects.filter(function(p) {
+    if (['Active', 'On Hold', 'Scheduled'].indexOf(p.status) < 0) return false;
+    return p.start || p.actual_end || p.working_due || p.end;
+  });
+
+  // ── Jump links nav bar ───────────────────────────────────────
+  var jumpLinks = [];
+  if (isViewingSelf && isTimeTrackingEnabled()) jumpLinks.push({ id: 'mw-time-tracking', label: '⏱️ Time' });
+  jumpLinks.push({ id: 'mw-my-week', label: '📅 Week' });
+  jumpLinks.push({ id: 'mw-attention', label: '⚡ Attention' });
+  if (ganttItems_preview.length > 0) jumpLinks.push({ id: 'mw-timeline', label: '📊 Timeline' });
+  jumpLinks.push({ id: 'mw-projects', label: '📁 Projects' });
+  jumpLinks.push({ id: 'mw-tasks', label: '✅ Tasks' });
+  html += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">';
+  jumpLinks.forEach(function(link) {
+    html += '<a href="#' + link.id + '" onclick="event.preventDefault();document.getElementById(\'' + link.id + '\').scrollIntoView({behavior:\'smooth\',block:\'start\'});" style="font-size:11px;font-weight:600;color:var(--navy);padding:4px 10px;background:#EEF2FF;border-radius:12px;text-decoration:none;white-space:nowrap;">' + link.label + '</a>';
+  });
+  html += '</div>';
+
   // ── All sections in one grid ─────────────────────────────────
   html += '<div class="mywork-columns">';
 
@@ -8259,7 +8279,7 @@ function renderMyWork(area) {
   }
 
   // ── My Week — spans both columns ───────────────────────────
-  html += '<div class="mywork-section mywork-full-width">';
+  html += '<div class="mywork-section mywork-full-width" id="mw-my-week">';
   html += '<div class="mywork-section-header">📅 My Week</div>';
   if (!RESOURCES_DATA || !RESOURCES_DATA.people[name]) {
     html += '<div class="mywork-empty">Resource data not available. Sign in and ensure your name matches the team roster.</div>';
@@ -8332,7 +8352,7 @@ function renderMyWork(area) {
   html += '</div>';
 
   // ── Attention Needed — spans both columns ───────────────────
-  html += '<div class="mywork-section mywork-full-width">';
+  html += '<div class="mywork-section mywork-full-width" id="mw-attention">';
   html += '<div class="mywork-section-header">⚡ Attention Needed <span class="badge-count">' + alerts.length + '</span></div>';
   if (alerts.length === 0) {
     html += '<div class="mywork-empty">All caught up! No items need your attention right now.</div>';
@@ -8426,7 +8446,7 @@ function renderMyWork(area) {
 
     var visibleCount = ganttItems.filter(function(g) { return _ganttFilter[g.title]; }).length;
 
-    html += '<div class="mywork-section mywork-full-width">';
+    html += '<div class="mywork-section mywork-full-width" id="mw-timeline">';
     html += '<div class="mywork-section-header" style="cursor:pointer;user-select:none;" onclick="toggleGantt()"><span id="gantt-arrow">▶</span> 📊 Timeline <span style="font-size:11px;font-weight:400;color:var(--text-muted);">(' + visibleCount + ' of ' + ganttItems.length + ' projects)</span></div>';
     html += '<div id="mywork-gantt" style="display:none;">';
 
@@ -8479,7 +8499,7 @@ function renderMyWork(area) {
 
   // ── LEFT COLUMN: My Projects ────────────────────────────────
   html += '<div>';
-  html += '<div class="mywork-section">';
+  html += '<div class="mywork-section" id="mw-projects">';
   html += '<div class="mywork-section-header">📁 My Projects <span class="badge-count">' + myProjects.length + '</span></div>';
   var projByStatus = {};
   myProjects.forEach(function(p) {
@@ -8539,7 +8559,7 @@ function renderMyWork(area) {
 
   // ── RIGHT COLUMN: My Tasks ──────────────────────────────────
   html += '<div>';
-  html += '<div class="mywork-section">';
+  html += '<div class="mywork-section" id="mw-tasks">';
 
   // Count tasks by visibility group
   var tasksByStatus = {};
