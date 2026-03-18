@@ -423,19 +423,6 @@ body {
 
 .tab-btn:hover { color: var(--navy); }
 
-.mywork-jump-nav {
-  position: sticky;
-  top: calc(var(--header-h) + 49px);
-  z-index: 40;
-  background: var(--white);
-  padding: 8px 0 10px;
-  margin: -8px 0 4px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
 .tab-btn.active {
   color: var(--navy);
   border-bottom-color: var(--orange);
@@ -494,16 +481,22 @@ body {
 [id^="mw-"] { scroll-margin-top: 160px; }
 
 .mywork-jump-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.mywork-sticky-header {
   position: sticky;
   top: calc(var(--header-h) + 49px);
   z-index: 40;
   background: var(--bg);
-  padding: 8px 0 8px;
-  margin: -8px 0 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  padding: 12px 0 10px;
+  margin: -12px 0 8px;
+  border-bottom: 1px solid var(--border);
 }
+
 .mywork-jump-link {
   font-size: 11px; font-weight: 600; color: var(--navy);
   padding: 4px 10px; background: #EEF2FF; border-radius: 12px;
@@ -2001,8 +1994,8 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 
 /* ── My Work Tab ───────────────────────────────── */
 .mywork-page { padding:20px 0; max-width:1100px; }
-.mywork-greeting { font-size:22px; font-weight:800; color:var(--navy); margin-bottom:4px; }
-.mywork-subtitle { font-size:13px; color:var(--text-muted); margin-bottom:24px; }
+.mywork-greeting { font-size:20px; font-weight:800; color:var(--navy); margin-bottom:2px; line-height:1.3; }
+.mywork-subtitle { font-size:13px; color:var(--text-muted); margin-bottom:0; }
 .mywork-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; }
 .mywork-columns { display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start; }
 @media (max-width:860px) { .mywork-columns { grid-template-columns:1fr; } }
@@ -2943,7 +2936,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0035';
+const APP_VERSION = '0.9.3.0036';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -8249,6 +8242,9 @@ function renderMyWork(area) {
   // ── Build HTML ──────────────────────────────────────────────
   var html = '<div class="mywork-page">';
 
+  // ── Sticky header: greeting + date/picker + jump links ──────
+  html += '<div class="mywork-sticky-header">';
+
   // Greeting
   if (isViewingSelf) {
     html += '<div class="mywork-greeting">Good ' + (today.getHours() < 12 ? 'morning' : today.getHours() < 17 ? 'afternoon' : 'evening') + ', ' + esc(firstName) + '</div>';
@@ -8259,7 +8255,7 @@ function renderMyWork(area) {
   // Admin user selector
   if (_isTeamLead && RESOURCES_DATA && RESOURCES_DATA.people) {
     var memberNames = Object.keys(RESOURCES_DATA.people).sort();
-    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">';
+    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:0;">';
     html += '<div class="mywork-subtitle" style="margin-bottom:0;">' + today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) + '</div>';
     html += '<select onchange="switchMyWorkUser(this)" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--navy);font-weight:600;cursor:pointer;">';
     memberNames.forEach(function(n) {
@@ -8273,7 +8269,7 @@ function renderMyWork(area) {
     }
     html += '</div>';
   } else {
-    html += '<div class="mywork-subtitle">' + today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) + '</div>';
+    html += '<div class="mywork-subtitle" style="margin-bottom:0;">' + today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) + '</div>';
   }
 
   // Quick preview: count gantt-eligible projects for nav link visibility
@@ -8295,6 +8291,8 @@ function renderMyWork(area) {
     html += '<a href="#' + link.id + '" class="mywork-jump-link" onclick="event.preventDefault();var el=document.getElementById(\'' + link.id + '\');if(el){var y=el.getBoundingClientRect().top+window.pageYOffset-160;window.scrollTo({top:y,behavior:\'smooth\'});}">' + link.label + '</a>';
   });
   html += '</div>';
+
+  html += '</div>'; // close mywork-sticky-header
 
   // ── All sections in one grid ─────────────────────────────────
   html += '<div class="mywork-columns">';
