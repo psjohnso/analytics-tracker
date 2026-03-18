@@ -2908,7 +2908,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0023';
+const APP_VERSION = '0.9.3.0024';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -8185,8 +8185,8 @@ function renderMyWork(area) {
     html += '<div class="mywork-empty">No projects assigned to you.</div>';
   }
 
-  // Expandable: On Hold, Future, Complete, Canceled
-  var expandProjStatuses = ['On Hold', 'Future', 'Complete', 'Canceled'];
+  // Expandable: On Hold, Future
+  var expandProjStatuses = ['On Hold', 'Future'];
   var expandProjItems = expandProjStatuses.filter(function(s) { return projByStatus[s] && projByStatus[s].length > 0; });
   if (expandProjItems.length > 0) {
     var expandProjLabel = expandProjItems.map(function(s) { return s + ' (' + projByStatus[s].length + ')'; }).join(', ');
@@ -8256,8 +8256,8 @@ function renderMyWork(area) {
     html += '<div class="mywork-empty">No tasks assigned to you.</div>';
   }
 
-  // Expandable sections: Pending, On Hold, Complete, Canceled
-  var expandStatuses = ['Pending', 'On Hold', 'Complete', 'Canceled'];
+  // Expandable sections: Pending, On Hold
+  var expandStatuses = ['Pending', 'On Hold'];
   var expandItems = expandStatuses.filter(function(s) { return tasksByStatus[s] && tasksByStatus[s].length > 0; });
   if (expandItems.length > 0) {
     var expandLabel = expandItems.map(function(s) { return s + ' (' + tasksByStatus[s].length + ')'; }).join(', ');
@@ -8267,12 +8267,10 @@ function renderMyWork(area) {
       if (!list || !list.length) return;
       list.sort(function(a, b) { return (a.due || '9999').localeCompare(b.due || '9999'); });
       var statusColor = STATUS_COLOR(status);
-      var isCollapsed = status === 'Complete' || status === 'Canceled';
       html += '<div style="margin-bottom:4px;margin-top:12px;font-size:11px;font-weight:700;color:' + statusColor + ';text-transform:uppercase;letter-spacing:0.06em;">' + esc(status) + ' (' + list.length + ')</div>';
-      var showList = isCollapsed ? list.slice(0, 3) : list;
-      showList.forEach(function(t) {
+      list.forEach(function(t) {
         var eDue = effectiveDue(t);
-        var isOverdue = eDue && eDue < todayStr && status !== 'Complete' && status !== 'Canceled';
+        var isOverdue = eDue && eDue < todayStr;
         var tHrs = getTaskHours(t.idx);
         var mHrs = getMyTaskHours(t.idx);
         var canComplete = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
@@ -8290,9 +8288,6 @@ function renderMyWork(area) {
         }
         html += '</div>';
       });
-      if (isCollapsed && list.length > 3) {
-        html += '<div class="mywork-empty" style="font-size:11px;padding:8px;">+ ' + (list.length - 3) + ' more ' + status.toLowerCase() + '</div>';
-      }
     });
     html += '</div>';
     html += '<button class="mywork-expand-btn" id="mywork-tasks-toggle" onclick="toggleMyWorkTasks()">' +
