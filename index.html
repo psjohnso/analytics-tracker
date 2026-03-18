@@ -2908,7 +2908,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0032';
+const APP_VERSION = '0.9.3.0033';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -7874,11 +7874,11 @@ function toggleGanttCollapse(title) {
 }
 
 function toggleAttentionMore() {
-  var panel = document.getElementById('attention-more');
+  var cards = document.querySelectorAll('.attention-overflow');
   var btn = document.getElementById('attention-more-toggle');
-  if (!panel || !btn) return;
-  var isHidden = panel.style.display === 'none';
-  panel.style.display = isHidden ? '' : 'none';
+  if (!cards.length || !btn) return;
+  var isHidden = cards[0].style.display === 'none';
+  cards.forEach(function(c) { c.style.display = isHidden ? '' : 'none'; });
   if (isHidden) {
     btn.dataset.origLabel = btn.textContent;
     btn.textContent = 'Show fewer items';
@@ -8338,9 +8338,11 @@ function renderMyWork(area) {
     html += '<div class="mywork-empty">All caught up! No items need your attention right now.</div>';
   } else {
     html += '<div class="mywork-alert-grid">';
-    alerts.slice(0, 15).forEach(function(a) {
+    alerts.forEach(function(a, idx) {
       var onclick = a.type === 'project' ? 'openProject(' + a.id + ')' : 'openTask(' + a.id + ')';
-      html += '<div class="mywork-alert-card" onclick="' + onclick + '">';
+      var hiddenStyle = idx >= 15 ? ' style="display:none;"' : '';
+      var extraClass = idx >= 15 ? ' attention-overflow' : '';
+      html += '<div class="mywork-alert-card' + extraClass + '"' + hiddenStyle + ' onclick="' + onclick + '">';
       html += '<div class="mywork-alert-icon">' + a.icon + '</div>';
       html += '<div class="mywork-alert-body">';
       var typeLabel = a.type === 'project' ? 'Project: ' : 'Task: ';
@@ -8352,19 +8354,6 @@ function renderMyWork(area) {
     html += '</div>';
     if (alerts.length > 15) {
       var remaining = alerts.length - 15;
-      html += '<div id="attention-more" style="display:none;"><div class="mywork-alert-grid">';
-      alerts.slice(15).forEach(function(a) {
-        var onclick = a.type === 'project' ? 'openProject(' + a.id + ')' : 'openTask(' + a.id + ')';
-        html += '<div class="mywork-alert-card" onclick="' + onclick + '">';
-        html += '<div class="mywork-alert-icon">' + a.icon + '</div>';
-        html += '<div class="mywork-alert-body">';
-        var typeLabel = a.type === 'project' ? 'Project: ' : 'Task: ';
-        html += '<div class="mywork-alert-title"><span style="font-weight:700;color:var(--text-muted);">' + typeLabel + '</span>' + esc(a.title) + '</div>';
-        html += '<div class="mywork-alert-meta">' + esc(a.meta) + '</div>';
-        html += '<div class="mywork-alert-reason">' + esc(a.reason) + '</div>';
-        html += '</div></div>';
-      });
-      html += '</div></div>';
       html += '<button class="mywork-expand-btn" id="attention-more-toggle" onclick="toggleAttentionMore()">Show ' + remaining + ' more item' + (remaining !== 1 ? 's' : '') + '</button>';
     }
   }
