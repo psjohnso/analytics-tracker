@@ -102,13 +102,18 @@ body {
 
 /* LAYOUT */
 .app-body {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr;
   padding-top: var(--header-h);
   min-height: 100vh;
 }
+.main-content {
+  display: contents;
+}
 /* ── DETAIL PAGE ─────────────────────────────────────────────────── */
 .app-body.detail-mode .sidebar { display: none; }
-.app-body.detail-mode .main-content { flex: 1; }
+.app-body.detail-mode .tab-bar { grid-column: 1; }
+.app-body.detail-mode .content-area { grid-column: 1; }
 
 .detail-page {
   padding: 0;
@@ -266,25 +271,29 @@ body {
 
 /* SIDEBAR */
 .sidebar {
-  width: var(--sidebar-w);
-  flex-shrink: 0;
+  order: 2;
+  width: 100%;
   background: var(--white);
-  border-right: 1px solid var(--border);
-  height: calc(100vh - var(--header-h));
-  position: sticky;
-  top: var(--header-h);
-  overflow-y: auto;
+  border-bottom: 1px solid var(--border);
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  gap: 0;
+  align-items: flex-start;
+  padding: 8px 16px;
+  overflow-x: auto;
+  position: sticky;
+  top: calc(var(--header-h) + 49px);
+  z-index: 45;
 }
 
 .sidebar-section {
-  padding: 16px;
-  border-bottom: 1px solid var(--gray-light);
+  padding: 6px 12px;
+  border-bottom: none;
+  flex-shrink: 0;
 }
 
 .sidebar-group-header {
-  padding: 10px 16px 6px;
+  padding: 6px 12px 4px;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -300,7 +309,8 @@ body {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-muted);
-  margin-bottom: 10px;
+  margin-bottom: 4px;
+  white-space: nowrap;
 }
 
 .search-box {
@@ -308,11 +318,11 @@ body {
 }
 
 .search-box input {
-  width: 100%;
-  padding: 8px 12px 8px 32px;
+  width: 200px;
+  padding: 6px 10px 6px 28px;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 13px;
+  border-radius: 14px;
+  font-size: 12px;
   font-family: 'Lato', sans-serif;
   background: var(--surface);
   color: var(--text-body);
@@ -335,24 +345,25 @@ body {
 
 .filter-group {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 4px;
 }
 
 .filter-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 7px 10px;
-  border-radius: 6px;
-  border: none;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
   background: transparent;
   cursor: pointer;
   font-family: 'Lato', sans-serif;
-  font-size: 13px;
+  font-size: 11px;
   color: var(--text-body);
-  transition: background 0.15s;
+  transition: background 0.15s, border-color 0.15s;
   text-align: left;
+  white-space: nowrap;
 }
 
 .filter-btn:hover {
@@ -365,12 +376,12 @@ body {
 }
 
 .filter-btn .badge {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  background: rgba(0,0,0,0.1);
-  border-radius: 10px;
-  padding: 1px 7px;
-  min-width: 24px;
+  background: rgba(0,0,0,0.08);
+  border-radius: 8px;
+  padding: 0px 5px;
+  min-width: 18px;
   text-align: center;
 }
 
@@ -379,19 +390,15 @@ body {
 }
 
 .status-dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
-  margin-right: 8px;
 }
 
 /* MAIN */
 .main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+  display: contents;
 }
 
 /* TAB BAR */
@@ -405,6 +412,7 @@ body {
   position: sticky;
   top: var(--header-h);
   z-index: 50;
+  order: 1;
 }
 
 .tab-btn {
@@ -452,6 +460,7 @@ body {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
+  order: 3;
 }
 
 .sort-select {
@@ -477,6 +486,7 @@ body {
 .content-area {
   padding: 20px 24px;
   flex: 1;
+  order: 4;
 }
 [id^="mw-"] { scroll-margin-top: 160px; }
 
@@ -491,7 +501,7 @@ body {
   position: sticky;
   top: calc(var(--header-h) + 49px);
   z-index: 40;
-  background: var(--bg);
+  background: var(--surface);
   padding: 12px 0 10px;
   margin: -12px 0 8px;
   border-bottom: 1px solid var(--border);
@@ -2936,7 +2946,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0036';
+const APP_VERSION = '0.9.3.0037';
 
 let PROJECTS = [];
 let TASKS = [];
