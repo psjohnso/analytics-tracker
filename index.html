@@ -2908,7 +2908,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0029';
+const APP_VERSION = '0.9.3.0030';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -7768,6 +7768,7 @@ function toggleEditTimeEntry(oid) {
 
 let _myWorkViewUser = null; // Admin view-as override; null = view own work
 let _ganttFilter = {};     // { projectTitle: true/false } — which projects show on gantt; empty = all visible
+let _ganttCollapsed = {};  // { projectTitle: true/false } — which projects have tasks hidden
 
 function getMyProjects(viewName) {
   var name = viewName || _userFullName;
@@ -7789,6 +7790,7 @@ function switchMyWorkUser(selectEl) {
   var val = selectEl.value;
   _myWorkViewUser = (val === _userFullName) ? null : val;
   _ganttFilter = {}; // reset so new user's projects default to all visible
+  _ganttCollapsed = {}; // reset collapse state
   renderMyWork(document.getElementById('content-area'));
 }
 
@@ -7843,15 +7845,43 @@ function ganttSelectAll(show) {
   rebuildGanttChart();
 }
 
+function toggleGanttDropdown() {
+  var dd = document.getElementById('gantt-filter-dropdown');
+  if (!dd) return;
+  var isOpen = dd.style.display !== 'none';
+  dd.style.display = isOpen ? 'none' : '';
+  // Close on outside click
+  if (!isOpen) {
+    setTimeout(function() {
+      function closeHandler(e) {
+        var wrap = document.getElementById('gantt-filter-wrap');
+        if (wrap && !wrap.contains(e.target)) {
+          dd.style.display = 'none';
+          document.removeEventListener('click', closeHandler);
+        }
+      }
+      document.addEventListener('click', closeHandler);
+    }, 0);
+  }
+}
+
+function toggleGanttCollapse(title) {
+  _ganttCollapsed[title] = !_ganttCollapsed[title];
+  rebuildGanttChart();
+}
+
 function rebuildGanttChart() {
   var container = document.getElementById('gantt-chart-body');
   if (!container) return;
   container.innerHTML = buildGanttBars();
-  // Update header count
-  var headerSpan = document.querySelector('#mywork-gantt').closest('.mywork-section').querySelector('.mywork-section-header span:last-child');
-  if (headerSpan && window._ganttItemsAll) {
+  // Update header and dropdown button counts
+  if (window._ganttItemsAll) {
     var vis = window._ganttItemsAll.filter(function(g) { return _ganttFilter[g.title]; }).length;
-    headerSpan.textContent = '(' + vis + ' of ' + window._ganttItemsAll.length + ' projects)';
+    var total = window._ganttItemsAll.length;
+    var headerSpan = document.querySelector('#mywork-gantt') && document.querySelector('#mywork-gantt').closest('.mywork-section') ? document.querySelector('#mywork-gantt').closest('.mywork-section').querySelector('.mywork-section-header span:last-child') : null;
+    if (headerSpan) headerSpan.textContent = '(' + vis + ' of ' + total + ' projects)';
+    var ddBtn = document.querySelector('#gantt-filter-wrap > button');
+    if (ddBtn) ddBtn.innerHTML = '📁 Projects (' + vis + '/' + total + ') <span style="font-size:9px;">▼</span>';
   }
 }
 
@@ -7891,14 +7921,23 @@ function buildGanttBars() {
     var rightPct = ganttPct(g.end || todayStr);
     var barWidth = Math.max(1, rightPct - leftPct);
     var isOverdue = g.end && g.end < todayStr;
+    var isCollapsed = _ganttCollapsed[g.title];
+    var hasTasks = g.tasks && g.tasks.length > 0;
+    var arrow = hasTasks ? (isCollapsed ? '▶' : '▼') : '•';
+    var arrowClick = hasTasks ? ' onclick="event.stopPropagation();toggleGanttCollapse(\'' + esc(g.title).replace(/'/g, "\\'") + '\')" style="cursor:pointer;margin-right:4px;font-size:9px;opacity:0.6;user-select:none;"' : ' style="margin-right:4px;font-size:7px;opacity:0.4;"';
 
     html += '<div style="display:flex;align-items:center;margin-bottom:2px;height:28px;">';
-    html += '<div style="width:200px;flex-shrink:0;font-size:11px;font-weight:700;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px;cursor:pointer;" onclick="openProject(' + g.id + ')" title="' + esc(g.title) + '">' + esc(g.title) + '</div>';
+    html += '<div style="width:200px;flex-shrink:0;display:flex;align-items:center;overflow:hidden;">';
+    html += '<span' + arrowClick + '>' + arrow + '</span>';
+    html += '<span style="font-size:11px;font-weight:700;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;" onclick="openProject(' + g.id + ')" title="' + esc(g.title) + '">' + esc(g.title) + '</span>';
+    if (hasTasks) html += '<span style="font-size:9px;color:var(--text-muted);margin-left:4px;flex-shrink:0;">(' + g.tasks.length + ')</span>';
+    html += '</div>';
     html += '<div style="flex:1;position:relative;height:20px;">';
     html += '<div style="position:absolute;left:' + leftPct + '%;width:' + barWidth + '%;height:100%;background:' + sc + ';border-radius:4px;opacity:0.85;' + (isOverdue ? 'outline:2px solid #EF4444;outline-offset:1px;' : '') + '" title="' + (g.start || '?') + ' → ' + (g.end || '?') + '"></div>';
     html += '</div></div>';
 
-    g.tasks.forEach(function(t) {
+    if (!isCollapsed) {
+      g.tasks.forEach(function(t) {
       var tStart = t.start || g.start || todayStr;
       var tEnd = t.working_due || t.due || g.end || todayStr;
       var tLeftPct = ganttPct(tStart);
@@ -7913,6 +7952,7 @@ function buildGanttBars() {
       html += '<div style="position:absolute;left:' + tLeftPct + '%;width:' + tWidth + '%;height:100%;background:' + tsc + ';border-radius:3px;opacity:0.7;' + (tOverdue ? 'outline:2px solid #EF4444;outline-offset:1px;' : '') + '" title="' + tStart + ' → ' + tEnd + '"></div>';
       html += '</div></div>';
     });
+    } // end if (!isCollapsed)
 
     html += '<div style="height:6px;"></div>';
   });
@@ -8370,19 +8410,42 @@ function renderMyWork(area) {
     html += '<div class="mywork-section-header" style="cursor:pointer;user-select:none;" onclick="toggleGantt()"><span id="gantt-arrow">▶</span> 📊 Timeline <span style="font-size:11px;font-weight:400;color:var(--text-muted);">(' + visibleCount + ' of ' + ganttItems.length + ' projects)</span></div>';
     html += '<div id="mywork-gantt" style="display:none;">';
 
-    // Filter bar
-    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px;padding:8px 0;border-bottom:1px solid var(--border);">';
-    html += '<button onclick="ganttSelectAll(true)" style="font-size:10px;padding:3px 8px;border:1px solid var(--border);border-radius:4px;background:#F3F4F6;cursor:pointer;font-weight:700;">All</button>';
-    html += '<button onclick="ganttSelectAll(false)" style="font-size:10px;padding:3px 8px;border:1px solid var(--border);border-radius:4px;background:#F3F4F6;cursor:pointer;font-weight:700;">None</button>';
-    html += '<span style="width:1px;height:16px;background:var(--border);"></span>';
+    // Toolbar: dropdown filter + legend
+    html += '<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:10px;padding:8px 0;border-bottom:1px solid var(--border);">';
+
+    // Dropdown project picker
+    html += '<div style="position:relative;display:inline-block;" id="gantt-filter-wrap">';
+    html += '<button onclick="toggleGanttDropdown()" style="font-size:11px;padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-weight:600;color:var(--navy);display:flex;align-items:center;gap:6px;">';
+    html += '📁 Projects (' + visibleCount + '/' + ganttItems.length + ') <span style="font-size:9px;">▼</span></button>';
+    html += '<div id="gantt-filter-dropdown" style="display:none;position:absolute;top:100%;left:0;z-index:100;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:8px 0;min-width:260px;max-height:300px;overflow-y:auto;margin-top:4px;">';
+    html += '<div style="display:flex;gap:6px;padding:4px 12px 8px;border-bottom:1px solid var(--border);">';
+    html += '<button onclick="ganttSelectAll(true)" style="font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:#F3F4F6;cursor:pointer;font-weight:700;">All</button>';
+    html += '<button onclick="ganttSelectAll(false)" style="font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:#F3F4F6;cursor:pointer;font-weight:700;">None</button>';
+    html += '</div>';
     ganttItems.forEach(function(g) {
       var sc = STATUS_COLOR(g.status) || '#3B82F6';
       var checked = _ganttFilter[g.title] ? ' checked' : '';
-      html += '<label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;white-space:nowrap;">';
+      html += '<label style="display:flex;align-items:center;gap:8px;padding:5px 12px;font-size:11px;cursor:pointer;white-space:nowrap;" onmouseenter="this.style.background=\'#F3F4F6\'" onmouseleave="this.style.background=\'#fff\'">';
       html += '<input type="checkbox" class="gantt-proj-check" value="' + esc(g.title) + '"' + checked + ' onchange="toggleGanttProject(\'' + esc(g.title).replace(/'/g, "\\'") + '\')">';
-      html += '<span style="width:8px;height:8px;border-radius:2px;background:' + sc + ';flex-shrink:0;"></span>';
-      html += esc(g.title) + '</label>';
+      html += '<span style="width:10px;height:10px;border-radius:2px;background:' + sc + ';flex-shrink:0;"></span>';
+      html += '<span style="overflow:hidden;text-overflow:ellipsis;">' + esc(g.title) + '</span>';
+      html += '<span style="font-size:9px;color:var(--text-muted);margin-left:auto;">' + esc(g.status) + '</span>';
+      html += '</label>';
     });
+    html += '</div></div>';
+
+    // Legend
+    html += '<span style="width:1px;height:16px;background:var(--border);"></span>';
+    var legendStatuses = ['Active', 'On Hold', 'Scheduled', 'In Progress', 'Waiting for Response'];
+    legendStatuses.forEach(function(s) {
+      var c = STATUS_COLOR(s);
+      if (!c) return;
+      html += '<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted);white-space:nowrap;">';
+      html += '<span style="width:10px;height:6px;border-radius:2px;background:' + c + ';opacity:0.85;"></span>' + s + '</span>';
+    });
+    html += '<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted);white-space:nowrap;">';
+    html += '<span style="width:10px;height:6px;border-radius:2px;background:#ccc;outline:2px solid #EF4444;outline-offset:1px;"></span>Overdue</span>';
+
     html += '</div>';
 
     // Chart area
