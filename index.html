@@ -499,11 +499,12 @@ body {
   top: calc(var(--header-h) + 49px);
   z-index: 40;
   background: var(--surface);
-  padding: 12px 0 10px;
-  margin: -20px 0 8px;
+  padding: 12px 24px 10px;
+  margin: -20px -24px 0;
   border-bottom: 1px solid var(--border);
-  width: 100%;
-  box-sizing: border-box;
+}
+.mywork-sticky-inner {
+  max-width: 1100px;
 }
 
 .mywork-jump-link {
@@ -2002,7 +2003,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 /* ── Settings Tab ───────────────────────────────── */
 
 /* ── My Work Tab ───────────────────────────────── */
-.mywork-page { padding:0 0 20px; max-width:1100px; width:100%; }
+.mywork-page { padding:16px 0 20px; max-width:1100px; }
 .mywork-greeting { font-size:20px; font-weight:800; color:var(--navy); margin-bottom:2px; line-height:1.3; }
 .mywork-subtitle { font-size:13px; color:var(--text-muted); margin-bottom:0; }
 .mywork-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; }
@@ -2949,7 +2950,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0042';
+const APP_VERSION = '0.9.3.0043';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -8253,10 +8254,12 @@ function renderMyWork(area) {
   alerts.sort(function(a, b) { return a.priority - b.priority; });
 
   // ── Build HTML ──────────────────────────────────────────────
-  var html = '<div class="mywork-page">';
+  // Sticky header sits outside mywork-page so it spans full content-area width
+  var html = '';
 
   // ── Sticky header: greeting + date/picker + jump links ──────
   html += '<div class="mywork-sticky-header">';
+  html += '<div class="mywork-sticky-inner">';
 
   // Greeting
   if (isViewingSelf) {
@@ -8305,9 +8308,11 @@ function renderMyWork(area) {
   });
   html += '</div>';
 
+  html += '</div>'; // close mywork-sticky-inner
   html += '</div>'; // close mywork-sticky-header
 
-  // ── All sections in one grid ─────────────────────────────────
+  // ── All sections in constrained page ────────────────────────
+  html += '<div class="mywork-page">';
   html += '<div class="mywork-columns">';
 
   // ── KPIs — spans both columns ──────────────────────────────
