@@ -2908,7 +2908,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0030';
+const APP_VERSION = '0.9.3.0031';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -7465,9 +7465,12 @@ function calculateWorkHours(startMs, endMs) {
 
         if (overlapEnd > overlapStart) {
           var dayHours = (overlapEnd - overlapStart) / 60;
-          // Subtract lunch only if the overlap spans a significant part of the day
-          var scheduledDayHours = (workEndMin - workStartMin) / 60;
-          if (dayHours >= scheduledDayHours * 0.5) {
+          // Only subtract lunch if the work overlap spans across the midday break.
+          // If you started before noon and ended after 1 PM, you presumably took lunch.
+          // Afternoon-only or morning-only sessions don't get lunch deducted.
+          var lunchStart = 12 * 60; // noon
+          var lunchEnd = lunchStart + (person.lunch_minutes || 60);
+          if (overlapStart < lunchStart && overlapEnd > lunchEnd) {
             dayHours = Math.max(0, dayHours - lunchHrs);
           }
           totalHours += dayHours;
