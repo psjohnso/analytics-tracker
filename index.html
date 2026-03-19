@@ -2980,7 +2980,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0068';
+const APP_VERSION = '0.9.3.0069';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -3021,17 +3021,18 @@ let activeFilters = {
 };
 
 // ─── STATUS / PRIORITY COLORS ─────────────────────────────────────────
+// Mapped to City of Tucson brand palette (COT_Brand_Guide_1.pdf)
 const STATUS_COLOR_MAP = {
-  'Active': '#22C55E',
-  'Complete': '#3B82F6',
-  'Canceled': '#9CA3AF',
-  'Future': '#F97316',
-  'On Hold': '#EAB308',
-  'Scheduled': '#9E0059',
-  'Idea': '#FFDB22',
-  'In Progress': '#22C55E',
-  'Pending': '#F97316',
-  'Waiting for Response': '#A855F7',
+  'Active': '#83AC16',              // Saguaro Green
+  'Complete': '#0088FF',            // Sky Blue
+  'Canceled': '#B0B3AE',           // Monsoon Gray (darkened for visibility)
+  'Future': '#C24200',              // Sunset Orange
+  'On Hold': '#FFDB22',             // Sun Yellow
+  'Scheduled': '#9E0059',           // Cactus Fruit
+  'Idea': '#E5D086',                // Sonoran Sand
+  'In Progress': '#83AC16',         // Saguaro Green
+  'Pending': '#C24200',             // Sunset Orange
+  'Waiting for Response': '#002669',// Tucson Blue
 };
 // STATUS_COLOR() returns a color for any status, including unknown ones.
 // Unknown statuses get a deterministic color derived from the string itself
