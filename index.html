@@ -2980,7 +2980,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0052';
+const APP_VERSION = '0.9.3.0054';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -3096,20 +3096,20 @@ function buildSidebarFilters() {
 
   renderFilterGroup('status-filters', statuses, 'status');
   renderFilterGroup('priority-filters', priorities, 'priority');
-  renderFilterGroup('category-filters', Object.fromEntries(Object.entries(categories).sort((a,b) => b[1]-a[1]).slice(0,8)), 'category');
-  renderFilterGroup('member-filters', Object.fromEntries(Object.entries(members).sort((a,b) => b[1]-a[1]).slice(0,10)), 'member');
+  renderFilterGroup('category-filters', Object.fromEntries(Object.entries(categories).sort((a,b) => a[0].localeCompare(b[0]))), 'category');
+  renderFilterGroup('member-filters', Object.fromEntries(Object.entries(members).sort((a,b) => a[0].localeCompare(b[0]))), 'member');
   renderFilterGroup('task-status-filters', taskStatuses, 'taskStatus');
 
   const taskCats = {};
   TASKS.forEach(t => { if(t.category) taskCats[t.category] = (taskCats[t.category] || 0) + 1; });
-  renderFilterGroup('task-category-filters', Object.fromEntries(Object.entries(taskCats).sort((a,b) => b[1]-a[1]).slice(0,10)), 'taskCategory');
+  renderFilterGroup('task-category-filters', Object.fromEntries(Object.entries(taskCats).sort((a,b) => a[0].localeCompare(b[0]))), 'taskCategory');
 
   const taskTools = {};
   TASKS.forEach(t => { if(t.tool) taskTools[t.tool] = (taskTools[t.tool] || 0) + 1; });
-  renderFilterGroup('task-tool-filters', Object.fromEntries(Object.entries(taskTools).sort((a,b) => b[1]-a[1]).slice(0,10)), 'taskTool');
+  renderFilterGroup('task-tool-filters', Object.fromEntries(Object.entries(taskTools).sort((a,b) => a[0].localeCompare(b[0]))), 'taskTool');
 
-  renderFilterGroup('dept-filters', Object.fromEntries(Object.entries(depts).sort((a,b) => b[1]-a[1])), 'partnerDept');
-  renderFilterGroup('team-filters', Object.fromEntries(Object.entries(teams).sort((a,b) => b[1]-a[1])), 'itdTeam');
+  renderFilterGroup('dept-filters', Object.fromEntries(Object.entries(depts).sort((a,b) => a[0].localeCompare(b[0]))), 'partnerDept');
+  renderFilterGroup('team-filters', Object.fromEntries(Object.entries(teams).sort((a,b) => a[0].localeCompare(b[0]))), 'itdTeam');
 }
 
 function renderFilterGroup(id, items, filterType) {
