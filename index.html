@@ -2980,7 +2980,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0057';
+const APP_VERSION = '0.9.3.0059';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -7565,6 +7565,22 @@ var _customTaskTools = [
 // Helper: build description map from {name,desc} array
 function buildDescMap(arr) { var m = {}; arr.forEach(function(i) { m[i.name] = i.desc; }); return m; }
 
+// Compact storage: save with short keys (n/d/a) to fit within 4000-char field limit
+function compressDescList(arr) {
+  return arr.map(function(i) {
+    var o = { n: i.name, d: i.desc };
+    if (i.active === false) o.a = false;
+    return o;
+  });
+}
+// Expand from short keys back to full names on load
+function expandDescList(arr) {
+  return arr.map(function(i) {
+    if (i.name !== undefined) return i; // already expanded
+    return { name: i.n || '', desc: i.d || '', active: i.a !== false };
+  });
+}
+
 // Called after loading config features from ArcGIS Online
 function applyAppConfig(features) {
   if (!features || !features.length) return;
@@ -7584,13 +7600,13 @@ function applyAppConfig(features) {
         _customItdTeams = parsed;
         _configOids.itd_teams = oid;
       } else if (key === 'proj_categories') {
-        if (parsed.length && typeof parsed[0] === 'object') _customProjCategories = parsed;
+        if (parsed.length && typeof parsed[0] === 'object') _customProjCategories = expandDescList(parsed);
         _configOids.proj_categories = oid;
       } else if (key === 'task_categories') {
-        if (parsed.length && typeof parsed[0] === 'object') _customTaskCategories = parsed;
+        if (parsed.length && typeof parsed[0] === 'object') _customTaskCategories = expandDescList(parsed);
         _configOids.task_categories = oid;
       } else if (key === 'task_tools') {
-        if (parsed.length && typeof parsed[0] === 'object') _customTaskTools = parsed;
+        if (parsed.length && typeof parsed[0] === 'object') _customTaskTools = expandDescList(parsed);
         _configOids.task_tools = oid;
       }
     } catch (e) {
@@ -7599,25 +7615,39 @@ function applyAppConfig(features) {
   });
   // Refresh enum aliases so dropdowns reflect loaded config
   if (typeof refreshEnums === 'function') refreshEnums();
-  console.log('[Config] Loaded:', _customPartnerDepts.length, 'depts,', _customItdTeams.length, 'teams');
+  console.log('[Config] Loaded:', _customPartnerDepts.length, 'depts,', _customItdTeams.length, 'teams,',
+    _configOids.proj_categories ? 'proj_cats' : 'no proj_cats,',
+    _configOids.task_categories ? 'task_cats' : 'no task_cats,',
+    _configOids.task_tools ? 'task_tools' : 'no task_tools');
 }
 
 // Save a single config key back to ArcGIS Online
 async function saveConfigKey(key, valueArray) {
   var oid = _configOids[key];
   var jsonValue = JSON.stringify(valueArray);
+  console.log('[Config] Saving "' + key + '" (' + jsonValue.length + ' chars)');
   try {
     if (oid) {
       // Update existing record
-      await agolApplyEdits(ARCGIS_CONFIG.appConfigUrl, {
+      var result = await agolApplyEdits(ARCGIS_CONFIG.appConfigUrl, {
         updates: [{ attributes: { OBJECTID: oid, config_value: jsonValue } }]
       });
+      // Check for per-record failure
+      if (result && result.updateResults && result.updateResults[0] && !result.updateResults[0].success) {
+        var err = result.updateResults[0].error || {};
+        throw new Error(err.description || 'Update failed — the config_value field may be too short for ' + jsonValue.length + ' characters. Increase the field length in ArcGIS Online.');
+      }
       console.log('[Config] Updated "' + key + '" in ArcGIS Online');
     } else {
       // Create new record
       var result = await agolApplyEdits(ARCGIS_CONFIG.appConfigUrl, {
         adds: [{ attributes: { config_key: key, config_value: jsonValue } }]
       });
+      // Check for per-record failure
+      if (result && result.addResults && result.addResults[0] && !result.addResults[0].success) {
+        var err = result.addResults[0].error || {};
+        throw new Error(err.description || 'Create failed — the config_value field may be too short for ' + jsonValue.length + ' characters. Increase the field length in ArcGIS Online.');
+      }
       // Store the new ObjectId for future updates
       if (result && result.addResults && result.addResults[0] && result.addResults[0].objectId) {
         _configOids[key] = result.addResults[0].objectId;
@@ -7627,7 +7657,7 @@ async function saveConfigKey(key, valueArray) {
     return true;
   } catch (e) {
     console.error('Failed to save config "' + key + '" to ArcGIS:', e);
-    alert('Failed to save changes: ' + e.message);
+    alert('Failed to save "' + key + '": ' + e.message);
     return false;
   }
 }
@@ -7638,11 +7668,11 @@ async function saveCustomLists(listKey) {
   } else if (listKey === 'team') {
     await saveConfigKey('itd_teams', _customItdTeams);
   } else if (listKey === 'proj_cat') {
-    await saveConfigKey('proj_categories', _customProjCategories);
+    await saveConfigKey('proj_categories', compressDescList(_customProjCategories));
   } else if (listKey === 'task_cat') {
-    await saveConfigKey('task_categories', _customTaskCategories);
+    await saveConfigKey('task_categories', compressDescList(_customTaskCategories));
   } else if (listKey === 'task_tool') {
-    await saveConfigKey('task_tools', _customTaskTools);
+    await saveConfigKey('task_tools', compressDescList(_customTaskTools));
   }
 }
 
