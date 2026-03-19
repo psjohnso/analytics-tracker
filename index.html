@@ -2980,7 +2980,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0066';
+const APP_VERSION = '0.9.3.0068';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -4671,6 +4671,8 @@ function toggleAuth() {
     _userFullName = null;
     _canPromoteIdeas = false;
     _isTeamLead = false;
+    _devMode = false;
+    sessionStorage.removeItem('dev_mode');
     const settingsTab = document.getElementById('tab-settings');
     if (settingsTab) settingsTab.style.display = 'none';
     const myWorkTab = document.getElementById('tab-mywork');
@@ -4741,6 +4743,7 @@ let _agolUsername = null;       // ArcGIS Online username of the logged-in user
 let _userFullName = null;      // Full display name for matching to projects/tasks
 let _canPromoteIdeas = false;  // Whether the user is authorized to promote Ideas
 let _isTeamLead = false;       // Whether the user can access Settings tab
+let _devMode = false;          // Developer mode — enables advanced tools like Edit History
 
 /**
  * Fetch the current user's profile from ArcGIS Online.
@@ -4802,6 +4805,10 @@ async function fetchAgolUserInfo(token) {
           if (_isTeamLead) {
             const settingsTab = document.getElementById('tab-settings');
             if (settingsTab) settingsTab.style.display = '';
+          } else {
+            // Non-admin: clear dev mode if it was left in session
+            _devMode = false;
+            sessionStorage.removeItem('dev_mode');
           }
         }
       } catch (gErr) {
@@ -6747,20 +6754,13 @@ function renderProjectDetail(id) {
         return '<div class="detail-section">' +
           '<div class="detail-section-label" style="display:flex;align-items:center;justify-content:space-between;">' +
             '<span>Project Timeline</span>' +
-            (_isTeamLead ? '<button onclick="toggleStatusHistoryEditor(' + p.id + ',' + p.objectId + ')" style="background:var(--navy);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:Lato,sans-serif;">📅 Edit History</button>' : '') +
+            (_devMode ? '<button onclick="toggleStatusHistoryEditor(' + p.id + ',' + p.objectId + ')" style="background:var(--navy);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:Lato,sans-serif;">📅 Edit History</button>' : '') +
           '</div>' +
           '<div style="position:relative;height:28px;background:#F3F4F6;border-radius:8px;overflow:hidden;">' +
             segments +
           '</div>' +
           '<div style="position:relative;height:28px;margin-top:2px;">' + labels + '</div>' +
-          '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:2px;">' +
-            '<div style="font-size:11px;color:var(--text-body);">' +
-              (projStart ? '<span style="font-weight:700;color:var(--navy);">Start</span> <span style="color:var(--text-muted);">' + projStart + '</span>' : '') +
-            '</div>' +
-            '<div style="font-size:11px;color:var(--text-body);text-align:right;">' +
-              (projActualEnd ? '<span style="font-weight:700;color:#22C55E;">Completed</span> <span style="color:var(--text-muted);">' + projActualEnd + '</span>' : '') +
-            '</div>' +
-          '</div>' +
+          (projActualEnd ? '<div style="text-align:right;margin-top:2px;font-size:11px;"><span style="font-weight:700;color:#22C55E;">✓ Completed</span> <span style="color:var(--text-muted);">' + projActualEnd + '</span></div>' : '') +
           '<div id="status-history-editor"></div>' +
         '</div>';
       })()}
@@ -9676,6 +9676,18 @@ function renderMyWork(area) {
   area.innerHTML = html;
 }
 
+function toggleDevMode(enabled) {
+  _devMode = enabled;
+  if (enabled) {
+    sessionStorage.setItem('dev_mode', '1');
+  } else {
+    sessionStorage.removeItem('dev_mode');
+  }
+}
+
+// Restore dev mode from session on load
+if (sessionStorage.getItem('dev_mode') === '1') _devMode = true;
+
 function renderSettingsPage(area) {
   if (!_isTeamLead) {
     area.innerHTML = '<div class="empty-state">You do not have access to Settings.</div>';
@@ -9745,6 +9757,19 @@ function renderSettingsPage(area) {
       '<div id="desc-editor-task-tool"></div>' +
     '</div>' +
     '<div class="list-editor-note">Changes are saved to ArcGIS Online and shared across all users. Values used in existing projects or tasks will always appear in the dropdown even if removed here. The "Help me choose" wizard uses a fixed decision tree — adding items here will make them available in the dropdown but not automatically in the wizard.</div>' +
+  '</div>';
+
+  // ── Developer Mode ──────────────────────────────────────
+  var devChecked = _devMode ? ' checked' : '';
+  html += '<div class="settings-section">' +
+    '<div class="settings-section-header"><span>Developer Mode</span></div>' +
+    '<div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;">' +
+      '<label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-body);">' +
+        '<input type="checkbox" id="dev-mode-toggle"' + devChecked + ' onchange="toggleDevMode(this.checked)" style="width:18px;height:18px;cursor:pointer;accent-color:var(--navy);">' +
+        'Enable Developer Mode' +
+      '</label>' +
+      '<span style="font-size:11px;color:var(--text-muted);">Activates advanced tools across the application. Currently enables: Edit History on project timelines.</span>' +
+    '</div>' +
   '</div>';
 
   html += '</div>';
