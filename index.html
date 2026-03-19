@@ -2980,7 +2980,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0060';
+const APP_VERSION = '0.9.3.0061';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -6689,6 +6689,112 @@ function renderProjectDetail(id) {
         <div class="detail-section-label">Description</div>
         <div class="detail-prose">${esc(p.description)}</div>
       </div>` : ''}
+
+      ${(() => {
+        // Build project phase timeline
+        var phaseTasks = relTasks.filter(t => t.start || t.working_due || t.due).sort((a, b) => (a.start || '9999').localeCompare(b.start || '9999'));
+        if (phaseTasks.length === 0) return '';
+
+        var projStart = p.start || null;
+        var projEnd = p.actual_end || p.working_due || p.end || null;
+        var todayStr = new Date().toISOString().slice(0, 10);
+
+        // Gather all dates to determine range
+        var allDates = [todayStr];
+        if (projStart) allDates.push(projStart);
+        if (projEnd) allDates.push(projEnd);
+        phaseTasks.forEach(t => {
+          if (t.start) allDates.push(t.start);
+          var tEnd = t.working_due || t.due;
+          if (tEnd) allDates.push(tEnd);
+        });
+        allDates.sort();
+        var rangeStart = new Date(allDates[0] + 'T00:00:00');
+        var rangeEnd = new Date(allDates[allDates.length - 1] + 'T00:00:00');
+        rangeStart.setDate(rangeStart.getDate() - 7);
+        rangeEnd.setDate(rangeEnd.getDate() + 14);
+        var totalDays = Math.max(1, Math.ceil((rangeEnd - rangeStart) / 86400000));
+
+        function pct(ds) {
+          if (!ds) return null;
+          var d = new Date(ds + 'T00:00:00');
+          return Math.max(0, Math.min(100, ((d - rangeStart) / 86400000 / totalDays) * 100));
+        }
+
+        var todayPct = pct(todayStr);
+
+        // Month labels
+        var months = '';
+        var cur = new Date(rangeStart);
+        cur.setDate(1);
+        if (cur < rangeStart) cur.setMonth(cur.getMonth() + 1);
+        while (cur <= rangeEnd) {
+          var mp = pct(cur.toISOString().slice(0, 10));
+          if (mp >= 0 && mp <= 98) {
+            months += '<span style="position:absolute;left:' + mp + '%;font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;transform:translateX(-50%);">' + cur.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }) + '</span>';
+          }
+          cur.setMonth(cur.getMonth() + 1);
+        }
+
+        // Project bar (background)
+        var pLeftPct = pct(projStart || allDates[0]);
+        var pRightPct = pct(projEnd || allDates[allDates.length - 1]);
+        var pWidth = Math.max(1, pRightPct - pLeftPct);
+
+        // Task rows
+        var rows = phaseTasks.map((t, idx) => {
+          var tStart = t.start || projStart || todayStr;
+          var tEnd = t.working_due || t.due || projEnd || todayStr;
+          var lp = pct(tStart);
+          var rp = pct(tEnd);
+          var w = Math.max(0.5, rp - lp);
+          var sc = STATUS_COLOR(t.status) || '#93C5FD';
+          var isOverdue = tEnd < todayStr && t.status !== 'Complete' && t.status !== 'Canceled';
+          var isComplete = t.status === 'Complete';
+          var opacity = isComplete ? '0.5' : '0.85';
+          var outline = isOverdue ? 'outline:2px solid #EF4444;outline-offset:1px;' : '';
+          var pattern = isComplete ? 'background:repeating-linear-gradient(45deg,' + sc + ',' + sc + ' 4px,transparent 4px,transparent 8px);' : 'background:' + sc + ';';
+
+          return '<div style="display:flex;align-items:center;height:26px;margin-bottom:2px;">' +
+            '<div style="width:180px;flex-shrink:0;font-size:11px;font-weight:600;color:var(--text-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px;cursor:pointer;" onclick="openTaskFromProject(' + t.idx + ')" title="' + esc(t.title) + ' (' + tStart + ' → ' + tEnd + ')">' + esc(t.title) + '</div>' +
+            '<div style="flex:1;position:relative;height:18px;">' +
+              '<div style="position:absolute;left:' + lp + '%;width:' + w + '%;height:100%;' + pattern + 'border-radius:3px;opacity:' + opacity + ';' + outline + '" title="' + tStart + ' → ' + tEnd + ' (' + t.status + ')"></div>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+
+        return '<div class="detail-section">' +
+          '<div class="detail-section-label">Project Timeline</div>' +
+          '<div style="overflow-x:auto;">' +
+            '<div style="min-width:600px;position:relative;padding-bottom:8px;">' +
+              // Month header
+              '<div style="position:relative;height:18px;margin-bottom:4px;margin-left:180px;border-bottom:1px solid var(--border);">' + months + '</div>' +
+              // Project background bar
+              '<div style="display:flex;align-items:center;height:10px;margin-bottom:6px;">' +
+                '<div style="width:180px;flex-shrink:0;font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Project Span</div>' +
+                '<div style="flex:1;position:relative;height:8px;">' +
+                  '<div style="position:absolute;left:' + pLeftPct + '%;width:' + pWidth + '%;height:100%;background:var(--navy);border-radius:4px;opacity:0.15;"></div>' +
+                '</div>' +
+              '</div>' +
+              // Task rows
+              rows +
+              // Today marker
+              (todayPct > 0 && todayPct < 100 ?
+                '<div style="position:absolute;top:0;bottom:0;left:calc(180px + (100% - 180px) * ' + (todayPct / 100) + ');width:2px;background:#EF4444;opacity:0.5;pointer-events:none;z-index:5;"></div>' +
+                '<div style="position:absolute;top:0;left:calc(180px + (100% - 180px) * ' + (todayPct / 100) + ');transform:translateX(-50%);font-size:8px;font-weight:800;color:#EF4444;pointer-events:none;z-index:6;">TODAY</div>'
+              : '') +
+              // Legend
+              '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;margin-left:180px;font-size:10px;color:var(--text-muted);">' +
+                '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:6px;border-radius:2px;background:#22C55E;opacity:0.85;"></span>In Progress</span>' +
+                '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:6px;border-radius:2px;background:#F97316;opacity:0.85;"></span>Pending</span>' +
+                '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:6px;border-radius:2px;background:#EAB308;opacity:0.85;"></span>On Hold</span>' +
+                '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:6px;border-radius:2px;background:repeating-linear-gradient(45deg,#3B82F6,#3B82F6 3px,transparent 3px,transparent 6px);opacity:0.5;"></span>Complete</span>' +
+                '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:6px;border-radius:2px;background:#ccc;outline:2px solid #EF4444;outline-offset:1px;"></span>Overdue</span>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      })()}
 
       <div class="detail-section">
         <div class="detail-section-label" style="display:flex;align-items:center;justify-content:space-between;">
