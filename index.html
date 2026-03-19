@@ -2980,7 +2980,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0074';
+const APP_VERSION = '0.9.3.0075';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -6563,6 +6563,17 @@ async function markTaskComplete(taskIdx) {
   render();
 }
 
+async function markProjectComplete(objectId) {
+  if (!_isLoggedIn) { alert('You must be signed in.'); return; }
+  var proj = PROJECTS.find(function(p) { return p.objectId == objectId; });
+  if (!proj) return;
+  if (!confirm('Mark "' + proj.title + '" as Complete?')) return;
+  var today = new Date();
+  var todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+  await DataStore.updateProject(objectId, { status: 'Complete', actual_end: todayStr });
+  render();
+}
+
 // ── Bootstrap ──
 // ── Application Init: Authenticate, then load ArcGIS Online data ──
 (async function appInit() {
@@ -6667,6 +6678,7 @@ function renderProjectDetail(id) {
   return `<div class="detail-page">
     <div class="detail-hero" style="background:linear-gradient(135deg, var(--navy) 0%, #003580 55%, ${statusColor}cc 100%);">
       <div class="detail-hero-actions">
+        ${p.status && p.status !== 'Complete' && p.status !== 'Canceled' ? `<button class="modal-edit-btn" style="background:rgba(34,197,94,0.25);border-color:rgba(34,197,94,0.5);" onclick="markProjectComplete(${p.objectId})">✓ Complete</button>` : ''}
         <button class="modal-edit-btn" onclick="openFormModal('edit-project',${p.objectId})">✏ Edit</button>
         <button class="modal-del-btn" onclick="confirmDeleteProject(${p.objectId})">🗑 Delete</button>
       </div>
