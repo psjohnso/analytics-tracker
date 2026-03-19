@@ -2980,7 +2980,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0065';
+const APP_VERSION = '0.9.3.0066';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -6745,7 +6745,10 @@ function renderProjectDetail(id) {
         });
 
         return '<div class="detail-section">' +
-          '<div class="detail-section-label">Project Timeline</div>' +
+          '<div class="detail-section-label" style="display:flex;align-items:center;justify-content:space-between;">' +
+            '<span>Project Timeline</span>' +
+            (_isTeamLead ? '<button onclick="toggleStatusHistoryEditor(' + p.id + ',' + p.objectId + ')" style="background:var(--navy);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:Lato,sans-serif;">📅 Edit History</button>' : '') +
+          '</div>' +
           '<div style="position:relative;height:28px;background:#F3F4F6;border-radius:8px;overflow:hidden;">' +
             segments +
           '</div>' +
@@ -6758,6 +6761,7 @@ function renderProjectDetail(id) {
               (projActualEnd ? '<span style="font-weight:700;color:#22C55E;">Completed</span> <span style="color:var(--text-muted);">' + projActualEnd + '</span>' : '') +
             '</div>' +
           '</div>' +
+          '<div id="status-history-editor"></div>' +
         '</div>';
       })()}
 
@@ -8113,6 +8117,135 @@ async function logStatusChange(projectId, projectTitle, newStatus) {
 function getProjectStatusHistory(projectId) {
   return STATUS_HISTORY.filter(function(h) { return h.project_id == projectId; })
     .sort(function(a, b) { return (a.changed_date || '').localeCompare(b.changed_date || ''); });
+}
+
+// ── Status History Editor ──────────────────────────────────────
+var _shEditorProjectId = null;
+var _shEditorObjectId = null;
+
+function toggleStatusHistoryEditor(projectId, objectId) {
+  var container = document.getElementById('status-history-editor');
+  if (!container) return;
+  if (_shEditorProjectId === projectId && container.innerHTML !== '') {
+    container.innerHTML = '';
+    _shEditorProjectId = null;
+    return;
+  }
+  _shEditorProjectId = projectId;
+  _shEditorObjectId = objectId;
+  renderStatusHistoryEditor();
+}
+
+function renderStatusHistoryEditor() {
+  var container = document.getElementById('status-history-editor');
+  if (!container || !_shEditorProjectId) return;
+  var history = getProjectStatusHistory(_shEditorProjectId);
+  var proj = PROJECTS.find(function(p) { return p.id == _shEditorProjectId; });
+  var projTitle = proj ? proj.title : '';
+
+  var statusOpts = ['Future','Scheduled','Active','On Hold','Waiting for Response','Complete','Canceled'];
+
+  var rowsHtml = history.map(function(h, idx) {
+    var sc = STATUS_COLOR(h.status) || '#9CA3AF';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #F3F4F6;">' +
+      '<span style="width:10px;height:10px;border-radius:50%;background:' + sc + ';flex-shrink:0;"></span>' +
+      '<span style="flex:1;font-size:12px;font-weight:600;color:var(--text-body);">' + esc(h.status) + '</span>' +
+      '<span style="font-size:11px;color:var(--text-muted);min-width:85px;">' + (h.changed_date || '') + '</span>' +
+      '<span style="font-size:11px;color:var(--text-muted);min-width:100px;">' + esc(h.changed_by || '') + '</span>' +
+      '<button onclick="deleteStatusHistoryRecord(' + idx + ')" style="background:none;border:none;color:#D1D5DB;cursor:pointer;font-size:14px;padding:2px 4px;border-radius:4px;" title="Remove" onmouseover="this.style.color=\'#EF4444\'" onmouseout="this.style.color=\'#D1D5DB\'">✕</button>' +
+    '</div>';
+  }).join('');
+
+  if (!history.length) {
+    rowsHtml = '<div style="padding:12px 0;font-size:12px;color:var(--text-muted);font-style:italic;">No status history records yet. Add entries below to build the timeline.</div>';
+  }
+
+  var statusSelectHtml = statusOpts.map(function(s) {
+    return '<option value="' + s + '">' + s + '</option>';
+  }).join('');
+
+  container.innerHTML = '<div style="margin-top:16px;background:#FAFBFC;border:1px solid var(--border);border-radius:10px;padding:16px;">' +
+    '<div style="font-size:13px;font-weight:800;color:var(--navy);margin-bottom:10px;">Status History Editor</div>' +
+    '<div style="margin-bottom:12px;">' + rowsHtml + '</div>' +
+    '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">' +
+      '<select id="sh-add-status" style="padding:6px 10px;border:1.5px solid #D1D5DB;border-radius:6px;font-size:12px;font-family:Lato,sans-serif;">' + statusSelectHtml + '</select>' +
+      '<input type="date" id="sh-add-date" style="padding:6px 10px;border:1.5px solid #D1D5DB;border-radius:6px;font-size:12px;font-family:Lato,sans-serif;" value="' + new Date().toISOString().slice(0, 10) + '">' +
+      '<button onclick="addStatusHistoryRecord()" style="background:var(--navy);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:Lato,sans-serif;">＋ Add Entry</button>' +
+    '</div>' +
+    '<div style="font-size:10px;color:var(--text-muted);margin-top:8px;">Add historical status changes to build the project timeline. Each entry marks when the project entered that status.</div>' +
+  '</div>';
+}
+
+async function addStatusHistoryRecord() {
+  var statusEl = document.getElementById('sh-add-status');
+  var dateEl = document.getElementById('sh-add-date');
+  if (!statusEl || !dateEl) return;
+  var status = statusEl.value;
+  var dateVal = dateEl.value;
+  if (!status || !dateVal) { alert('Please select a status and date.'); return; }
+
+  var proj = PROJECTS.find(function(p) { return p.id == _shEditorProjectId; });
+  var projTitle = proj ? proj.title : '';
+  var who = _userFullName || 'Unknown';
+
+  var record = {
+    project_id: _shEditorProjectId,
+    project_title: projTitle,
+    status: status,
+    changed_date: dateVal,
+    changed_by: who,
+  };
+
+  STATUS_HISTORY.push(record);
+
+  try {
+    var result = await agolApplyEdits(ARCGIS_CONFIG.statusHistoryUrl, {
+      adds: [{ attributes: record }]
+    });
+    if (result && result.addResults && result.addResults[0] && result.addResults[0].objectId) {
+      record.objectId = result.addResults[0].objectId;
+    }
+    console.log('[StatusHistory] Added:', projTitle, '→', status, 'on', dateVal);
+  } catch (err) {
+    console.error('[StatusHistory] Failed to add:', err);
+    alert('Failed to save: ' + err.message);
+  }
+
+  renderStatusHistoryEditor();
+  // Re-render the full page to update the timeline bar, then reopen editor
+  var savedProjId = _shEditorProjectId;
+  render();
+  _shEditorProjectId = savedProjId;
+  renderStatusHistoryEditor();
+}
+
+async function deleteStatusHistoryRecord(histIdx) {
+  var history = getProjectStatusHistory(_shEditorProjectId);
+  if (histIdx < 0 || histIdx >= history.length) return;
+  var record = history[histIdx];
+  if (!confirm('Remove "' + record.status + '" entry from ' + record.changed_date + '?')) return;
+
+  // Remove from local array
+  var globalIdx = STATUS_HISTORY.indexOf(record);
+  if (globalIdx >= 0) STATUS_HISTORY.splice(globalIdx, 1);
+
+  // Delete from ArcGIS Online
+  if (record.objectId) {
+    try {
+      await agolApplyEdits(ARCGIS_CONFIG.statusHistoryUrl, {
+        deletes: [record.objectId]
+      });
+      console.log('[StatusHistory] Deleted record OID:', record.objectId);
+    } catch (err) {
+      console.error('[StatusHistory] Failed to delete:', err);
+    }
+  }
+
+  // Re-render page then reopen editor
+  var savedProjId = _shEditorProjectId;
+  render();
+  _shEditorProjectId = savedProjId;
+  renderStatusHistoryEditor();
 }
 
 function getTaskHours(taskIdx) {
