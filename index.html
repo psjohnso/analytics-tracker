@@ -2980,7 +2980,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0051';
+const APP_VERSION = '0.9.3.0052';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -6484,7 +6484,7 @@ async function handleFormSubmit(andDownload) {
   // opening the form — e.g. a status or search filter — can cause the
   // just-edited record to vanish if the edit changed the filtered field.)
   if (isEdit) {
-    activeFilters = { status: [], priority: [], category: [], member: [], taskStatus: [], partnerDept: [], itdTeam: [], search: '' };
+    activeFilters = { status: [], priority: [], category: [], member: [], taskStatus: [], taskCategory: [], taskTool: [], partnerDept: [], itdTeam: [], search: '' };
     const si = document.getElementById('search-input');
     if (si) si.value = '';
     buildSidebarFilters();
