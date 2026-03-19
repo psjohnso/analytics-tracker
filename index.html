@@ -2950,7 +2950,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0047';
+const APP_VERSION = '0.9.3.0048';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -5543,11 +5543,16 @@ function getEnums() {
     TASKS.map(t => t.assignee)
   );
   const taskTools      = mergeEnums(
-    ['ArcGIS Dashboard','ArcGIS Experience Builder','ArcGIS Hub Site',
-     'ArcGIS Online','ArcGIS Pro','ArcGIS Python API','ArcGIS Server','ArcGIS StoryMap',
-     'ArcGIS Survey123','Alation','DataHub','Docker','Excel','FME','Git/Github',
-     'Geocortex App','Other','Power Automate','Power BI Dashboard','Power BI Report',
-     'PowerShell','Python','Qlik','SQL (Various Tools)','Smartsheet','TimeXtender','Word'],
+    ['AI Assistant (ChatGPT/Claude/Copilot)','Alation','ArcGIS Dashboard',
+     'ArcGIS Enterprise','ArcGIS Experience Builder','ArcGIS Field Maps',
+     'ArcGIS Hub Site','ArcGIS Instant Apps','ArcGIS Online','ArcGIS Pro',
+     'ArcGIS Python API (arcpy/arcgis)','ArcGIS Server','ArcGIS StoryMap',
+     'ArcGIS Survey123','ArcMap (Desktop)','Azure / Cloud Services',
+     'Docker','Excel','FME','Geocortex / VertiGIS','Git / GitHub',
+     'Jupyter / Notebooks','Microsoft Forms','Microsoft Teams',
+     'Power Automate','Power BI','PowerPoint','PowerShell','Python',
+     'Qlik','SharePoint','Smartsheet','Snowflake','SQL (Various Tools)',
+     'TimeXtender','Word','Other'],
     TASKS.map(t => t.tool)
   );
   const taskCategories = mergeEnums(
@@ -5770,6 +5775,243 @@ function taskCatWizardApply(categoryName) {
   var hidden = document.getElementById('fm-category-val');
   if (input) input.value = categoryName;
   if (hidden) hidden.value = categoryName;
+}
+
+// ── Task Tool Descriptions ──────────────────────────────────────
+const TASK_TOOL_DESCRIPTIONS = {
+  'AI Assistant (ChatGPT/Claude/Copilot)': 'AI-powered assistants for code generation, analysis, writing, and problem-solving.',
+  'Alation': 'Data catalog and governance platform for discovering and documenting data assets.',
+  'ArcGIS Dashboard': 'Real-time operational dashboards with maps, charts, and indicators.',
+  'ArcGIS Enterprise': 'On-premises GIS platform for hosting maps, services, and spatial data.',
+  'ArcGIS Experience Builder': 'Configurable web apps with maps, data, and interactive widgets.',
+  'ArcGIS Field Maps': 'Mobile data collection and field work management (includes legacy Workforce).',
+  'ArcGIS Hub Site': 'Community engagement sites for sharing data, maps, and initiatives.',
+  'ArcGIS Instant Apps': 'Quick, focused web apps built from templates with minimal configuration.',
+  'ArcGIS Online': 'Cloud-based GIS for creating, managing, and sharing maps and spatial data.',
+  'ArcGIS Pro': 'Desktop GIS application for advanced mapping, analysis, and data management.',
+  'ArcGIS Python API (arcpy/arcgis)': 'Python libraries for scripting GIS workflows, automation, and spatial analysis.',
+  'ArcGIS Server': 'Server-based GIS services — map, feature, geoprocessing, and image services.',
+  'ArcGIS StoryMap': 'Narrative-driven web apps combining maps, text, images, and multimedia.',
+  'ArcGIS Survey123': 'Form-based mobile and web data collection with smart form logic.',
+  'ArcMap (Desktop)': 'Legacy desktop GIS application — predecessor to ArcGIS Pro.',
+  'Azure / Cloud Services': 'Microsoft Azure or other cloud platforms for hosting, compute, and storage.',
+  'Docker': 'Containerization platform for packaging and deploying applications.',
+  'Excel': 'Spreadsheet tool for data analysis, tabular data, and quick calculations.',
+  'FME': 'Spatial ETL platform for data transformation and integration between systems.',
+  'Geocortex / VertiGIS': 'Extended GIS web and mobile applications built on ArcGIS technology.',
+  'Git / GitHub': 'Version control and code collaboration platform.',
+  'Jupyter / Notebooks': 'Interactive computing environment for data science and analysis.',
+  'Microsoft Forms': 'Simple form builder for surveys, quizzes, and data collection.',
+  'Microsoft Teams': 'Collaboration platform for chat, meetings, and file sharing.',
+  'Power Automate': 'Workflow automation connecting apps, services, and data sources.',
+  'Power BI': 'Business intelligence — dashboards, reports, and data visualization.',
+  'PowerPoint': 'Presentation tool for slide decks and visual communications.',
+  'PowerShell': 'Command-line scripting for system administration and automation.',
+  'Python': 'General-purpose programming language for scripting, analysis, and automation.',
+  'Qlik': 'Data analytics and visualization platform for interactive dashboards.',
+  'SharePoint': 'Document management and intranet collaboration platform.',
+  'Smartsheet': 'Work management platform for project tracking and collaboration.',
+  'Snowflake': 'Cloud data warehouse for storing, querying, and sharing structured data.',
+  'SQL (Various Tools)': 'Database querying — SSMS, pgAdmin, DBeaver, or other SQL clients.',
+  'TimeXtender': 'Data integration and automation platform for building data estates.',
+  'Word': 'Document authoring for reports, memos, and written deliverables.',
+  'Other': 'A tool not listed here. Consider requesting it be added to the list.',
+};
+
+// ── Task Tool Wizard ──────────────────────────────────────────────
+const TASK_TOOL_WIZARD_TREE = {
+  q1: {
+    question: 'What type of tool are you primarily using?',
+    options: [
+      { label: 'A GIS or mapping tool', next: 'q2_gis' },
+      { label: 'A data or analytics tool', next: 'q2_data' },
+      { label: 'A coding or development tool', next: 'q2_dev' },
+      { label: 'A Microsoft Office or collaboration tool', next: 'q2_office' },
+      { label: 'An automation or integration tool', next: 'q2_auto' },
+      { label: 'None of these fit', category: 'Other' },
+    ]
+  },
+  q2_gis: {
+    question: 'Which GIS tool?',
+    options: [
+      { label: 'Building a web map or managing data online', category: 'ArcGIS Online' },
+      { label: 'Desktop analysis, editing, or cartography', category: 'ArcGIS Pro' },
+      { label: 'A web app (Experience Builder, Hub, Instant Apps)', next: 'q3_webapp' },
+      { label: 'A dashboard for real-time monitoring', category: 'ArcGIS Dashboard' },
+      { label: 'Data collection with forms or field work', next: 'q3_collect' },
+      { label: 'A narrative or story-driven app', category: 'ArcGIS StoryMap' },
+      { label: 'Server administration or enterprise services', next: 'q3_server' },
+      { label: 'Legacy ArcMap / ArcGIS Desktop', category: 'ArcMap (Desktop)' },
+      { label: 'Geocortex / VertiGIS application', category: 'Geocortex / VertiGIS' },
+      { label: 'None of these fit', category: 'Other' },
+    ]
+  },
+  q3_webapp: {
+    question: 'Which type of web app?',
+    options: [
+      { label: 'ArcGIS Experience Builder (custom layout)', category: 'ArcGIS Experience Builder' },
+      { label: 'ArcGIS Hub Site (community/public site)', category: 'ArcGIS Hub Site' },
+      { label: 'ArcGIS Instant Apps (quick template-based)', category: 'ArcGIS Instant Apps' },
+      { label: 'None of these fit', category: 'Other' },
+    ]
+  },
+  q3_collect: {
+    question: 'What kind of data collection?',
+    options: [
+      { label: 'Form-based surveys (Survey123)', category: 'ArcGIS Survey123' },
+      { label: 'Field data collection or workforce tasks', category: 'ArcGIS Field Maps' },
+      { label: 'A simple web form (Microsoft Forms)', category: 'Microsoft Forms' },
+      { label: 'None of these fit', category: 'Other' },
+    ]
+  },
+  q3_server: {
+    question: 'Which server/enterprise platform?',
+    options: [
+      { label: 'ArcGIS Enterprise (portal & services)', category: 'ArcGIS Enterprise' },
+      { label: 'ArcGIS Server (map/feature/GP services)', category: 'ArcGIS Server' },
+      { label: 'Azure or other cloud platform', category: 'Azure / Cloud Services' },
+      { label: 'None of these fit', category: 'Other' },
+    ]
+  },
+  q2_data: {
+    question: 'What kind of data work?',
+    options: [
+      { label: 'Building dashboards or reports (Power BI)', category: 'Power BI' },
+      { label: 'Querying databases with SQL', category: 'SQL (Various Tools)' },
+      { label: 'Data warehouse (Snowflake)', category: 'Snowflake' },
+      { label: 'Data integration (TimeXtender)', category: 'TimeXtender' },
+      { label: 'Data transformation (FME)', category: 'FME' },
+      { label: 'Data catalog (Alation)', category: 'Alation' },
+      { label: 'Analytics platform (Qlik)', category: 'Qlik' },
+      { label: 'Spreadsheet analysis (Excel)', category: 'Excel' },
+      { label: 'None of these fit', category: 'Other' },
+    ]
+  },
+  q2_dev: {
+    question: 'What kind of development?',
+    options: [
+      { label: 'Python scripting or programming', category: 'Python' },
+      { label: 'GIS automation with arcpy or ArcGIS Python API', category: 'ArcGIS Python API (arcpy/arcgis)' },
+      { label: 'PowerShell scripting or system admin', category: 'PowerShell' },
+      { label: 'Version control with Git / GitHub', category: 'Git / GitHub' },
+      { label: 'Interactive notebooks (Jupyter)', category: 'Jupyter / Notebooks' },
+      { label: 'Containers (Docker)', category: 'Docker' },
+      { label: 'AI assistant (ChatGPT, Claude, Copilot)', category: 'AI Assistant (ChatGPT/Claude/Copilot)' },
+      { label: 'None of these fit', category: 'Other' },
+    ]
+  },
+  q2_office: {
+    question: 'Which tool?',
+    options: [
+      { label: 'Excel (spreadsheets)', category: 'Excel' },
+      { label: 'Word (documents)', category: 'Word' },
+      { label: 'PowerPoint (presentations)', category: 'PowerPoint' },
+      { label: 'SharePoint (document management)', category: 'SharePoint' },
+      { label: 'Microsoft Teams (collaboration)', category: 'Microsoft Teams' },
+      { label: 'Microsoft Forms (surveys)', category: 'Microsoft Forms' },
+      { label: 'Smartsheet (work management)', category: 'Smartsheet' },
+      { label: 'None of these fit', category: 'Other' },
+    ]
+  },
+  q2_auto: {
+    question: 'What kind of automation?',
+    options: [
+      { label: 'Power Automate workflows', category: 'Power Automate' },
+      { label: 'FME spatial ETL', category: 'FME' },
+      { label: 'Python scripting', category: 'Python' },
+      { label: 'PowerShell scripting', category: 'PowerShell' },
+      { label: 'None of these fit', category: 'Other' },
+    ]
+  },
+};
+
+var _toolWizardOriginalHTML = '';
+
+function toolWizardOpen() {
+  var container = document.getElementById('fm-tool-content');
+  if (!container) return;
+  _toolWizardOriginalHTML = container.innerHTML;
+  toolWizardRenderStep('q1');
+}
+
+function toolWizardClose() {
+  var container = document.getElementById('fm-tool-content');
+  if (!container || !_toolWizardOriginalHTML) return;
+  container.innerHTML = _toolWizardOriginalHTML;
+  _toolWizardOriginalHTML = '';
+  initSearchableSelect('fm-tool');
+}
+
+function toolWizardRenderStep(stepId) {
+  var container = document.getElementById('fm-tool-content');
+  if (!container) return;
+  var step = TASK_TOOL_WIZARD_TREE[stepId];
+  if (!step) return;
+  var stepNum = stepId === 'q1' ? 1 : stepId.startsWith('q3') ? 3 : 2;
+  var totalSteps = stepId.startsWith('q3') ? 3 : stepId === 'q1' ? 2 : 2;
+  var html = '<div class="cat-wizard-panel open">';
+  html += '<div class="cat-wizard-q">Step ' + stepNum + ': ' + esc(step.question) + '</div>';
+  html += '<div class="cat-wizard-opts">';
+  step.options.forEach(function(opt) {
+    if (opt.next) {
+      html += '<button type="button" class="cat-wizard-opt" onclick="toolWizardRenderStep(\'' + opt.next + '\')">' + esc(opt.label) + '</button>';
+    } else if (opt.category) {
+      html += '<button type="button" class="cat-wizard-opt" onclick="toolWizardShowResult(\'' + esc(opt.category).replace(/'/g, "\\'") + '\')">' + esc(opt.label) + '</button>';
+    }
+  });
+  html += '</div>';
+  html += '<div style="margin-top:8px;">';
+  if (stepId !== 'q1') {
+    // Find parent step to go back to
+    var backStep = stepId.startsWith('q3') ? Object.keys(TASK_TOOL_WIZARD_TREE).find(function(k) {
+      return TASK_TOOL_WIZARD_TREE[k].options && TASK_TOOL_WIZARD_TREE[k].options.some(function(o) { return o.next === stepId; });
+    }) || 'q1' : 'q1';
+    html += '<button type="button" class="cat-wizard-back" onclick="toolWizardRenderStep(\'' + backStep + '\')">← Back</button>';
+  }
+  html += ' <button type="button" class="cat-wizard-back" onclick="toolWizardClose()">Cancel</button>';
+  html += '</div></div>';
+  container.innerHTML = html;
+}
+
+function toolWizardShowResult(toolName) {
+  var container = document.getElementById('fm-tool-content');
+  if (!container) return;
+  var desc = TASK_TOOL_DESCRIPTIONS[toolName] || '';
+  var html = '<div class="cat-wizard-panel open">';
+  html += '<div class="cat-wizard-result">' +
+    '<div class="cat-wizard-result-label">✓ Recommended Tool</div>' +
+    '<div class="cat-wizard-result-name">' + esc(toolName) + '</div>' +
+    (desc ? '<div class="cat-wizard-result-desc">' + esc(desc) + '</div>' : '') +
+    '<button type="button" class="cat-wizard-result-btn" onclick="toolWizardApply(\'' + esc(toolName).replace(/'/g, "\\'") + '\')">Use This Tool</button>' +
+  '</div>';
+  html += '<div style="margin-top:8px;">';
+  html += '<button type="button" class="cat-wizard-back" onclick="toolWizardRenderStep(\'q1\')">← Start over</button>';
+  html += ' <button type="button" class="cat-wizard-back" onclick="toolWizardClose()">Cancel</button>';
+  html += '</div></div>';
+  container.innerHTML = html;
+}
+
+function toolWizardApply(toolName) {
+  toolWizardClose();
+  var input = document.getElementById('fm-tool');
+  var hidden = document.getElementById('fm-tool-val');
+  if (input) input.value = toolName;
+  if (hidden) hidden.value = toolName;
+}
+
+function fmTaskToolField(currentValue, span2) {
+  var cls = 'fm-field' + (span2 ? ' span2' : '');
+  return '<div class="' + cls + '" id="fm-tool-field">' +
+    '<label class="fm-label">' +
+      'Tool / Technology ' +
+      '<a href="javascript:void(0)" class="cat-wizard-link" onclick="toolWizardOpen()">' +
+        'Not sure? Help me choose' +
+      '</a>' +
+    '</label>' +
+    '<div id="fm-tool-content">' +
+      fmSearchableSelect('fm-tool', FM_TASK_TOOLS, currentValue, 'Type to search tools…', TASK_TOOL_DESCRIPTIONS) +
+    '</div>' +
+  '</div>';
 }
 
 function fmSelect(id, options, value, placeholder, required) {
@@ -6157,7 +6399,7 @@ function buildTaskForm(t) {
     '<div class="fm-section-label">Classification</div>' +
     '<div class="fm-grid">' +
       fmField('Project', fmSelect('fm-project', projTitles, v('project'), 'Select project…'), false, true) +
-      fmField('Tool / Technology', fmSelect('fm-tool', FM_TASK_TOOLS, v('tool'), 'Select tool…')) +
+      fmTaskToolField(v('tool'), false) +
       fmTaskCategoryField(v('category'), false) +
     '</div>' +
     '<div class="fm-section-label">Timeline</div>' +
@@ -6197,6 +6439,8 @@ function openFormModal(mode, id) {
   document.getElementById('form-modal-backdrop').classList.add('open');
   // Initialize searchable dropdowns (category field uses searchable select in both forms)
   initSearchableSelect('fm-category');
+  // Tool field uses searchable select in task forms
+  if (!isProject) initSearchableSelect('fm-tool');
 }
 
 function closeFormModal() {
