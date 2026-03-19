@@ -2980,7 +2980,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0063';
+const APP_VERSION = '0.9.3.0064';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -6776,12 +6776,9 @@ function renderProjectDetail(id) {
 
         return '<div class="detail-section">' +
           '<div class="detail-section-label">Project Timeline</div>' +
-          '<div style="overflow-x:auto;">' +
-            '<div style="min-width:400px;position:relative;padding-bottom:42px;padding-top:16px;">' +
-              '<div style="position:relative;height:16px;margin-bottom:10px;border-bottom:1px solid var(--border);">' + months + '</div>' +
-              '<div style="position:relative;height:24px;background:#F3F4F6;border-radius:10px;">' +
-                barHtml + markers + todayMarker +
-              '</div>' +
+          '<div style="position:relative;padding-bottom:42px;padding-top:4px;">' +
+            '<div style="position:relative;height:24px;background:#F3F4F6;border-radius:10px;">' +
+              barHtml + markers + todayMarker +
             '</div>' +
           '</div>' +
         '</div>';
