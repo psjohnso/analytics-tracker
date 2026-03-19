@@ -2950,7 +2950,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0046';
+const APP_VERSION = '0.9.3.0047';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -5525,7 +5525,8 @@ function getEnums() {
      'Public Engagement & Open Data',
      'Spatial Data Services & GIS Product Development',
      'Strategic Planning & Architecture',
-     'Training, Enablement & Community'],
+     'Training, Enablement & Community',
+     'Other'],
     PROJECTS.map(p => p.category)
   );
   const taskStatuses   = mergeEnums(
@@ -5557,7 +5558,8 @@ function getEnums() {
      'Infrastructure & Server Management','Meeting & Collaboration',
      'Professional Development','Project Planning & Scoping','Research & Prototyping',
      'Security & Compliance','Statistical Analysis','Stakeholder Support',
-     'Troubleshooting','User Training & Enablement'],
+     'Troubleshooting','User Training & Enablement',
+     'Other'],
     TASKS.map(t => t.category)
   );
   const partnerDepts = mergeEnums(
@@ -5609,6 +5611,7 @@ const CATEGORY_DESCRIPTIONS = {
   'Spatial Data Services & GIS Product Development': 'Building and maintaining GIS maps, spatial datasets, web mapping apps, and location services.',
   'Strategic Planning & Architecture': 'Long-range planning, technology roadmaps, solution architecture, and strategic initiatives.',
   'Training, Enablement & Community': 'Training programs, workshops, user enablement, and fostering user communities.',
+  'Other': 'Work that doesn\'t fit neatly into any existing category. Consider suggesting a new category if this is used frequently.',
 };
 
 // Short descriptions for each task category
@@ -5635,6 +5638,7 @@ const TASK_CATEGORY_DESCRIPTIONS = {
   'Stakeholder Support': 'Answering user questions, ad-hoc data requests, and general user assistance.',
   'Troubleshooting': 'Debugging, incident response, diagnosing issues, and root cause analysis.',
   'User Training & Enablement': 'Training others, creating training materials, onboarding users, and demos.',
+  'Other': 'Work that doesn\'t fit neatly into any existing category. Consider suggesting a new category if this is used frequently.',
 };
 
 // ── Task Category Wizard ──────────────────────────────────────────────
@@ -5647,6 +5651,7 @@ const TASK_CAT_WIZARD_TREE = {
       { label: 'Working with data', next: 'q2_data' },
       { label: 'Maintaining, fixing, or deploying', next: 'q2_ops' },
       { label: 'Planning, learning, or communicating', next: 'q2_plan' },
+      { label: 'None of these fit my task', category: 'Other' },
     ]
   },
   q2_build: {
@@ -5658,6 +5663,7 @@ const TASK_CAT_WIZARD_TREE = {
       { label: 'A map, spatial analysis, or GIS product', category: 'Geospatial Analysis' },
       { label: 'A report, dashboard, or data visualization', category: 'Data Visualization & Reporting' },
       { label: 'A proof of concept or prototype', category: 'Research & Prototyping' },
+      { label: 'None of these fit', category: 'Other' },
     ]
   },
   q2_data: {
@@ -5668,6 +5674,7 @@ const TASK_CAT_WIZARD_TREE = {
       { label: 'Routine data updates, corrections, or cleanup', category: 'Data Maintenance' },
       { label: 'Statistical modeling or quantitative analysis', category: 'Statistical Analysis' },
       { label: 'Validating data quality or reviewing work', category: 'Code Review & QA' },
+      { label: 'None of these fit', category: 'Other' },
     ]
   },
   q2_ops: {
@@ -5678,6 +5685,7 @@ const TASK_CAT_WIZARD_TREE = {
       { label: 'Publishing, deploying, or releasing to production', category: 'Deployment & Release' },
       { label: 'Server builds, software installs, or platform admin', category: 'Infrastructure & Server Management' },
       { label: 'Security, access management, or compliance', category: 'Security & Compliance' },
+      { label: 'None of these fit', category: 'Other' },
     ]
   },
   q2_plan: {
@@ -5690,6 +5698,7 @@ const TASK_CAT_WIZARD_TREE = {
       { label: 'Training others or creating training materials', category: 'User Training & Enablement' },
       { label: 'Helping a user or answering a support request', category: 'Stakeholder Support' },
       { label: 'Researching tools, techniques, or approaches', category: 'Research & Prototyping' },
+      { label: 'None of these fit', category: 'Other' },
     ]
   },
 };
@@ -5973,6 +5982,7 @@ const CAT_WIZARD_TREE = {
       { label: 'Analyzing data or producing insights', next: 'q2_data' },
       { label: 'Planning, documenting, or enabling others', next: 'q2_knowledge' },
       { label: 'Serving another department or the public', next: 'q2_service' },
+      { label: 'None of these fit my project', category: 'Other' },
     ]
   },
   q2_create: {
@@ -5983,6 +5993,7 @@ const CAT_WIZARD_TREE = {
       { label: 'A workflow connecting multiple tools or systems', category: 'Multi-Application Workflow Development' },
       { label: 'A data pipeline, database, or system integration', category: 'Data Processing, Integration & Engineering' },
       { label: 'A public-facing tool, open data portal, or story map', category: 'Public Engagement & Open Data' },
+      { label: 'None of these fit', category: 'Other' },
     ]
   },
   q2_maintain: {
@@ -5992,6 +6003,7 @@ const CAT_WIZARD_TREE = {
       { label: 'Managing enterprise platforms, licenses, or accounts', category: 'Enterprise Administration & Platform Management' },
       { label: 'Monitoring, troubleshooting, or supporting production systems', category: 'Operational Support & Sustainment Activities' },
       { label: 'Migrating or modernizing legacy infrastructure', category: 'Infrastructure Modernization & Platform Migration' },
+      { label: 'None of these fit', category: 'Other' },
     ]
   },
   q2_data: {
@@ -6000,6 +6012,7 @@ const CAT_WIZARD_TREE = {
       { label: 'Producing reports, dashboards, or actionable insights', category: 'Data Analysis, Reporting & Insights' },
       { label: 'Building or maintaining data pipelines and integrations', category: 'Data Processing, Integration & Engineering' },
       { label: 'Establishing data standards, policies, or compliance', category: 'Data Governance, Compliance & Policy' },
+      { label: 'None of these fit', category: 'Other' },
     ]
   },
   q2_knowledge: {
@@ -6008,6 +6021,7 @@ const CAT_WIZARD_TREE = {
       { label: 'Strategic plans, roadmaps, or solution architecture', category: 'Strategic Planning & Architecture' },
       { label: 'Documentation, SOPs, or knowledge base content', category: 'Documentation & Knowledge Management' },
       { label: 'Training materials, workshops, or user communities', category: 'Training, Enablement & Community' },
+      { label: 'None of these fit', category: 'Other' },
     ]
   },
   q2_service: {
@@ -6015,6 +6029,7 @@ const CAT_WIZARD_TREE = {
     options: [
       { label: 'Another city department', category: 'Interdepartmental Consulting & Support' },
       { label: 'The general public or external community', category: 'Public Engagement & Open Data' },
+      { label: 'None of these fit', category: 'Other' },
     ]
   },
 };
