@@ -2980,7 +2980,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0062';
+const APP_VERSION = '0.9.3.0063';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -6681,28 +6681,32 @@ function renderProjectDetail(id) {
       </div>
 
       ${(() => {
-        // Build project phase timeline — single bar with status-colored segments
-        var phaseTasks = relTasks.filter(t => t.start || t.working_due || t.due).sort((a, b) => (a.start || '9999').localeCompare(b.start || '9999'));
-        if (phaseTasks.length === 0) return '';
-
+        // Project-level timeline — single bar colored by project status
         var projStart = p.start || null;
-        var projEnd = p.actual_end || p.working_due || p.end || null;
-        var todayStr = new Date().toISOString().slice(0, 10);
+        var projDue = p.working_due || p.end || null;
+        var projActualEnd = p.actual_end || null;
+        if (!projStart && !projDue) return '';
 
-        // Gather all dates to determine range
+        var todayStr = new Date().toISOString().slice(0, 10);
+        var sc = STATUS_COLOR(p.status) || '#9CA3AF';
+        var isComplete = p.status === 'Complete';
+        var isCanceled = p.status === 'Canceled';
+
+        // Determine bar end point
+        var barEnd = projActualEnd || todayStr;
+        if (projDue && projDue > barEnd && !isComplete) barEnd = projDue;
+
+        // Date range with padding
         var allDates = [todayStr];
         if (projStart) allDates.push(projStart);
-        if (projEnd) allDates.push(projEnd);
-        phaseTasks.forEach(t => {
-          if (t.start) allDates.push(t.start);
-          var tEnd = t.actual_end || t.working_due || t.due;
-          if (tEnd) allDates.push(tEnd);
-        });
+        if (projDue) allDates.push(projDue);
+        if (projActualEnd) allDates.push(projActualEnd);
+        allDates.push(barEnd);
         allDates.sort();
         var rangeStart = new Date(allDates[0] + 'T00:00:00');
         var rangeEnd = new Date(allDates[allDates.length - 1] + 'T00:00:00');
-        rangeStart.setDate(rangeStart.getDate() - 7);
-        rangeEnd.setDate(rangeEnd.getDate() + 14);
+        rangeStart.setDate(rangeStart.getDate() - 14);
+        rangeEnd.setDate(rangeEnd.getDate() + 21);
         var totalDays = Math.max(1, Math.ceil((rangeEnd - rangeStart) / 86400000));
 
         function pct(ds) {
@@ -6712,6 +6716,12 @@ function renderProjectDetail(id) {
         }
 
         var todayPct = pct(todayStr);
+        var startPct = pct(projStart || todayStr);
+        var barEndPct = pct(barEnd);
+        var barWidth = Math.max(1, barEndPct - startPct);
+        var duePct = projDue ? pct(projDue) : null;
+        var actualEndPct = projActualEnd ? pct(projActualEnd) : null;
+        var isOverdue = projDue && projDue < todayStr && !isComplete && !isCanceled;
 
         // Month labels
         var months = '';
@@ -6726,63 +6736,52 @@ function renderProjectDetail(id) {
           cur.setMonth(cur.getMonth() + 1);
         }
 
-        // Build segments for the single bar
-        var segments = phaseTasks.map(t => {
-          var tStart = t.start || projStart || todayStr;
-          var tEnd = t.actual_end || t.working_due || t.due || projEnd || todayStr;
-          var lp = pct(tStart);
-          var rp = pct(tEnd);
-          var w = Math.max(0.3, rp - lp);
-          var sc = STATUS_COLOR(t.status) || '#93C5FD';
-          var isOverdue = (t.working_due || t.due || '') < todayStr && t.status !== 'Complete' && t.status !== 'Canceled';
+        // Build bar — if overdue, split into on-time + overdue portions
+        var barHtml = '';
+        if (isOverdue && duePct !== null) {
+          var onTimeWidth = Math.max(0, duePct - startPct);
+          var overdueWidth = Math.max(0.5, barEndPct - duePct);
+          barHtml = '<div style="position:absolute;left:' + startPct + '%;width:' + onTimeWidth + '%;height:100%;background:' + sc + ';border-radius:8px 0 0 8px;" title="On time: ' + (projStart || '?') + ' → ' + projDue + '"></div>' +
+            '<div style="position:absolute;left:' + duePct + '%;width:' + overdueWidth + '%;height:100%;background:repeating-linear-gradient(135deg,#EF4444,#EF4444 6px,' + sc + ' 6px,' + sc + ' 12px);border-radius:0 8px 8px 0;" title="Overdue since ' + projDue + '"></div>';
+        } else {
+          barHtml = '<div style="position:absolute;left:' + startPct + '%;width:' + barWidth + '%;height:100%;background:' + sc + ';border-radius:8px;' +
+            (isComplete ? 'opacity:0.7;' : '') +
+            '" title="' + (p.status || '') + ': ' + (projStart || '?') + ' → ' + (projActualEnd || projDue || '?') + '"></div>';
+        }
 
-          return '<div onclick="openTaskFromProject(' + t.idx + ')" style="position:absolute;left:' + lp + '%;width:' + w + '%;height:100%;background:' + sc + ';cursor:pointer;' +
-            (isOverdue ? 'box-shadow:inset 0 0 0 2px #EF4444;' : '') +
-            '" title="' + esc(t.title) + '\n' + tStart + ' → ' + tEnd + '\nStatus: ' + (t.status || '—') + '"></div>';
-        }).join('');
+        // Marker helper
+        function marker(leftPct, dateStr, color, label) {
+          if (leftPct === null || leftPct < 0 || leftPct > 100) return '';
+          return '<div style="position:absolute;left:' + leftPct + '%;top:-2px;bottom:-2px;width:2px;background:' + color + ';z-index:3;pointer-events:none;"></div>' +
+            '<div style="position:absolute;left:' + leftPct + '%;top:100%;transform:translateX(-50%);margin-top:4px;white-space:nowrap;font-size:9px;font-weight:700;color:' + color + ';pointer-events:none;text-align:center;line-height:1.3;">' +
+              label + '<br>' + (dateStr || '') +
+            '</div>';
+        }
 
-        // Build labels below the bar
-        var labels = phaseTasks.map(t => {
-          var tStart = t.start || projStart || todayStr;
-          var tEnd = t.actual_end || t.working_due || t.due || projEnd || todayStr;
-          var lp = pct(tStart);
-          var rp = pct(tEnd);
-          var w = rp - lp;
-          if (w < 3) return ''; // too narrow for a label
-          return '<div style="position:absolute;left:' + lp + '%;width:' + w + '%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;font-weight:600;color:var(--text-body);padding-top:2px;cursor:pointer;" onclick="openTaskFromProject(' + t.idx + ')" title="' + esc(t.title) + '">' + esc(t.title) + '</div>';
-        }).join('');
+        var markers = '';
+        markers += marker(startPct, projStart || '', 'var(--navy)', '▼ Start');
+        if (duePct !== null && Math.abs(duePct - startPct) > 2) {
+          markers += marker(duePct, projDue, isOverdue ? '#EF4444' : '#F59E0B', isOverdue ? '⚠ Due' : '▼ Due');
+        }
+        if (actualEndPct !== null) {
+          markers += marker(actualEndPct, projActualEnd, '#22C55E', '✓ Done');
+        }
 
-        // Collect unique statuses for legend
-        var usedStatuses = {};
-        phaseTasks.forEach(t => { if (t.status) usedStatuses[t.status] = STATUS_COLOR(t.status); });
-        var hasOverdue = phaseTasks.some(t => {
-          var tEnd = t.working_due || t.due || '';
-          return tEnd < todayStr && t.status !== 'Complete' && t.status !== 'Canceled';
-        });
-        var legendItems = Object.keys(usedStatuses).map(s => {
-          return '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:8px;border-radius:2px;background:' + usedStatuses[s] + ';"></span>' + s + '</span>';
-        }).join('');
-        if (hasOverdue) legendItems += '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:8px;border-radius:2px;background:#ccc;box-shadow:inset 0 0 0 2px #EF4444;"></span>Overdue</span>';
+        // Today marker (only for non-complete projects)
+        var todayMarker = '';
+        if (todayPct > 0 && todayPct < 100 && !isComplete && !isCanceled) {
+          todayMarker = '<div style="position:absolute;left:' + todayPct + '%;top:-6px;bottom:-6px;width:2px;background:#EF4444;z-index:4;pointer-events:none;"></div>' +
+            '<div style="position:absolute;left:' + todayPct + '%;bottom:100%;transform:translateX(-50%);margin-bottom:4px;font-size:8px;font-weight:800;color:#EF4444;pointer-events:none;">TODAY</div>';
+        }
 
         return '<div class="detail-section">' +
           '<div class="detail-section-label">Project Timeline</div>' +
           '<div style="overflow-x:auto;">' +
-            '<div style="min-width:500px;position:relative;padding-bottom:8px;">' +
-              // Month header
-              '<div style="position:relative;height:18px;margin-bottom:6px;border-bottom:1px solid var(--border);">' + months + '</div>' +
-              // Single bar with segments
-              '<div style="position:relative;height:28px;background:#F3F4F6;border-radius:6px;overflow:hidden;">' +
-                segments +
+            '<div style="min-width:400px;position:relative;padding-bottom:42px;padding-top:16px;">' +
+              '<div style="position:relative;height:16px;margin-bottom:10px;border-bottom:1px solid var(--border);">' + months + '</div>' +
+              '<div style="position:relative;height:24px;background:#F3F4F6;border-radius:10px;">' +
+                barHtml + markers + todayMarker +
               '</div>' +
-              // Task labels below bar
-              '<div style="position:relative;height:16px;margin-top:2px;">' + labels + '</div>' +
-              // Today marker
-              (todayPct > 0 && todayPct < 100 ?
-                '<div style="position:absolute;top:18px;bottom:18px;left:' + todayPct + '%;width:2px;background:#EF4444;opacity:0.7;pointer-events:none;z-index:5;"></div>' +
-                '<div style="position:absolute;top:14px;left:' + todayPct + '%;transform:translateX(-50%);font-size:8px;font-weight:800;color:#EF4444;pointer-events:none;z-index:6;">TODAY</div>'
-              : '') +
-              // Legend
-              '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:10px;color:var(--text-muted);">' + legendItems + '</div>' +
             '</div>' +
           '</div>' +
         '</div>';
