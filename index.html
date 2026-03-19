@@ -2980,7 +2980,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0069';
+const APP_VERSION = '0.9.3.0070';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -6707,23 +6707,51 @@ function renderProjectDetail(id) {
         if (!projStart && !p.status && !history.length) return '';
 
         // Build phases from history, or fall back to single current-status bar
-        var phases = [];
+        var allPhases = [];
         var todayStr = new Date().toISOString().slice(0, 10);
         var endDate = projActualEnd || todayStr;
+        var timelineStatuses = ['Active', 'On Hold', 'Waiting for Response'];
 
         if (history.length > 0) {
           for (var hi = 0; hi < history.length; hi++) {
             var phaseStart = history[hi].changed_date;
             var phaseEnd = (hi + 1 < history.length) ? history[hi + 1].changed_date : endDate;
-            phases.push({ status: history[hi].status, start: phaseStart, end: phaseEnd });
+            allPhases.push({ status: history[hi].status, start: phaseStart, end: phaseEnd });
           }
         } else {
           // No history — show single bar with current status
-          phases.push({ status: p.status || 'Unknown', start: projStart || todayStr, end: endDate });
+          allPhases.push({ status: p.status || 'Unknown', start: projStart || todayStr, end: endDate });
         }
 
+        // Filter to only show Active, On Hold, Waiting for Response
+        var phases = allPhases.filter(function(ph) { return timelineStatuses.includes(ph.status); });
+        if (phases.length === 0) {
+          // Nothing to show — fall back to single bar with current status if it qualifies
+          if (timelineStatuses.includes(p.status)) {
+            phases.push({ status: p.status, start: projStart || todayStr, end: endDate });
+          } else {
+            // Show a simple bar using project dates only
+            var sc = STATUS_COLOR(p.status) || '#9CA3AF';
+            return '<div class="detail-section">' +
+              '<div class="detail-section-label" style="display:flex;align-items:center;justify-content:space-between;">' +
+                '<span>Project Timeline</span>' +
+                (_devMode ? '<button onclick="toggleStatusHistoryEditor(' + p.id + ',' + p.objectId + ')" style="background:var(--navy);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:Lato,sans-serif;">📅 Edit History</button>' : '') +
+              '</div>' +
+              '<div style="position:relative;height:28px;background:' + sc + ';border-radius:8px;" title="' + esc(p.status || '') + '"></div>' +
+              '<div style="display:flex;justify-content:space-between;margin-top:4px;">' +
+                (projStart ? '<span style="font-size:10px;color:var(--text-muted);">' + projStart + '</span>' : '<span></span>') +
+                (projActualEnd ? '<span style="font-size:11px;"><span style="font-weight:700;color:#0088FF;">✓ Completed</span> <span style="color:var(--text-muted);">' + projActualEnd + '</span></span>' : '<span></span>') +
+              '</div>' +
+              '<div id="status-history-editor"></div>' +
+            '</div>';
+          }
+        }
+
+        // Use project start as the range start if earlier than first phase
+        var rangeStartStr = projStart && projStart < phases[0].start ? projStart : phases[0].start;
+
         // Calculate total days for proportional widths
-        var firstDate = phases[0].start;
+        var firstDate = rangeStartStr;
         var lastDate = phases[phases.length - 1].end;
         var totalMs = new Date(lastDate + 'T00:00:00') - new Date(firstDate + 'T00:00:00');
         var totalDays = Math.max(1, Math.ceil(totalMs / 86400000));
@@ -6744,7 +6772,13 @@ function renderProjectDetail(id) {
 
           segments += '<div style="position:absolute;left:' + leftPct + '%;width:' + widthPct + '%;height:100%;background:' + sc + ';border-radius:' + radius + ';" title="' + esc(ph.status) + ': ' + ph.start + ' → ' + ph.end + '"></div>';
 
-          // Phase start label (skip first — that's the project start)
+          // First segment: show start date
+          if (idx === 0) {
+            labels += '<div style="position:absolute;left:' + leftPct + '%;font-size:9px;color:var(--text-muted);white-space:nowrap;line-height:1.3;">' +
+              '<span style="font-weight:700;color:' + sc + ';">' + esc(ph.status) + '</span><br>' + (projStart || ph.start) +
+            '</div>';
+          }
+          // Subsequent segments: show transition date
           if (idx > 0 && widthPct > 3) {
             labels += '<div style="position:absolute;left:' + leftPct + '%;transform:translateX(-50%);font-size:9px;color:var(--text-muted);white-space:nowrap;text-align:center;line-height:1.3;">' +
               '<span style="font-weight:700;color:' + sc + ';">' + esc(ph.status) + '</span><br>' + ph.start +
@@ -6761,7 +6795,7 @@ function renderProjectDetail(id) {
             segments +
           '</div>' +
           '<div style="position:relative;height:28px;margin-top:2px;">' + labels + '</div>' +
-          (projActualEnd ? '<div style="text-align:right;margin-top:2px;font-size:11px;"><span style="font-weight:700;color:#22C55E;">✓ Completed</span> <span style="color:var(--text-muted);">' + projActualEnd + '</span></div>' : '') +
+          (projActualEnd ? '<div style="text-align:right;margin-top:2px;font-size:11px;"><span style="font-weight:700;color:#0088FF;">✓ Completed</span> <span style="color:var(--text-muted);">' + projActualEnd + '</span></div>' : '') +
           '<div id="status-history-editor"></div>' +
         '</div>';
       })()}
