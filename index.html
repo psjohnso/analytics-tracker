@@ -2108,6 +2108,26 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .list-editor-add button { padding:7px 14px; border:none; border-radius:6px; background:var(--navy);
   color:#fff; font-size:12px; font-weight:700; cursor:pointer; font-family:Lato,sans-serif; white-space:nowrap; }
 .list-editor-add button:hover { background:#1a3a7c; }
+.desc-editor-item { padding:8px 16px; border-bottom:1px solid #F3F4F6; }
+.desc-editor-item:last-child { border-bottom:none; }
+.desc-editor-item:hover { background:#F8F9FA; }
+.desc-editor-item-main { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.desc-editor-item-name { font-size:13px; font-weight:600; color:var(--text-body); flex:1; }
+.desc-editor-item-desc { font-size:11px; color:var(--text-muted); margin-top:2px; line-height:1.4; }
+.desc-editor-item-actions { display:flex; gap:2px; flex-shrink:0; opacity:0; transition:opacity 0.15s; }
+.desc-editor-item:hover .desc-editor-item-actions { opacity:1; }
+.desc-editor-edit { background:none; border:none; cursor:pointer; font-size:14px; padding:2px 4px; border-radius:4px; }
+.desc-editor-edit:hover { background:#EEF2FF; }
+.desc-editor-add { display:flex; gap:6px; padding:10px 12px; border-top:1px solid #E5E7EB; align-items:center; }
+.desc-editor-add input:first-child { flex:1; min-width:0; }
+.desc-editor-add input:nth-child(2) { flex:2; min-width:0; }
+.desc-editor-add input { padding:7px 10px; border:1.5px solid #D1D5DB; border-radius:6px;
+  font-size:12px; font-family:Lato,sans-serif; }
+.desc-editor-add input:focus { outline:none; border-color:var(--navy); box-shadow:0 0 0 2px rgba(0,38,105,0.15); }
+.desc-editor-add button { padding:7px 14px; border:none; border-radius:6px; background:var(--navy);
+  color:#fff; font-size:12px; font-weight:700; cursor:pointer; font-family:Lato,sans-serif; white-space:nowrap; }
+.desc-editor-add button:hover { background:#1a3a7c; }
+.desc-editor-inline-edit { padding:4px 0; }
 .list-editor-note { font-size:11px; color:var(--text-muted); margin-top:10px; line-height:1.5;
   background:#FFFBEB; border:1px solid #FDE68A; border-radius:8px; padding:10px 14px; }
 #member-form-backdrop.open { display:flex; }
@@ -2950,7 +2970,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0048';
+const APP_VERSION = '0.9.3.0049';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -5511,22 +5531,7 @@ function getEnums() {
     PROJECTS.map(p => p.priority)
   );
   const projCategories = mergeEnums(
-    ['AI Enablement, Automation & Machine Intelligence',
-     'Application Update & Enhancement',
-     'Data Analysis, Reporting & Insights',
-     'Data Governance, Compliance & Policy',
-     'Data Processing, Integration & Engineering',
-     'Documentation & Knowledge Management',
-     'Enterprise Administration & Platform Management',
-     'Infrastructure Modernization & Platform Migration',
-     'Interdepartmental Consulting & Support',
-     'Multi-Application Workflow Development',
-     'Operational Support & Sustainment Activities',
-     'Public Engagement & Open Data',
-     'Spatial Data Services & GIS Product Development',
-     'Strategic Planning & Architecture',
-     'Training, Enablement & Community',
-     'Other'],
+    _customProjCategories.map(function(c) { return c.name; }),
     PROJECTS.map(p => p.category)
   );
   const taskStatuses   = mergeEnums(
@@ -5543,28 +5548,11 @@ function getEnums() {
     TASKS.map(t => t.assignee)
   );
   const taskTools      = mergeEnums(
-    ['AI Assistant (ChatGPT/Claude/Copilot)','Alation','ArcGIS Dashboard',
-     'ArcGIS Enterprise','ArcGIS Experience Builder','ArcGIS Field Maps',
-     'ArcGIS Hub Site','ArcGIS Instant Apps','ArcGIS Online','ArcGIS Pro',
-     'ArcGIS Python API (arcpy/arcgis)','ArcGIS Server','ArcGIS StoryMap',
-     'ArcGIS Survey123','ArcMap (Desktop)','Azure / Cloud Services',
-     'Docker','Excel','FME','Geocortex / VertiGIS','Git / GitHub',
-     'Jupyter / Notebooks','Microsoft Forms','Microsoft Teams',
-     'Power Automate','Power BI','PowerPoint','PowerShell','Python',
-     'Qlik','SharePoint','Smartsheet','Snowflake','SQL (Various Tools)',
-     'TimeXtender','Word','Other'],
+    _customTaskTools.map(function(c) { return c.name; }),
     TASKS.map(t => t.tool)
   );
   const taskCategories = mergeEnums(
-    ['AI & Machine Learning','Application Development','Application Maintenance',
-     'Automation & Scripting','Code Review & QA','Data Discovery & Profiling',
-     'Data Engineering','Data Maintenance','Data Visualization & Reporting',
-     'Deployment & Release','Documentation','Geospatial Analysis',
-     'Infrastructure & Server Management','Meeting & Collaboration',
-     'Professional Development','Project Planning & Scoping','Research & Prototyping',
-     'Security & Compliance','Statistical Analysis','Stakeholder Support',
-     'Troubleshooting','User Training & Enablement',
-     'Other'],
+    _customTaskCategories.map(function(c) { return c.name; }),
     TASKS.map(t => t.category)
   );
   const partnerDepts = mergeEnums(
@@ -5597,54 +5585,17 @@ function refreshEnums() {
   FM_TASK_CATEGORIES = e.taskCategories;
   FM_PARTNER_DEPTS   = e.partnerDepts;
   FM_ITD_TEAMS       = e.itdTeams;
+  // Rebuild description maps from custom arrays
+  CATEGORY_DESCRIPTIONS = buildDescMap(_customProjCategories);
+  TASK_CATEGORY_DESCRIPTIONS = buildDescMap(_customTaskCategories);
+  TASK_TOOL_DESCRIPTIONS = buildDescMap(_customTaskTools);
 }
 
 // Short descriptions for each project category — shown in the searchable dropdown
-const CATEGORY_DESCRIPTIONS = {
-  'AI Enablement, Automation & Machine Intelligence': 'Leveraging AI, machine learning, or automation to improve city operations and decision-making.',
-  'Application Update & Enhancement': 'Maintenance, upgrades, and feature additions to existing applications and tools.',
-  'Data Analysis, Reporting & Insights': 'Analyzing city data to produce reports, dashboards, visualizations, or actionable insights.',
-  'Data Governance, Compliance & Policy': 'Standards, policies, and procedures for data quality, security, access, and compliance.',
-  'Data Processing, Integration & Engineering': 'Data pipelines, ETL processes, database design, and integrations between city systems.',
-  'Documentation & Knowledge Management': 'Technical documentation, SOPs, knowledge bases, and institutional knowledge resources.',
-  'Enterprise Administration & Platform Management': 'Administering shared platforms, licenses, user accounts, and enterprise software systems.',
-  'Infrastructure Modernization & Platform Migration': 'Upgrading, replacing, or migrating legacy systems to modern architectures and cloud services.',
-  'Interdepartmental Consulting & Support': 'Providing data, GIS, or analytics expertise to other city departments for their initiatives.',
-  'Multi-Application Workflow Development': 'Integrated workflows and cross-system processes spanning multiple tools or platforms.',
-  'Operational Support & Sustainment Activities': 'Ongoing maintenance, monitoring, troubleshooting, and support for production systems.',
-  'Public Engagement & Open Data': 'Publishing city data, building community-facing tools, story maps, and open data portals.',
-  'Spatial Data Services & GIS Product Development': 'Building and maintaining GIS maps, spatial datasets, web mapping apps, and location services.',
-  'Strategic Planning & Architecture': 'Long-range planning, technology roadmaps, solution architecture, and strategic initiatives.',
-  'Training, Enablement & Community': 'Training programs, workshops, user enablement, and fostering user communities.',
-  'Other': 'Work that doesn\'t fit neatly into any existing category. Consider suggesting a new category if this is used frequently.',
-};
+// Description maps — built dynamically from custom arrays (rebuilt by refreshEnums)
+var CATEGORY_DESCRIPTIONS = buildDescMap(_customProjCategories);
 
-// Short descriptions for each task category
-const TASK_CATEGORY_DESCRIPTIONS = {
-  'AI & Machine Learning': 'Model training, prompt engineering, ML pipelines, AI integration, and evaluation.',
-  'Application Development': 'Building new apps — Experience Builder, Hub, Survey123, dashboards, or custom tools.',
-  'Application Maintenance': 'Reconfiguring, updating, patching, or fixing existing production applications.',
-  'Automation & Scripting': 'Python scripts, Power Automate flows, FME workbenches, and scheduled automation jobs.',
-  'Code Review & QA': 'Reviewing others\' work, peer testing, quality assurance, and validation.',
-  'Data Discovery & Profiling': 'Exploring new data sources, assessing data quality, profiling, and cataloging.',
-  'Data Engineering': 'ETL pipelines, data transformations, schema design, and system integrations.',
-  'Data Maintenance': 'Routine data updates, corrections, ongoing data stewardship, and data hygiene.',
-  'Data Visualization & Reporting': 'Building dashboards, reports, charts, Power BI content, and StoryMaps.',
-  'Deployment & Release': 'Publishing apps to production, promoting builds, and release management.',
-  'Documentation': 'Technical docs, SOPs, knowledge base articles, process documentation, and policies.',
-  'Geospatial Analysis': 'Spatial queries, geocoding, network analysis, geoprocessing, and map production.',
-  'Infrastructure & Server Management': 'Server builds, software installs/updates, platform admin, and environment setup.',
-  'Meeting & Collaboration': 'Team meetings, stakeholder sessions, cross-department coordination, and standups.',
-  'Professional Development': 'Training you take, certifications, conferences, courses, and self-directed learning.',
-  'Project Planning & Scoping': 'Requirements gathering, estimating, writing scope docs, and project setup.',
-  'Research & Prototyping': 'Evaluating tools or approaches, proof of concept work, and pilot builds.',
-  'Security & Compliance': 'Access management, security audits, ADA compliance, and data governance tasks.',
-  'Statistical Analysis': 'Statistical modeling, trend analysis, forecasting, and quantitative research.',
-  'Stakeholder Support': 'Answering user questions, ad-hoc data requests, and general user assistance.',
-  'Troubleshooting': 'Debugging, incident response, diagnosing issues, and root cause analysis.',
-  'User Training & Enablement': 'Training others, creating training materials, onboarding users, and demos.',
-  'Other': 'Work that doesn\'t fit neatly into any existing category. Consider suggesting a new category if this is used frequently.',
-};
+var TASK_CATEGORY_DESCRIPTIONS = buildDescMap(_customTaskCategories);
 
 // ── Task Category Wizard ──────────────────────────────────────────────
 // Three-question guided walkthrough to help users pick the right task category.
@@ -5778,45 +5729,7 @@ function taskCatWizardApply(categoryName) {
 }
 
 // ── Task Tool Descriptions ──────────────────────────────────────
-const TASK_TOOL_DESCRIPTIONS = {
-  'AI Assistant (ChatGPT/Claude/Copilot)': 'AI-powered assistants for code generation, analysis, writing, and problem-solving.',
-  'Alation': 'Data catalog and governance platform for discovering and documenting data assets.',
-  'ArcGIS Dashboard': 'Real-time operational dashboards with maps, charts, and indicators.',
-  'ArcGIS Enterprise': 'On-premises GIS platform for hosting maps, services, and spatial data.',
-  'ArcGIS Experience Builder': 'Configurable web apps with maps, data, and interactive widgets.',
-  'ArcGIS Field Maps': 'Mobile data collection and field work management (includes legacy Workforce).',
-  'ArcGIS Hub Site': 'Community engagement sites for sharing data, maps, and initiatives.',
-  'ArcGIS Instant Apps': 'Quick, focused web apps built from templates with minimal configuration.',
-  'ArcGIS Online': 'Cloud-based GIS for creating, managing, and sharing maps and spatial data.',
-  'ArcGIS Pro': 'Desktop GIS application for advanced mapping, analysis, and data management.',
-  'ArcGIS Python API (arcpy/arcgis)': 'Python libraries for scripting GIS workflows, automation, and spatial analysis.',
-  'ArcGIS Server': 'Server-based GIS services — map, feature, geoprocessing, and image services.',
-  'ArcGIS StoryMap': 'Narrative-driven web apps combining maps, text, images, and multimedia.',
-  'ArcGIS Survey123': 'Form-based mobile and web data collection with smart form logic.',
-  'ArcMap (Desktop)': 'Legacy desktop GIS application — predecessor to ArcGIS Pro.',
-  'Azure / Cloud Services': 'Microsoft Azure or other cloud platforms for hosting, compute, and storage.',
-  'Docker': 'Containerization platform for packaging and deploying applications.',
-  'Excel': 'Spreadsheet tool for data analysis, tabular data, and quick calculations.',
-  'FME': 'Spatial ETL platform for data transformation and integration between systems.',
-  'Geocortex / VertiGIS': 'Extended GIS web and mobile applications built on ArcGIS technology.',
-  'Git / GitHub': 'Version control and code collaboration platform.',
-  'Jupyter / Notebooks': 'Interactive computing environment for data science and analysis.',
-  'Microsoft Forms': 'Simple form builder for surveys, quizzes, and data collection.',
-  'Microsoft Teams': 'Collaboration platform for chat, meetings, and file sharing.',
-  'Power Automate': 'Workflow automation connecting apps, services, and data sources.',
-  'Power BI': 'Business intelligence — dashboards, reports, and data visualization.',
-  'PowerPoint': 'Presentation tool for slide decks and visual communications.',
-  'PowerShell': 'Command-line scripting for system administration and automation.',
-  'Python': 'General-purpose programming language for scripting, analysis, and automation.',
-  'Qlik': 'Data analytics and visualization platform for interactive dashboards.',
-  'SharePoint': 'Document management and intranet collaboration platform.',
-  'Smartsheet': 'Work management platform for project tracking and collaboration.',
-  'Snowflake': 'Cloud data warehouse for storing, querying, and sharing structured data.',
-  'SQL (Various Tools)': 'Database querying — SSMS, pgAdmin, DBeaver, or other SQL clients.',
-  'TimeXtender': 'Data integration and automation platform for building data estates.',
-  'Word': 'Document authoring for reports, memos, and written deliverables.',
-  'Other': 'A tool not listed here. Consider requesting it be added to the list.',
-};
+var TASK_TOOL_DESCRIPTIONS = buildDescMap(_customTaskTools);
 
 // ── Task Tool Wizard ──────────────────────────────────────────────
 const TASK_TOOL_WIZARD_TREE = {
@@ -7526,11 +7439,98 @@ const _defaultItdTeams = [
 ];
 
 // ObjectIds for the two config records (populated on load from ArcGIS)
-var _configOids = { partner_depts: null, itd_teams: null };
+var _configOids = { partner_depts: null, itd_teams: null, proj_categories: null, task_categories: null, task_tools: null };
 
 // Start with defaults; overwritten by applyAppConfig() after ArcGIS load
 var _customPartnerDepts = [..._defaultPartnerDepts];
 var _customItdTeams = [..._defaultItdTeams];
+
+// Category and tool lists: arrays of {name, desc} objects
+var _customProjCategories = [
+  {name:'AI Enablement, Automation & Machine Intelligence', desc:'Leveraging AI, machine learning, or automation to improve city operations and decision-making.'},
+  {name:'Application Update & Enhancement', desc:'Maintenance, upgrades, and feature additions to existing applications and tools.'},
+  {name:'Data Analysis, Reporting & Insights', desc:'Analyzing city data to produce reports, dashboards, visualizations, or actionable insights.'},
+  {name:'Data Governance, Compliance & Policy', desc:'Standards, policies, and procedures for data quality, security, access, and compliance.'},
+  {name:'Data Processing, Integration & Engineering', desc:'Data pipelines, ETL processes, database design, and integrations between city systems.'},
+  {name:'Documentation & Knowledge Management', desc:'Technical documentation, SOPs, knowledge bases, and institutional knowledge resources.'},
+  {name:'Enterprise Administration & Platform Management', desc:'Administering shared platforms, licenses, user accounts, and enterprise software systems.'},
+  {name:'Infrastructure Modernization & Platform Migration', desc:'Upgrading, replacing, or migrating legacy systems to modern architectures and cloud services.'},
+  {name:'Interdepartmental Consulting & Support', desc:'Providing data, GIS, or analytics expertise to other city departments for their initiatives.'},
+  {name:'Multi-Application Workflow Development', desc:'Integrated workflows and cross-system processes spanning multiple tools or platforms.'},
+  {name:'Operational Support & Sustainment Activities', desc:'Ongoing maintenance, monitoring, troubleshooting, and support for production systems.'},
+  {name:'Public Engagement & Open Data', desc:'Publishing city data, building community-facing tools, story maps, and open data portals.'},
+  {name:'Spatial Data Services & GIS Product Development', desc:'Building and maintaining GIS maps, spatial datasets, web mapping apps, and location services.'},
+  {name:'Strategic Planning & Architecture', desc:'Long-range planning, technology roadmaps, solution architecture, and strategic initiatives.'},
+  {name:'Training, Enablement & Community', desc:'Training programs, workshops, user enablement, and fostering user communities.'},
+  {name:'Other', desc:'Work that doesn\'t fit neatly into any existing category. Consider suggesting a new category if this is used frequently.'},
+];
+var _customTaskCategories = [
+  {name:'AI & Machine Learning', desc:'Model training, prompt engineering, ML pipelines, AI integration, and evaluation.'},
+  {name:'Application Development', desc:'Building new apps — Experience Builder, Hub, Survey123, dashboards, or custom tools.'},
+  {name:'Application Maintenance', desc:'Reconfiguring, updating, patching, or fixing existing production applications.'},
+  {name:'Automation & Scripting', desc:'Python scripts, Power Automate flows, FME workbenches, and scheduled automation jobs.'},
+  {name:'Code Review & QA', desc:'Reviewing others\' work, peer testing, quality assurance, and validation.'},
+  {name:'Data Discovery & Profiling', desc:'Exploring new data sources, assessing data quality, profiling, and cataloging.'},
+  {name:'Data Engineering', desc:'ETL pipelines, data transformations, schema design, and system integrations.'},
+  {name:'Data Maintenance', desc:'Routine data updates, corrections, ongoing data stewardship, and data hygiene.'},
+  {name:'Data Visualization & Reporting', desc:'Building dashboards, reports, charts, Power BI content, and StoryMaps.'},
+  {name:'Deployment & Release', desc:'Publishing apps to production, promoting builds, and release management.'},
+  {name:'Documentation', desc:'Technical docs, SOPs, knowledge base articles, process documentation, and policies.'},
+  {name:'Geospatial Analysis', desc:'Spatial queries, geocoding, network analysis, geoprocessing, and map production.'},
+  {name:'Infrastructure & Server Management', desc:'Server builds, software installs/updates, platform admin, and environment setup.'},
+  {name:'Meeting & Collaboration', desc:'Team meetings, stakeholder sessions, cross-department coordination, and standups.'},
+  {name:'Professional Development', desc:'Training you take, certifications, conferences, courses, and self-directed learning.'},
+  {name:'Project Planning & Scoping', desc:'Requirements gathering, estimating, writing scope docs, and project setup.'},
+  {name:'Research & Prototyping', desc:'Evaluating tools or approaches, proof of concept work, and pilot builds.'},
+  {name:'Security & Compliance', desc:'Access management, security audits, ADA compliance, and data governance tasks.'},
+  {name:'Statistical Analysis', desc:'Statistical modeling, trend analysis, forecasting, and quantitative research.'},
+  {name:'Stakeholder Support', desc:'Answering user questions, ad-hoc data requests, and general user assistance.'},
+  {name:'Troubleshooting', desc:'Debugging, incident response, diagnosing issues, and root cause analysis.'},
+  {name:'User Training & Enablement', desc:'Training others, creating training materials, onboarding users, and demos.'},
+  {name:'Other', desc:'Work that doesn\'t fit neatly into any existing category. Consider suggesting a new category if this is used frequently.'},
+];
+var _customTaskTools = [
+  {name:'AI Assistant (ChatGPT/Claude/Copilot)', desc:'AI-powered assistants for code generation, analysis, writing, and problem-solving.'},
+  {name:'Alation', desc:'Data catalog and governance platform for discovering and documenting data assets.'},
+  {name:'ArcGIS Dashboard', desc:'Real-time operational dashboards with maps, charts, and indicators.'},
+  {name:'ArcGIS Enterprise', desc:'On-premises GIS platform for hosting maps, services, and spatial data.'},
+  {name:'ArcGIS Experience Builder', desc:'Configurable web apps with maps, data, and interactive widgets.'},
+  {name:'ArcGIS Field Maps', desc:'Mobile data collection and field work management (includes legacy Workforce).'},
+  {name:'ArcGIS Hub Site', desc:'Community engagement sites for sharing data, maps, and initiatives.'},
+  {name:'ArcGIS Instant Apps', desc:'Quick, focused web apps built from templates with minimal configuration.'},
+  {name:'ArcGIS Online', desc:'Cloud-based GIS for creating, managing, and sharing maps and spatial data.'},
+  {name:'ArcGIS Pro', desc:'Desktop GIS application for advanced mapping, analysis, and data management.'},
+  {name:'ArcGIS Python API (arcpy/arcgis)', desc:'Python libraries for scripting GIS workflows, automation, and spatial analysis.'},
+  {name:'ArcGIS Server', desc:'Server-based GIS services — map, feature, geoprocessing, and image services.'},
+  {name:'ArcGIS StoryMap', desc:'Narrative-driven web apps combining maps, text, images, and multimedia.'},
+  {name:'ArcGIS Survey123', desc:'Form-based mobile and web data collection with smart form logic.'},
+  {name:'ArcMap (Desktop)', desc:'Legacy desktop GIS application — predecessor to ArcGIS Pro.'},
+  {name:'Azure / Cloud Services', desc:'Microsoft Azure or other cloud platforms for hosting, compute, and storage.'},
+  {name:'Docker', desc:'Containerization platform for packaging and deploying applications.'},
+  {name:'Excel', desc:'Spreadsheet tool for data analysis, tabular data, and quick calculations.'},
+  {name:'FME', desc:'Spatial ETL platform for data transformation and integration between systems.'},
+  {name:'Geocortex / VertiGIS', desc:'Extended GIS web and mobile applications built on ArcGIS technology.'},
+  {name:'Git / GitHub', desc:'Version control and code collaboration platform.'},
+  {name:'Jupyter / Notebooks', desc:'Interactive computing environment for data science and analysis.'},
+  {name:'Microsoft Forms', desc:'Simple form builder for surveys, quizzes, and data collection.'},
+  {name:'Microsoft Teams', desc:'Collaboration platform for chat, meetings, and file sharing.'},
+  {name:'Power Automate', desc:'Workflow automation connecting apps, services, and data sources.'},
+  {name:'Power BI', desc:'Business intelligence — dashboards, reports, and data visualization.'},
+  {name:'PowerPoint', desc:'Presentation tool for slide decks and visual communications.'},
+  {name:'PowerShell', desc:'Command-line scripting for system administration and automation.'},
+  {name:'Python', desc:'General-purpose programming language for scripting, analysis, and automation.'},
+  {name:'Qlik', desc:'Data analytics and visualization platform for interactive dashboards.'},
+  {name:'SharePoint', desc:'Document management and intranet collaboration platform.'},
+  {name:'Smartsheet', desc:'Work management platform for project tracking and collaboration.'},
+  {name:'Snowflake', desc:'Cloud data warehouse for storing, querying, and sharing structured data.'},
+  {name:'SQL (Various Tools)', desc:'Database querying — SSMS, pgAdmin, DBeaver, or other SQL clients.'},
+  {name:'TimeXtender', desc:'Data integration and automation platform for building data estates.'},
+  {name:'Word', desc:'Document authoring for reports, memos, and written deliverables.'},
+  {name:'Other', desc:'A tool not listed here. Consider requesting it be added to the list.'},
+];
+
+// Helper: build description map from {name,desc} array
+function buildDescMap(arr) { var m = {}; arr.forEach(function(i) { m[i.name] = i.desc; }); return m; }
 
 // Called after loading config features from ArcGIS Online
 function applyAppConfig(features) {
@@ -7550,6 +7550,15 @@ function applyAppConfig(features) {
       } else if (key === 'itd_teams') {
         _customItdTeams = parsed;
         _configOids.itd_teams = oid;
+      } else if (key === 'proj_categories') {
+        if (parsed.length && typeof parsed[0] === 'object') _customProjCategories = parsed;
+        _configOids.proj_categories = oid;
+      } else if (key === 'task_categories') {
+        if (parsed.length && typeof parsed[0] === 'object') _customTaskCategories = parsed;
+        _configOids.task_categories = oid;
+      } else if (key === 'task_tools') {
+        if (parsed.length && typeof parsed[0] === 'object') _customTaskTools = parsed;
+        _configOids.task_tools = oid;
       }
     } catch (e) {
       console.warn('Could not parse config value for key:', key, e);
@@ -7564,19 +7573,28 @@ function applyAppConfig(features) {
 async function saveConfigKey(key, valueArray) {
   var oid = _configOids[key];
   var jsonValue = JSON.stringify(valueArray);
-  if (!oid) {
-    console.warn('No ObjectId for config key "' + key + '", cannot save to ArcGIS');
-    return false;
-  }
   try {
-    await agolApplyEdits(ARCGIS_CONFIG.appConfigUrl, {
-      updates: [{ attributes: { OBJECTID: oid, config_value: jsonValue } }]
-    });
-    console.log('[Config] Saved "' + key + '" to ArcGIS Online');
+    if (oid) {
+      // Update existing record
+      await agolApplyEdits(ARCGIS_CONFIG.appConfigUrl, {
+        updates: [{ attributes: { OBJECTID: oid, config_value: jsonValue } }]
+      });
+      console.log('[Config] Updated "' + key + '" in ArcGIS Online');
+    } else {
+      // Create new record
+      var result = await agolApplyEdits(ARCGIS_CONFIG.appConfigUrl, {
+        adds: [{ attributes: { config_key: key, config_value: jsonValue } }]
+      });
+      // Store the new ObjectId for future updates
+      if (result && result.addResults && result.addResults[0] && result.addResults[0].objectId) {
+        _configOids[key] = result.addResults[0].objectId;
+      }
+      console.log('[Config] Created "' + key + '" in ArcGIS Online');
+    }
     return true;
   } catch (e) {
     console.error('Failed to save config "' + key + '" to ArcGIS:', e);
-    alert('Failed to save dropdown list changes: ' + e.message);
+    alert('Failed to save changes: ' + e.message);
     return false;
   }
 }
@@ -7586,6 +7604,12 @@ async function saveCustomLists(listKey) {
     await saveConfigKey('partner_depts', _customPartnerDepts);
   } else if (listKey === 'team') {
     await saveConfigKey('itd_teams', _customItdTeams);
+  } else if (listKey === 'proj_cat') {
+    await saveConfigKey('proj_categories', _customProjCategories);
+  } else if (listKey === 'task_cat') {
+    await saveConfigKey('task_categories', _customTaskCategories);
+  } else if (listKey === 'task_tool') {
+    await saveConfigKey('task_tools', _customTaskTools);
   }
 }
 
@@ -7680,9 +7704,146 @@ async function removeListItem(listKey, idx) {
   await saveCustomLists(listKey);
 }
 
-// ══════════════════════════════════════════════════════════════════════
-//  MY WORK TAB
-// ══════════════════════════════════════════════════════════════════════
+// ── Description List Editor (for categories & tools with name + description) ──
+
+function getDescList(listKey) {
+  if (listKey === 'proj_cat') return _customProjCategories;
+  if (listKey === 'task_cat') return _customTaskCategories;
+  if (listKey === 'task_tool') return _customTaskTools;
+  return [];
+}
+
+function getDescListMeta(listKey) {
+  if (listKey === 'proj_cat') return { containerId: 'desc-editor-proj-cat', title: 'Project Categories', dataSource: 'projects', dataField: 'category' };
+  if (listKey === 'task_cat') return { containerId: 'desc-editor-task-cat', title: 'Task Categories', dataSource: 'tasks', dataField: 'category' };
+  if (listKey === 'task_tool') return { containerId: 'desc-editor-task-tool', title: 'Task Tools', dataSource: 'tasks', dataField: 'tool' };
+  return {};
+}
+
+function renderDescListEditor(listKey) {
+  var meta = getDescListMeta(listKey);
+  var container = document.getElementById(meta.containerId);
+  if (!container) return;
+  var list = getDescList(listKey);
+
+  // Values from data not in custom list
+  var dataValues = [];
+  var listNames = list.map(function(i) { return i.name; });
+  if (meta.dataSource === 'projects') {
+    dataValues = [...new Set(PROJECTS.map(function(p) { return p[meta.dataField]; }))].filter(function(v) { return v && !listNames.includes(v); }).sort();
+  } else {
+    dataValues = [...new Set(TASKS.map(function(t) { return t[meta.dataField]; }))].filter(function(v) { return v && !listNames.includes(v); }).sort();
+  }
+
+  var itemsHtml = list.map(function(item, idx) {
+    return '<div class="desc-editor-item">' +
+      '<div class="desc-editor-item-main">' +
+        '<span class="desc-editor-item-name">' + esc(item.name) + '</span>' +
+        '<div class="desc-editor-item-actions">' +
+          '<button class="desc-editor-edit" title="Edit" onclick="editDescListItem(\'' + listKey + '\',' + idx + ')">✏️</button>' +
+          '<button class="list-editor-remove" title="Remove" onclick="removeDescListItem(\'' + listKey + '\',' + idx + ')">✕</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="desc-editor-item-desc">' + esc(item.desc || '') + '</div>' +
+    '</div>';
+  }).join('');
+
+  var dataItemsHtml = dataValues.map(function(v) {
+    return '<div class="desc-editor-item">' +
+      '<div class="desc-editor-item-main">' +
+        '<span class="desc-editor-item-name">' + esc(v) + '</span>' +
+        '<span class="list-editor-item-from-data">from data</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  container.innerHTML = '<div class="list-editor-card">' +
+    '<div class="list-editor-card-header">' +
+      '<span>' + meta.title + '</span>' +
+      '<span class="list-count">' + (list.length + dataValues.length) + ' items</span>' +
+    '</div>' +
+    '<div class="list-editor-items" style="max-height:400px;">' + itemsHtml + dataItemsHtml + '</div>' +
+    '<div class="desc-editor-add">' +
+      '<input type="text" id="desc-add-name-' + listKey + '" placeholder="Name…" onkeydown="if(event.key===\'Enter\')document.getElementById(\'desc-add-desc-' + listKey + '\').focus()">' +
+      '<input type="text" id="desc-add-desc-' + listKey + '" placeholder="Description…" onkeydown="if(event.key===\'Enter\')addDescListItem(\'' + listKey + '\')">' +
+      '<button onclick="addDescListItem(\'' + listKey + '\')">＋ Add</button>' +
+    '</div>' +
+  '</div>';
+}
+
+async function addDescListItem(listKey) {
+  var nameInput = document.getElementById('desc-add-name-' + listKey);
+  var descInput = document.getElementById('desc-add-desc-' + listKey);
+  if (!nameInput) return;
+  var name = nameInput.value.trim();
+  var desc = descInput ? descInput.value.trim() : '';
+  if (!name) { alert('Please enter a name.'); return; }
+
+  var list = getDescList(listKey);
+  if (list.some(function(i) { return i.name.toLowerCase() === name.toLowerCase(); })) {
+    alert('An item with this name already exists.');
+    return;
+  }
+  list.push({ name: name, desc: desc });
+  list.sort(function(a, b) { return a.name.localeCompare(b.name); });
+
+  refreshEnums();
+  renderDescListEditor(listKey);
+  await saveCustomLists(listKey);
+}
+
+async function removeDescListItem(listKey, idx) {
+  var list = getDescList(listKey);
+  var item = list[idx];
+  if (!confirm('Remove "' + item.name + '" from the list?')) return;
+  list.splice(idx, 1);
+  refreshEnums();
+  renderDescListEditor(listKey);
+  await saveCustomLists(listKey);
+}
+
+function editDescListItem(listKey, idx) {
+  var list = getDescList(listKey);
+  var item = list[idx];
+  var meta = getDescListMeta(listKey);
+  var container = document.getElementById(meta.containerId);
+  if (!container) return;
+
+  // Find the item row and replace with inline edit form
+  var items = container.querySelectorAll('.desc-editor-item');
+  if (!items[idx]) return;
+  var row = items[idx];
+  row.innerHTML = '<div class="desc-editor-inline-edit">' +
+    '<input type="text" id="desc-edit-name-' + listKey + '-' + idx + '" class="fm-input" value="' + esc(item.name) + '" style="font-weight:700;margin-bottom:4px;">' +
+    '<input type="text" id="desc-edit-desc-' + listKey + '-' + idx + '" class="fm-input" value="' + esc(item.desc || '') + '" placeholder="Description…" style="font-size:12px;">' +
+    '<div style="display:flex;gap:6px;margin-top:6px;">' +
+      '<button class="settings-btn settings-btn-primary" style="padding:4px 12px;font-size:11px;" onclick="saveDescListEdit(\'' + listKey + '\',' + idx + ')">Save</button>' +
+      '<button class="settings-btn settings-btn-secondary" style="padding:4px 12px;font-size:11px;" onclick="renderDescListEditor(\'' + listKey + '\')">Cancel</button>' +
+    '</div>' +
+  '</div>';
+  document.getElementById('desc-edit-name-' + listKey + '-' + idx).focus();
+}
+
+async function saveDescListEdit(listKey, idx) {
+  var nameEl = document.getElementById('desc-edit-name-' + listKey + '-' + idx);
+  var descEl = document.getElementById('desc-edit-desc-' + listKey + '-' + idx);
+  if (!nameEl) return;
+  var newName = nameEl.value.trim();
+  var newDesc = descEl ? descEl.value.trim() : '';
+  if (!newName) { alert('Name cannot be empty.'); return; }
+
+  var list = getDescList(listKey);
+  // Check for duplicate (excluding self)
+  if (list.some(function(i, ii) { return ii !== idx && i.name.toLowerCase() === newName.toLowerCase(); })) {
+    alert('An item with this name already exists.');
+    return;
+  }
+  list[idx] = { name: newName, desc: newDesc };
+  list.sort(function(a, b) { return a.name.localeCompare(b.name); });
+  refreshEnums();
+  renderDescListEditor(listKey);
+  await saveCustomLists(listKey);
+}
 
 // ══════════════════════════════════════════════════════════════════════
 //  TIME TRACKING
@@ -9210,6 +9371,18 @@ function renderSettingsPage(area) {
     '<div class="list-editor-note">Changes are saved to ArcGIS Online and shared across all users. Values used in existing projects will always appear in the dropdown even if removed here.</div>' +
   '</div>';
 
+  // ── Category & Tool Editors ──────────────────────────────────────
+  html += '<div class="settings-section">' +
+    '<div class="settings-section-header"><span>Manage Categories & Tools</span></div>' +
+    '<p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Add, edit, or remove categories and tools. Each item has a name and description. The description appears in the searchable dropdown when creating or editing projects and tasks.</p>' +
+    '<div id="desc-editor-proj-cat" style="margin-bottom:20px;"></div>' +
+    '<div class="list-editor-grid">' +
+      '<div id="desc-editor-task-cat"></div>' +
+      '<div id="desc-editor-task-tool"></div>' +
+    '</div>' +
+    '<div class="list-editor-note">Changes are saved to ArcGIS Online and shared across all users. Values used in existing projects or tasks will always appear in the dropdown even if removed here. The "Help me choose" wizard uses a fixed decision tree — adding items here will make them available in the dropdown but not automatically in the wizard.</div>' +
+  '</div>';
+
   html += '</div>';
 
   area.innerHTML = html;
@@ -9217,6 +9390,11 @@ function renderSettingsPage(area) {
   // Render the dropdown list editors
   renderListEditor('list-editor-dept', 'Partner Departments', _customPartnerDepts, 'dept');
   renderListEditor('list-editor-team', 'ITD Teams', _customItdTeams, 'team');
+
+  // Render the category & tool editors
+  renderDescListEditor('proj_cat');
+  renderDescListEditor('task_cat');
+  renderDescListEditor('task_tool');
 
   // If a member was selected for absence editing, re-render that section
   if (_settingsSelectedMember && people[_settingsSelectedMember]) {
