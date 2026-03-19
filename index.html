@@ -2980,7 +2980,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0061';
+const APP_VERSION = '0.9.3.0062';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -6680,18 +6680,8 @@ function renderProjectDetail(id) {
         </div>
       </div>
 
-      ${p.problem_statement ? `<div class="detail-section">
-        <div class="detail-section-label">Problem Statement</div>
-        <div class="detail-prose">${esc(p.problem_statement)}</div>
-      </div>` : ''}
-
-      ${p.description ? `<div class="detail-section">
-        <div class="detail-section-label">Description</div>
-        <div class="detail-prose">${esc(p.description)}</div>
-      </div>` : ''}
-
       ${(() => {
-        // Build project phase timeline
+        // Build project phase timeline — single bar with status-colored segments
         var phaseTasks = relTasks.filter(t => t.start || t.working_due || t.due).sort((a, b) => (a.start || '9999').localeCompare(b.start || '9999'));
         if (phaseTasks.length === 0) return '';
 
@@ -6705,7 +6695,7 @@ function renderProjectDetail(id) {
         if (projEnd) allDates.push(projEnd);
         phaseTasks.forEach(t => {
           if (t.start) allDates.push(t.start);
-          var tEnd = t.working_due || t.due;
+          var tEnd = t.actual_end || t.working_due || t.due;
           if (tEnd) allDates.push(tEnd);
         });
         allDates.sort();
@@ -6736,65 +6726,77 @@ function renderProjectDetail(id) {
           cur.setMonth(cur.getMonth() + 1);
         }
 
-        // Project bar (background)
-        var pLeftPct = pct(projStart || allDates[0]);
-        var pRightPct = pct(projEnd || allDates[allDates.length - 1]);
-        var pWidth = Math.max(1, pRightPct - pLeftPct);
-
-        // Task rows
-        var rows = phaseTasks.map((t, idx) => {
+        // Build segments for the single bar
+        var segments = phaseTasks.map(t => {
           var tStart = t.start || projStart || todayStr;
-          var tEnd = t.working_due || t.due || projEnd || todayStr;
+          var tEnd = t.actual_end || t.working_due || t.due || projEnd || todayStr;
           var lp = pct(tStart);
           var rp = pct(tEnd);
-          var w = Math.max(0.5, rp - lp);
+          var w = Math.max(0.3, rp - lp);
           var sc = STATUS_COLOR(t.status) || '#93C5FD';
-          var isOverdue = tEnd < todayStr && t.status !== 'Complete' && t.status !== 'Canceled';
-          var isComplete = t.status === 'Complete';
-          var opacity = isComplete ? '0.5' : '0.85';
-          var outline = isOverdue ? 'outline:2px solid #EF4444;outline-offset:1px;' : '';
-          var pattern = isComplete ? 'background:repeating-linear-gradient(45deg,' + sc + ',' + sc + ' 4px,transparent 4px,transparent 8px);' : 'background:' + sc + ';';
+          var isOverdue = (t.working_due || t.due || '') < todayStr && t.status !== 'Complete' && t.status !== 'Canceled';
 
-          return '<div style="display:flex;align-items:center;height:26px;margin-bottom:2px;">' +
-            '<div style="width:180px;flex-shrink:0;font-size:11px;font-weight:600;color:var(--text-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px;cursor:pointer;" onclick="openTaskFromProject(' + t.idx + ')" title="' + esc(t.title) + ' (' + tStart + ' → ' + tEnd + ')">' + esc(t.title) + '</div>' +
-            '<div style="flex:1;position:relative;height:18px;">' +
-              '<div style="position:absolute;left:' + lp + '%;width:' + w + '%;height:100%;' + pattern + 'border-radius:3px;opacity:' + opacity + ';' + outline + '" title="' + tStart + ' → ' + tEnd + ' (' + t.status + ')"></div>' +
-            '</div>' +
-          '</div>';
+          return '<div onclick="openTaskFromProject(' + t.idx + ')" style="position:absolute;left:' + lp + '%;width:' + w + '%;height:100%;background:' + sc + ';cursor:pointer;' +
+            (isOverdue ? 'box-shadow:inset 0 0 0 2px #EF4444;' : '') +
+            '" title="' + esc(t.title) + '\n' + tStart + ' → ' + tEnd + '\nStatus: ' + (t.status || '—') + '"></div>';
         }).join('');
+
+        // Build labels below the bar
+        var labels = phaseTasks.map(t => {
+          var tStart = t.start || projStart || todayStr;
+          var tEnd = t.actual_end || t.working_due || t.due || projEnd || todayStr;
+          var lp = pct(tStart);
+          var rp = pct(tEnd);
+          var w = rp - lp;
+          if (w < 3) return ''; // too narrow for a label
+          return '<div style="position:absolute;left:' + lp + '%;width:' + w + '%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;font-weight:600;color:var(--text-body);padding-top:2px;cursor:pointer;" onclick="openTaskFromProject(' + t.idx + ')" title="' + esc(t.title) + '">' + esc(t.title) + '</div>';
+        }).join('');
+
+        // Collect unique statuses for legend
+        var usedStatuses = {};
+        phaseTasks.forEach(t => { if (t.status) usedStatuses[t.status] = STATUS_COLOR(t.status); });
+        var hasOverdue = phaseTasks.some(t => {
+          var tEnd = t.working_due || t.due || '';
+          return tEnd < todayStr && t.status !== 'Complete' && t.status !== 'Canceled';
+        });
+        var legendItems = Object.keys(usedStatuses).map(s => {
+          return '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:8px;border-radius:2px;background:' + usedStatuses[s] + ';"></span>' + s + '</span>';
+        }).join('');
+        if (hasOverdue) legendItems += '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:8px;border-radius:2px;background:#ccc;box-shadow:inset 0 0 0 2px #EF4444;"></span>Overdue</span>';
 
         return '<div class="detail-section">' +
           '<div class="detail-section-label">Project Timeline</div>' +
           '<div style="overflow-x:auto;">' +
-            '<div style="min-width:600px;position:relative;padding-bottom:8px;">' +
+            '<div style="min-width:500px;position:relative;padding-bottom:8px;">' +
               // Month header
-              '<div style="position:relative;height:18px;margin-bottom:4px;margin-left:180px;border-bottom:1px solid var(--border);">' + months + '</div>' +
-              // Project background bar
-              '<div style="display:flex;align-items:center;height:10px;margin-bottom:6px;">' +
-                '<div style="width:180px;flex-shrink:0;font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Project Span</div>' +
-                '<div style="flex:1;position:relative;height:8px;">' +
-                  '<div style="position:absolute;left:' + pLeftPct + '%;width:' + pWidth + '%;height:100%;background:var(--navy);border-radius:4px;opacity:0.15;"></div>' +
-                '</div>' +
+              '<div style="position:relative;height:18px;margin-bottom:6px;border-bottom:1px solid var(--border);">' + months + '</div>' +
+              // Single bar with segments
+              '<div style="position:relative;height:28px;background:#F3F4F6;border-radius:6px;overflow:hidden;">' +
+                segments +
               '</div>' +
-              // Task rows
-              rows +
+              // Task labels below bar
+              '<div style="position:relative;height:16px;margin-top:2px;">' + labels + '</div>' +
               // Today marker
               (todayPct > 0 && todayPct < 100 ?
-                '<div style="position:absolute;top:0;bottom:0;left:calc(180px + (100% - 180px) * ' + (todayPct / 100) + ');width:2px;background:#EF4444;opacity:0.5;pointer-events:none;z-index:5;"></div>' +
-                '<div style="position:absolute;top:0;left:calc(180px + (100% - 180px) * ' + (todayPct / 100) + ');transform:translateX(-50%);font-size:8px;font-weight:800;color:#EF4444;pointer-events:none;z-index:6;">TODAY</div>'
+                '<div style="position:absolute;top:18px;bottom:18px;left:' + todayPct + '%;width:2px;background:#EF4444;opacity:0.7;pointer-events:none;z-index:5;"></div>' +
+                '<div style="position:absolute;top:14px;left:' + todayPct + '%;transform:translateX(-50%);font-size:8px;font-weight:800;color:#EF4444;pointer-events:none;z-index:6;">TODAY</div>'
               : '') +
               // Legend
-              '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;margin-left:180px;font-size:10px;color:var(--text-muted);">' +
-                '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:6px;border-radius:2px;background:#22C55E;opacity:0.85;"></span>In Progress</span>' +
-                '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:6px;border-radius:2px;background:#F97316;opacity:0.85;"></span>Pending</span>' +
-                '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:6px;border-radius:2px;background:#EAB308;opacity:0.85;"></span>On Hold</span>' +
-                '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:6px;border-radius:2px;background:repeating-linear-gradient(45deg,#3B82F6,#3B82F6 3px,transparent 3px,transparent 6px);opacity:0.5;"></span>Complete</span>' +
-                '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:12px;height:6px;border-radius:2px;background:#ccc;outline:2px solid #EF4444;outline-offset:1px;"></span>Overdue</span>' +
-              '</div>' +
+              '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:10px;color:var(--text-muted);">' + legendItems + '</div>' +
             '</div>' +
           '</div>' +
         '</div>';
       })()}
+
+      ${p.problem_statement ? `<div class="detail-section">
+        <div class="detail-section-label">Problem Statement</div>
+        <div class="detail-prose">${esc(p.problem_statement)}</div>
+      </div>` : ''}
+
+      ${p.description ? `<div class="detail-section">
+        <div class="detail-section-label">Description</div>
+        <div class="detail-prose">${esc(p.description)}</div>
+      </div>` : ''}
 
       <div class="detail-section">
         <div class="detail-section-label" style="display:flex;align-items:center;justify-content:space-between;">
