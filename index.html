@@ -2980,7 +2980,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0055';
+const APP_VERSION = '0.9.3.0057';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -7768,7 +7768,7 @@ function renderDescListEditor(listKey) {
     dataValues = [...new Set(TASKS.map(function(t) { return t[meta.dataField]; }))].filter(function(v) { return v && !listNames.includes(v); }).sort();
   }
 
-  var hasActiveFlag = list.length > 0 && list[0].active !== undefined;
+  var hasActiveFlag = (listKey === 'task_tool'); // Active/retired toggle for task tools
   var activeCount = hasActiveFlag ? list.filter(function(i) { return i.active !== false; }).length : list.length;
 
   var itemsHtml = list.map(function(item, idx) {
@@ -7776,9 +7776,10 @@ function renderDescListEditor(listKey) {
     var inactiveStyle = isInactive ? ' style="opacity:0.5;"' : '';
     var toggleHtml = '';
     if (hasActiveFlag) {
-      var toggleColor = isInactive ? '#D1D5DB' : '#22C55E';
-      var toggleTitle = isInactive ? 'Retired — click to reactivate' : 'Active — click to retire';
-      toggleHtml = '<button class="desc-editor-edit" title="' + toggleTitle + '" onclick="toggleDescListActive(\'' + listKey + '\',' + idx + ')" style="font-size:11px;color:' + toggleColor + ';">' + (isInactive ? '○' : '●') + '</button>';
+      var toggleLabel = isInactive ? 'Retired' : 'Active';
+      var toggleColor = isInactive ? '#EF4444' : '#22C55E';
+      var toggleTitle = isInactive ? 'Click to reactivate' : 'Click to retire';
+      toggleHtml = '<button class="desc-editor-edit" title="' + toggleTitle + '" onclick="toggleDescListActive(\'' + listKey + '\',' + idx + ')" style="font-size:10px;font-weight:700;color:' + toggleColor + ';letter-spacing:0.03em;">' + toggleLabel + '</button>';
     }
     return '<div class="desc-editor-item"' + inactiveStyle + '>' +
       '<div class="desc-editor-item-main">' +
