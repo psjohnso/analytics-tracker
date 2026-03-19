@@ -2980,7 +2980,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0059';
+const APP_VERSION = '0.9.3.0060';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -6661,6 +6661,7 @@ function renderProjectDetail(id) {
         ${p.category ? `<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;">${esc(p.category)}</span>` : ''}
         ${p.itd_team ? `<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;">${esc(p.itd_team)}</span>` : ''}
         ${projTotalHrs > 0 ? `<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;">⏱ ${hoursLabel(projTotalHrs, projMyHrs)}</span>` : ''}
+        ${p.actual_end ? `<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;">✓ Completed ${p.actual_end}</span>` : ''}
       </div>
       ${allMembers.length ? `<div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:6px;">${memberChips}</div>` : ''}
     </div>
@@ -6674,8 +6675,7 @@ function renderProjectDetail(id) {
           <div class="detail-meta-item"><label>ITD Team</label><p>${esc(p.itd_team||'—')}</p></div>
           <div class="detail-meta-item"><label>Category</label><p>${esc(p.category||'—')}</p></div>
           <div class="detail-meta-item"><label>Start Date</label><p>${p.start||'—'}</p></div>
-          <div class="detail-meta-item"><label>Original End Date</label><p>${p.end||'—'}</p></div>
-          <div class="detail-meta-item"><label>Working Due Date</label><p>${p.working_due ? p.working_due + (p.end && p.working_due !== p.end ? ' <span style="font-size:10px;color:#EF4444;">(moved)</span>' : '') : '—'}</p></div>
+          <div class="detail-meta-item"><label>Working Due Date</label><p>${p.working_due || p.end || '—'}</p></div>
           ${p.actual_end ? `<div class="detail-meta-item"><label>Actual End</label><p>${p.actual_end}</p></div>` : ''}
         </div>
       </div>
