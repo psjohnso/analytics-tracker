@@ -2970,7 +2970,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0049';
+const APP_VERSION = '0.9.3.0050';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -5592,10 +5592,10 @@ function refreshEnums() {
 }
 
 // Short descriptions for each project category — shown in the searchable dropdown
-// Description maps — built dynamically from custom arrays (rebuilt by refreshEnums)
-var CATEGORY_DESCRIPTIONS = buildDescMap(_customProjCategories);
+// Description maps — initialized empty, populated by refreshEnums() after custom arrays load
+var CATEGORY_DESCRIPTIONS = {};
 
-var TASK_CATEGORY_DESCRIPTIONS = buildDescMap(_customTaskCategories);
+var TASK_CATEGORY_DESCRIPTIONS = {};
 
 // ── Task Category Wizard ──────────────────────────────────────────────
 // Three-question guided walkthrough to help users pick the right task category.
@@ -5729,7 +5729,7 @@ function taskCatWizardApply(categoryName) {
 }
 
 // ── Task Tool Descriptions ──────────────────────────────────────
-var TASK_TOOL_DESCRIPTIONS = buildDescMap(_customTaskTools);
+var TASK_TOOL_DESCRIPTIONS = {};
 
 // ── Task Tool Wizard ──────────────────────────────────────────────
 const TASK_TOOL_WIZARD_TREE = {
