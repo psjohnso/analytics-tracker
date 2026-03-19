@@ -2992,6 +2992,7 @@ let TIME_ENTRIES = [];          // Array of time entry records for the current u
 let _timeEntryTimerInterval = null; // Interval for updating running timers
 let TASK_HOURS = {};            // { task_idx: totalHours } — aggregated across all users
 let TASK_HOURS_BY_PERSON = {};  // { task_idx: { name: hours } } — per person
+let STATUS_HISTORY = [];        // Array of { project_id, project_title, status, changed_date, changed_by, objectId }
 
 let currentTab = 'overview';
 let currentDetail = null; // {type:'project'|'task', id}
@@ -4578,6 +4579,7 @@ const ARCGIS_CONFIG = {
   weeklyCapacityUrl:'https://services3.arcgis.com/9coHY2fvuFjG9HQX/ArcGIS/rest/services/weekly_capacity/FeatureServer/0',
   appConfigUrl:     'https://services3.arcgis.com/9coHY2fvuFjG9HQX/ArcGIS/rest/services/app_config/FeatureServer/0',
   timeEntriesUrl:   'https://services3.arcgis.com/9coHY2fvuFjG9HQX/ArcGIS/rest/services/time_series/FeatureServer/0',
+  statusHistoryUrl: 'https://services3.arcgis.com/9coHY2fvuFjG9HQX/ArcGIS/rest/services/status_history/FeatureServer/0',
 };
 
 // ── ACCESS CONTROL ────────────────────────────────────────────────────
@@ -5283,6 +5285,7 @@ async function loadArcGISData() {
     initResourcesWeekIndices();
 
     updateLoadingOverlay('All data loaded.');
+    await loadStatusHistory();
     _agolDataLoaded = true;
     hideLoadingOverlay();
     return true;
@@ -5361,6 +5364,8 @@ const DataStore = {
       const proj = Object.assign({ pid: pid, objectId: addResult.objectId }, fields);
       PROJECTS.push(proj);
       markSynced('Project created');
+      // Log initial status to history
+      if (fields.status) logStatusChange(fields.id, fields.title, fields.status);
       return proj;
     } catch (err) {
       console.error('ArcGIS createProject failed:', err);
@@ -5378,6 +5383,10 @@ const DataStore = {
   async updateProject(id, fields) {
     const i = PROJECTS.findIndex(function(p) { return p.objectId == id; });
     if (i < 0) return null;
+    // Detect status change before applying
+    var oldStatus = PROJECTS[i].status;
+    var newStatus = fields.status;
+    var statusChanged = newStatus && newStatus !== oldStatus;
     // Auto-set actual_end when status changes to Complete
     if (fields.status === 'Complete' && !fields.actual_end && !PROJECTS[i].actual_end) {
       var today = new Date();
@@ -5410,6 +5419,8 @@ const DataStore = {
           }
         }
         markSynced('Project updated');
+        // Log status change to history
+        if (statusChanged) logStatusChange(PROJECTS[i].id, PROJECTS[i].title, newStatus);
       } catch (err) {
         console.error('ArcGIS updateProject failed:', err);
         markDirty();
@@ -6681,17 +6692,65 @@ function renderProjectDetail(id) {
       </div>
 
       ${(() => {
-        // Project-level timeline — full-width bar colored by project status
+        // Project timeline — full-width bar with status history phases
         var projStart = p.start || null;
         var projActualEnd = p.actual_end || null;
-        if (!projStart && !p.status) return '';
+        var history = getProjectStatusHistory(p.id);
+        if (!projStart && !p.status && !history.length) return '';
 
-        var sc = STATUS_COLOR(p.status) || '#9CA3AF';
+        // Build phases from history, or fall back to single current-status bar
+        var phases = [];
+        var todayStr = new Date().toISOString().slice(0, 10);
+        var endDate = projActualEnd || todayStr;
+
+        if (history.length > 0) {
+          for (var hi = 0; hi < history.length; hi++) {
+            var phaseStart = history[hi].changed_date;
+            var phaseEnd = (hi + 1 < history.length) ? history[hi + 1].changed_date : endDate;
+            phases.push({ status: history[hi].status, start: phaseStart, end: phaseEnd });
+          }
+        } else {
+          // No history — show single bar with current status
+          phases.push({ status: p.status || 'Unknown', start: projStart || todayStr, end: endDate });
+        }
+
+        // Calculate total days for proportional widths
+        var firstDate = phases[0].start;
+        var lastDate = phases[phases.length - 1].end;
+        var totalMs = new Date(lastDate + 'T00:00:00') - new Date(firstDate + 'T00:00:00');
+        var totalDays = Math.max(1, Math.ceil(totalMs / 86400000));
+
+        // Build segments
+        var segments = '';
+        var labels = '';
+        var cumulativePct = 0;
+        phases.forEach(function(ph, idx) {
+          var startMs = new Date(ph.start + 'T00:00:00') - new Date(firstDate + 'T00:00:00');
+          var endMs = new Date(ph.end + 'T00:00:00') - new Date(firstDate + 'T00:00:00');
+          var leftPct = (startMs / 86400000 / totalDays) * 100;
+          var widthPct = Math.max(0.5, ((endMs - startMs) / 86400000 / totalDays) * 100);
+          var sc = STATUS_COLOR(ph.status) || '#9CA3AF';
+          var isFirst = idx === 0;
+          var isLast = idx === phases.length - 1;
+          var radius = (isFirst ? '8px' : '0') + ' ' + (isLast ? '8px' : '0') + ' ' + (isLast ? '8px' : '0') + ' ' + (isFirst ? '8px' : '0');
+
+          segments += '<div style="position:absolute;left:' + leftPct + '%;width:' + widthPct + '%;height:100%;background:' + sc + ';border-radius:' + radius + ';" title="' + esc(ph.status) + ': ' + ph.start + ' → ' + ph.end + '"></div>';
+
+          // Phase start label (skip first — that's the project start)
+          if (idx > 0 && widthPct > 3) {
+            labels += '<div style="position:absolute;left:' + leftPct + '%;transform:translateX(-50%);font-size:9px;color:var(--text-muted);white-space:nowrap;text-align:center;line-height:1.3;">' +
+              '<span style="font-weight:700;color:' + sc + ';">' + esc(ph.status) + '</span><br>' + ph.start +
+            '</div>';
+          }
+        });
 
         return '<div class="detail-section">' +
           '<div class="detail-section-label">Project Timeline</div>' +
-          '<div style="position:relative;height:28px;background:' + sc + ';border-radius:8px;" title="' + esc(p.status || '') + '"></div>' +
-          '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:6px;">' +
+          '<div style="position:relative;height:28px;background:#F3F4F6;border-radius:8px;overflow:hidden;">' +
+            segments +
+          '</div>' +
+          '<div style="position:relative;height:28px;margin-top:2px;">' + labels + '</div>' +
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:2px;">' +
             '<div style="font-size:11px;color:var(--text-body);">' +
               (projStart ? '<span style="font-weight:700;color:var(--navy);">Start</span> <span style="color:var(--text-muted);">' + projStart + '</span>' : '') +
             '</div>' +
@@ -7994,6 +8053,66 @@ async function loadTaskHours() {
 async function reloadAllTimeData() {
   await loadTaskHours();
   await loadTimeEntries();
+}
+
+// ── STATUS HISTORY ────────────────────────────────────────────────────
+
+async function loadStatusHistory() {
+  try {
+    var token = await ensureAgolToken();
+    if (!token) return;
+    var resp = await fetch(ARCGIS_CONFIG.statusHistoryUrl + '/query?' + new URLSearchParams({
+      where: '1=1', outFields: '*', orderByFields: 'changed_date ASC', resultRecordCount: 5000, f: 'json', token: token
+    }));
+    var data = await resp.json();
+    if (handleAgolTokenError(data)) return;
+    STATUS_HISTORY = (data.features || []).map(function(f) {
+      var a = f.attributes;
+      return {
+        objectId: a.ObjectId || a.OBJECTID || a.objectid,
+        project_id: a.project_id,
+        project_title: a.project_title,
+        status: a.status,
+        changed_date: a.changed_date,
+        changed_by: a.changed_by,
+      };
+    });
+    console.log('[StatusHistory] Loaded', STATUS_HISTORY.length, 'records');
+  } catch (err) {
+    console.warn('[StatusHistory] Could not load:', err);
+    STATUS_HISTORY = [];
+  }
+}
+
+async function logStatusChange(projectId, projectTitle, newStatus) {
+  var todayStr = new Date().toISOString().slice(0, 10);
+  var who = _userFullName || 'Unknown';
+  var record = {
+    project_id: projectId,
+    project_title: projectTitle,
+    status: newStatus,
+    changed_date: todayStr,
+    changed_by: who,
+  };
+  // Add to local array immediately
+  STATUS_HISTORY.push(record);
+  // Save to ArcGIS Online
+  try {
+    var result = await agolApplyEdits(ARCGIS_CONFIG.statusHistoryUrl, {
+      adds: [{ attributes: record }]
+    });
+    if (result && result.addResults && result.addResults[0] && result.addResults[0].objectId) {
+      record.objectId = result.addResults[0].objectId;
+    }
+    console.log('[StatusHistory] Logged:', projectTitle, '→', newStatus);
+  } catch (err) {
+    console.error('[StatusHistory] Failed to log:', err);
+  }
+}
+
+function getProjectStatusHistory(projectId) {
+  return STATUS_HISTORY.filter(function(h) { return h.project_id == projectId; })
+    .sort(function(a, b) { return (a.changed_date || '').localeCompare(b.changed_date || ''); });
 }
 
 function getTaskHours(taskIdx) {
