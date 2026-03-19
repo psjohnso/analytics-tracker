@@ -2980,7 +2980,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0064';
+const APP_VERSION = '0.9.3.0065';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -6681,104 +6681,22 @@ function renderProjectDetail(id) {
       </div>
 
       ${(() => {
-        // Project-level timeline — single bar colored by project status
+        // Project-level timeline — full-width bar colored by project status
         var projStart = p.start || null;
-        var projDue = p.working_due || p.end || null;
         var projActualEnd = p.actual_end || null;
-        if (!projStart && !projDue) return '';
+        if (!projStart && !p.status) return '';
 
-        var todayStr = new Date().toISOString().slice(0, 10);
         var sc = STATUS_COLOR(p.status) || '#9CA3AF';
-        var isComplete = p.status === 'Complete';
-        var isCanceled = p.status === 'Canceled';
-
-        // Determine bar end point
-        var barEnd = projActualEnd || todayStr;
-        if (projDue && projDue > barEnd && !isComplete) barEnd = projDue;
-
-        // Date range with padding
-        var allDates = [todayStr];
-        if (projStart) allDates.push(projStart);
-        if (projDue) allDates.push(projDue);
-        if (projActualEnd) allDates.push(projActualEnd);
-        allDates.push(barEnd);
-        allDates.sort();
-        var rangeStart = new Date(allDates[0] + 'T00:00:00');
-        var rangeEnd = new Date(allDates[allDates.length - 1] + 'T00:00:00');
-        rangeStart.setDate(rangeStart.getDate() - 14);
-        rangeEnd.setDate(rangeEnd.getDate() + 21);
-        var totalDays = Math.max(1, Math.ceil((rangeEnd - rangeStart) / 86400000));
-
-        function pct(ds) {
-          if (!ds) return null;
-          var d = new Date(ds + 'T00:00:00');
-          return Math.max(0, Math.min(100, ((d - rangeStart) / 86400000 / totalDays) * 100));
-        }
-
-        var todayPct = pct(todayStr);
-        var startPct = pct(projStart || todayStr);
-        var barEndPct = pct(barEnd);
-        var barWidth = Math.max(1, barEndPct - startPct);
-        var duePct = projDue ? pct(projDue) : null;
-        var actualEndPct = projActualEnd ? pct(projActualEnd) : null;
-        var isOverdue = projDue && projDue < todayStr && !isComplete && !isCanceled;
-
-        // Month labels
-        var months = '';
-        var cur = new Date(rangeStart);
-        cur.setDate(1);
-        if (cur < rangeStart) cur.setMonth(cur.getMonth() + 1);
-        while (cur <= rangeEnd) {
-          var mp = pct(cur.toISOString().slice(0, 10));
-          if (mp >= 0 && mp <= 98) {
-            months += '<span style="position:absolute;left:' + mp + '%;font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;transform:translateX(-50%);">' + cur.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }) + '</span>';
-          }
-          cur.setMonth(cur.getMonth() + 1);
-        }
-
-        // Build bar — if overdue, split into on-time + overdue portions
-        var barHtml = '';
-        if (isOverdue && duePct !== null) {
-          var onTimeWidth = Math.max(0, duePct - startPct);
-          var overdueWidth = Math.max(0.5, barEndPct - duePct);
-          barHtml = '<div style="position:absolute;left:' + startPct + '%;width:' + onTimeWidth + '%;height:100%;background:' + sc + ';border-radius:8px 0 0 8px;" title="On time: ' + (projStart || '?') + ' → ' + projDue + '"></div>' +
-            '<div style="position:absolute;left:' + duePct + '%;width:' + overdueWidth + '%;height:100%;background:repeating-linear-gradient(135deg,#EF4444,#EF4444 6px,' + sc + ' 6px,' + sc + ' 12px);border-radius:0 8px 8px 0;" title="Overdue since ' + projDue + '"></div>';
-        } else {
-          barHtml = '<div style="position:absolute;left:' + startPct + '%;width:' + barWidth + '%;height:100%;background:' + sc + ';border-radius:8px;' +
-            (isComplete ? 'opacity:0.7;' : '') +
-            '" title="' + (p.status || '') + ': ' + (projStart || '?') + ' → ' + (projActualEnd || projDue || '?') + '"></div>';
-        }
-
-        // Marker helper
-        function marker(leftPct, dateStr, color, label) {
-          if (leftPct === null || leftPct < 0 || leftPct > 100) return '';
-          return '<div style="position:absolute;left:' + leftPct + '%;top:-2px;bottom:-2px;width:2px;background:' + color + ';z-index:3;pointer-events:none;"></div>' +
-            '<div style="position:absolute;left:' + leftPct + '%;top:100%;transform:translateX(-50%);margin-top:4px;white-space:nowrap;font-size:9px;font-weight:700;color:' + color + ';pointer-events:none;text-align:center;line-height:1.3;">' +
-              label + '<br>' + (dateStr || '') +
-            '</div>';
-        }
-
-        var markers = '';
-        markers += marker(startPct, projStart || '', 'var(--navy)', '▼ Start');
-        if (duePct !== null && Math.abs(duePct - startPct) > 2) {
-          markers += marker(duePct, projDue, isOverdue ? '#EF4444' : '#F59E0B', isOverdue ? '⚠ Due' : '▼ Due');
-        }
-        if (actualEndPct !== null) {
-          markers += marker(actualEndPct, projActualEnd, '#22C55E', '✓ Done');
-        }
-
-        // Today marker (only for non-complete projects)
-        var todayMarker = '';
-        if (todayPct > 0 && todayPct < 100 && !isComplete && !isCanceled) {
-          todayMarker = '<div style="position:absolute;left:' + todayPct + '%;top:-6px;bottom:-6px;width:2px;background:#EF4444;z-index:4;pointer-events:none;"></div>' +
-            '<div style="position:absolute;left:' + todayPct + '%;bottom:100%;transform:translateX(-50%);margin-bottom:4px;font-size:8px;font-weight:800;color:#EF4444;pointer-events:none;">TODAY</div>';
-        }
 
         return '<div class="detail-section">' +
           '<div class="detail-section-label">Project Timeline</div>' +
-          '<div style="position:relative;padding-bottom:42px;padding-top:4px;">' +
-            '<div style="position:relative;height:24px;background:#F3F4F6;border-radius:10px;">' +
-              barHtml + markers + todayMarker +
+          '<div style="position:relative;height:28px;background:' + sc + ';border-radius:8px;" title="' + esc(p.status || '') + '"></div>' +
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:6px;">' +
+            '<div style="font-size:11px;color:var(--text-body);">' +
+              (projStart ? '<span style="font-weight:700;color:var(--navy);">Start</span> <span style="color:var(--text-muted);">' + projStart + '</span>' : '') +
+            '</div>' +
+            '<div style="font-size:11px;color:var(--text-body);text-align:right;">' +
+              (projActualEnd ? '<span style="font-weight:700;color:#22C55E;">Completed</span> <span style="color:var(--text-muted);">' + projActualEnd + '</span>' : '') +
             '</div>' +
           '</div>' +
         '</div>';
