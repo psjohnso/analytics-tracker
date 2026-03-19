@@ -2265,6 +2265,16 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
         <div class="sidebar-label">Task Status</div>
         <div class="filter-group" id="task-status-filters"></div>
       </div>
+
+      <div class="sidebar-section" id="task-category-section">
+        <div class="sidebar-label">Task Category</div>
+        <div class="filter-group" id="task-category-filters"></div>
+      </div>
+
+      <div class="sidebar-section" id="task-tool-section">
+        <div class="sidebar-label">Task Tool</div>
+        <div class="filter-group" id="task-tool-filters"></div>
+      </div>
     </div>
 
     <div id="sidebar-project-filters">
@@ -2970,7 +2980,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0050';
+const APP_VERSION = '0.9.3.0051';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -3002,6 +3012,8 @@ let activeFilters = {
   category: [],
   member: [],
   taskStatus: [],
+  taskCategory: [],
+  taskTool: [],
   partnerDept: [],
   itdTeam: [],
   search: '',
@@ -3087,6 +3099,15 @@ function buildSidebarFilters() {
   renderFilterGroup('category-filters', Object.fromEntries(Object.entries(categories).sort((a,b) => b[1]-a[1]).slice(0,8)), 'category');
   renderFilterGroup('member-filters', Object.fromEntries(Object.entries(members).sort((a,b) => b[1]-a[1]).slice(0,10)), 'member');
   renderFilterGroup('task-status-filters', taskStatuses, 'taskStatus');
+
+  const taskCats = {};
+  TASKS.forEach(t => { if(t.category) taskCats[t.category] = (taskCats[t.category] || 0) + 1; });
+  renderFilterGroup('task-category-filters', Object.fromEntries(Object.entries(taskCats).sort((a,b) => b[1]-a[1]).slice(0,10)), 'taskCategory');
+
+  const taskTools = {};
+  TASKS.forEach(t => { if(t.tool) taskTools[t.tool] = (taskTools[t.tool] || 0) + 1; });
+  renderFilterGroup('task-tool-filters', Object.fromEntries(Object.entries(taskTools).sort((a,b) => b[1]-a[1]).slice(0,10)), 'taskTool');
+
   renderFilterGroup('dept-filters', Object.fromEntries(Object.entries(depts).sort((a,b) => b[1]-a[1])), 'partnerDept');
   renderFilterGroup('team-filters', Object.fromEntries(Object.entries(teams).sort((a,b) => b[1]-a[1])), 'itdTeam');
 }
@@ -3210,6 +3231,8 @@ function switchTab(tab) {
   if (isTask) { activeFilters.status = []; buildSidebarFilters(); }
   else {
     activeFilters.taskStatus = [];
+    activeFilters.taskCategory = [];
+    activeFilters.taskTool = [];
     const btn = document.getElementById('weekly-filter-btn');
     btn.classList.remove('weekly-active');
     btn.style.background = 'transparent';
@@ -3249,7 +3272,8 @@ function filterTasks() {
   let data = TASKS;
   if (activeFilters.taskStatus.length) data = data.filter(t => activeFilters.taskStatus.includes(t.status));
   if (activeFilters.priority.length)   data = data.filter(t => activeFilters.priority.includes(t.priority || 'Unset'));
-  if (activeFilters.category.length)   data = data.filter(t => activeFilters.category.includes(t.category));
+  if (activeFilters.taskCategory.length) data = data.filter(t => activeFilters.taskCategory.includes(t.category));
+  if (activeFilters.taskTool.length)   data = data.filter(t => activeFilters.taskTool.includes(t.tool));
   if (activeFilters.member.length)     data = data.filter(t => activeFilters.member.includes(t.assignee));
   if (activeFilters.search) data = data.filter(t =>
     (t.title || '').toLowerCase().includes(activeFilters.search) ||
