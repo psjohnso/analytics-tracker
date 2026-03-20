@@ -2984,7 +2984,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0084';
+const APP_VERSION = '0.9.3.0085';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -6842,6 +6842,16 @@ function renderProjectDetail(id) {
         <div class="detail-prose">${esc(p.description)}</div>
       </div>` : ''}
 
+      ${p.urgency_notes ? `<div class="detail-section">
+        <div class="detail-section-label" style="color:#C24200;">Urgency / Timeline Notes</div>
+        <div class="detail-prose">${esc(p.urgency_notes)}</div>
+      </div>` : ''}
+
+      ${p.reviewer_notes ? `<div class="detail-section">
+        <div class="detail-section-label">Reviewer Notes</div>
+        <div class="detail-prose" style="white-space:pre-line;">${esc(p.reviewer_notes)}</div>
+      </div>` : ''}
+
       <div class="detail-section">
         <div class="detail-section-label" style="display:flex;align-items:center;justify-content:space-between;">
           <span>Tasks (${relTasks.length})${relTasks.length ? ` · <span style="font-weight:400;font-size:12px;color:var(--text-muted);">${getProjectHours(p.title)}h logged</span>` : ''}</span>
@@ -7446,7 +7456,8 @@ async function submitIdeaForm() {
     end:               null,
     actual_end:        null,
     problem_statement: problem,
-    description:       urgency ? 'Urgency: ' + urgency : null,
+    description:       null,
+    urgency_notes:     urgency || null,
   });
 
   closeIdeaFormDirect();
@@ -7549,6 +7560,14 @@ function renderIdeaReview() {
                 <div class="idea-card-section-label">Problem Statement</div>
                 <div class="idea-card-text">${esc(p.problem_statement)}</div>
               </div>` : ''}
+              ${p.urgency_notes ? `<div class="idea-card-section">
+                <div class="idea-card-section-label" style="color:#C24200;">Urgency / Timeline</div>
+                <div class="idea-card-text">${esc(p.urgency_notes)}</div>
+              </div>` : ''}
+              ${p.reviewer_notes ? `<div class="idea-card-section">
+                <div class="idea-card-section-label">Previous Notes</div>
+                <div class="idea-card-text" style="white-space:pre-line;">${esc(p.reviewer_notes)}</div>
+              </div>` : ''}
             </div>
             <div style="padding:0 20px 12px;">
               <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Reviewer Notes</div>
@@ -7581,10 +7600,10 @@ async function promoteIdea(id, newStatus) {
   var notesEl = document.getElementById('idea-notes-' + id);
   if (notesEl && notesEl.value.trim()) {
     var proj = PROJECTS.find(function(p) { return p.objectId == id; });
-    var existingDesc = proj ? (proj.description || '') : '';
+    var existing = proj ? (proj.reviewer_notes || '') : '';
     var notes = notesEl.value.trim();
-    var newDesc = existingDesc ? existingDesc + '\n\nReviewer Notes: ' + notes : 'Reviewer Notes: ' + notes;
-    await DataStore.updateProject(id, { description: newDesc });
+    var newNotes = existing ? existing + '\n' + notes : notes;
+    await DataStore.updateProject(id, { reviewer_notes: newNotes });
   }
   await DataStore.updateProject(id, { status: newStatus });
   markDirty();
@@ -7616,12 +7635,11 @@ async function saveIdeaReviewNotes(id) {
   if (!notes) { alert('No notes to save.'); return; }
   var proj = PROJECTS.find(function(p) { return p.objectId == id; });
   if (!proj) return;
-  var existingDesc = proj.description || '';
-  var newDesc = existingDesc ? existingDesc + '\n\nReviewer Notes: ' + notes : 'Reviewer Notes: ' + notes;
-  await DataStore.updateProject(id, { description: newDesc });
+  var existing = proj.reviewer_notes || '';
+  var newNotes = existing ? existing + '\n' + notes : notes;
+  await DataStore.updateProject(id, { reviewer_notes: newNotes });
   notesEl.value = '';
   showToast('Notes saved for "' + proj.title + '"');
-  // Re-render to show updated notes
   document.getElementById('content-area').innerHTML = renderIdeaReview();
 }
 
