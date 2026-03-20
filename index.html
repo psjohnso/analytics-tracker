@@ -2984,7 +2984,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0078';
+const APP_VERSION = '0.9.3.0079';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -7319,12 +7319,15 @@ function openIdeaForm() {
       <label>Submitted By <span class="req">*</span></label>
       <select id="idea-contact" class="idea-select">
         <option value="">Select your name…</option>
-        ${FM_TASK_ASSIGNEES.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('')}
+        ${(FM_ACTIVE_MEMBERS || FM_TASK_ASSIGNEES).map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('')}
       </select>
     </div>
     <div class="idea-field">
       <label>Partner / Requesting Department</label>
-      <input id="idea-dept" class="idea-input" type="text" placeholder="Which department is this for?">
+      <select id="idea-dept" class="idea-select">
+        <option value="">Select department…</option>
+        ${FM_PARTNER_DEPTS.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('')}
+      </select>
     </div>
     <div class="idea-field">
       <label>Problem Statement <span class="req">*</span></label>
