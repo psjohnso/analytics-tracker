@@ -2984,7 +2984,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0076';
+const APP_VERSION = '0.9.3.0077';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -9889,8 +9889,8 @@ function openMemberForm(mode, name) {
     });
     updateWeekTotals();
     // We need to find the OID for this member
-    document.getElementById('mf-name').readOnly = true;
-    document.getElementById('mf-name').style.background = '#F3F4F6';
+    document.getElementById('mf-name').readOnly = false;
+    document.getElementById('mf-name').style.background = '';
   } else {
     document.getElementById('mf-name').value = '';
     document.getElementById('mf-name').dataset.origName = '';
@@ -10030,6 +10030,92 @@ async function toggleTimeTracking(name, enabled) {
   }
 }
 
+async function cascadeRename(oldName, newName) {
+  var log = [];
+  var escaped = oldName.replace(/'/g, "''");
+
+  // Helper: query + batch update a service
+  async function renameInService(url, whereField, attrs) {
+    try {
+      var features = await agolQuery(url, whereField + "='" + escaped + "'");
+      if (features.length === 0) return;
+      var updates = features.map(function(f) {
+        var oid = f.attributes.OBJECTID || f.attributes.ObjectId || f.attributes.objectid || f.attributes.FID;
+        var upd = Object.assign({ OBJECTID: oid }, attrs);
+        return { attributes: upd };
+      });
+      await agolApplyEdits(url, { updates: updates });
+      log.push(whereField + ': ' + features.length + ' records');
+    } catch (err) {
+      console.error('[Rename] Failed on', whereField, ':', err);
+      log.push(whereField + ': FAILED - ' + err.message);
+    }
+  }
+
+  // 1. Projects: contact
+  await renameInService(ARCGIS_CONFIG.projectsUrl, 'contact', { contact: newName });
+
+  // 2. Projects: other_members (comma-separated, need to query and do string replace)
+  try {
+    var projFeatures = await agolQuery(ARCGIS_CONFIG.projectsUrl, "other_members LIKE '%" + escaped + "%'");
+    if (projFeatures.length > 0) {
+      var updates = projFeatures.map(function(f) {
+        var oid = f.attributes.OBJECTID || f.attributes.ObjectId || f.attributes.objectid;
+        var om = f.attributes.other_members || '';
+        // Replace the name in the comma-separated list
+        var parts = om.split(',').map(function(s) { return s.trim() === oldName ? newName : s.trim(); });
+        return { attributes: { OBJECTID: oid, other_members: parts.join(', ') } };
+      });
+      await agolApplyEdits(ARCGIS_CONFIG.projectsUrl, { updates: updates });
+      log.push('other_members: ' + projFeatures.length + ' records');
+    }
+  } catch (err) {
+    console.error('[Rename] Failed on other_members:', err);
+    log.push('other_members: FAILED - ' + err.message);
+  }
+
+  // 3. Tasks: assignee
+  await renameInService(ARCGIS_CONFIG.tasksUrl, 'assignee', { assignee: newName });
+
+  // 4. Time entries: name
+  await renameInService(ARCGIS_CONFIG.timeEntriesUrl, 'name', { name: newName });
+
+  // 5. Allocations: name
+  await renameInService(ARCGIS_CONFIG.allocationsUrl, 'name', { name: newName });
+
+  // 6. Absences: name
+  await renameInService(ARCGIS_CONFIG.absencesUrl, 'name', { name: newName });
+
+  // 7. Status history: changed_by
+  await renameInService(ARCGIS_CONFIG.statusHistoryUrl, 'changed_by', { changed_by: newName });
+
+  // 8. Update local arrays
+  PROJECTS.forEach(function(p) {
+    if (p.contact === oldName) p.contact = newName;
+    if (p.other_members) {
+      p.other_members = p.other_members.split(',').map(function(s) { return s.trim() === oldName ? newName : s.trim(); }).join(', ');
+    }
+  });
+  TASKS.forEach(function(t) {
+    if (t.assignee === oldName) t.assignee = newName;
+  });
+  TIME_ENTRIES.forEach(function(e) {
+    if (e.name === oldName) e.name = newName;
+  });
+  STATUS_HISTORY.forEach(function(h) {
+    if (h.changed_by === oldName) h.changed_by = newName;
+  });
+  // Update RESOURCES_DATA
+  if (RESOURCES_DATA && RESOURCES_DATA.people[oldName]) {
+    RESOURCES_DATA.people[newName] = RESOURCES_DATA.people[oldName];
+    delete RESOURCES_DATA.people[oldName];
+  }
+  // Update _userFullName if renaming self
+  if (_userFullName === oldName) _userFullName = newName;
+
+  console.log('[Rename] Cascade complete:', log.join(', '));
+}
+
 async function toggleMemberActive(name) {
   var p = RESOURCES_DATA && RESOURCES_DATA.people[name];
   if (!p) return;
@@ -10112,13 +10198,24 @@ async function saveMemberForm() {
     }
   }
 
-  var isEdit = origName !== '' && origName === name;
+  var isEdit = origName !== '';
+  var isRename = isEdit && origName !== name;
+
+  if (isRename) {
+    if (!confirm('Renaming "' + origName + '" to "' + name + '" will update all projects, tasks, time entries, allocations, and absences.\n\nThis may take a moment. Continue?')) return;
+  }
+
+  // Check for duplicate if name is changing or adding new
+  if ((!isEdit || isRename) && RESOURCES_DATA && RESOURCES_DATA.people[name]) {
+    alert('A team member named "' + name + '" already exists.');
+    return;
+  }
 
   try {
     if (isEdit) {
-      // Find existing OID
-      var existing = await agolQuery(ARCGIS_CONFIG.teamMembersUrl, "name='" + name.replace(/'/g, "''") + "'");
-      if (existing.length === 0) { alert('Could not find existing record for ' + name); return; }
+      // Find existing OID using original name
+      var existing = await agolQuery(ARCGIS_CONFIG.teamMembersUrl, "name='" + origName.replace(/'/g, "''") + "'");
+      if (existing.length === 0) { alert('Could not find existing record for ' + origName); return; }
       var oid = existing[0].attributes.OBJECTID || existing[0].attributes.ObjectId || existing[0].attributes.objectid || existing[0].attributes.FID;
       memberAttrs.OBJECTID = oid;
       console.log('[Settings] Saving member update:', JSON.stringify(memberAttrs));
@@ -10126,12 +10223,13 @@ async function saveMemberForm() {
         updates: [{ attributes: memberAttrs }]
       });
       console.log('[Settings] Updated member:', name, result);
-    } else {
-      // Check for duplicate
-      if (RESOURCES_DATA && RESOURCES_DATA.people[name]) {
-        alert('A team member named "' + name + '" already exists.');
-        return;
+
+      // Cascading rename across all services
+      if (isRename) {
+        showLoadingOverlay('Renaming "' + origName + '" → "' + name + '" across all records...');
+        await cascadeRename(origName, name);
       }
+    } else {
       console.log('[Settings] Saving new member:', JSON.stringify(memberAttrs));
       var result = await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, {
         adds: [{ attributes: memberAttrs }]
@@ -10154,9 +10252,10 @@ async function saveMemberForm() {
     await loadResourcesData();
     initResourcesWeekIndices();
     hideLoadingOverlay();
-    markSynced(isEdit ? 'Updated ' + name : 'Added ' + name);
+    markSynced(isRename ? 'Renamed ' + origName + ' → ' + name : isEdit ? 'Updated ' + name : 'Added ' + name);
     render();
   } catch (err) {
+    hideLoadingOverlay();
     console.error('[Settings] Save member failed:', err);
     alert('Save failed: ' + err.message);
   }

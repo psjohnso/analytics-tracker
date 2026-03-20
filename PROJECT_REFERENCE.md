@@ -257,6 +257,7 @@ utilization = total_allocated_hours / proj_cap
 | 0.9.3.0074 | Guide: open via window.open() so window.close() works from back button; preserves tracker OAuth session |
 | 0.9.3.0075 | Add Complete button to project detail page hero actions; markProjectComplete function |
 | 0.9.3.0076 | Active/inactive team members: active flag on team_members; inactive members hidden from form dropdowns, sidebar filters, admin view-as selector; Settings shows Active/Inactive toggle per member; "Show former members" checkbox in sidebar filter |
+| 0.9.3.0077 | Enable team member name editing with cascading rename across all services (projects, tasks, time entries, allocations, absences, status history); confirmation dialog; loading overlay during rename; local arrays updated immediately |
 
 ---
 
