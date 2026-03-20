@@ -2984,7 +2984,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0079';
+const APP_VERSION = '0.9.3.0080';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -7333,10 +7333,6 @@ function openIdeaForm() {
       <label>Problem Statement <span class="req">*</span></label>
       <textarea id="idea-problem" class="idea-textarea" rows="3" placeholder="What problem does this solve? Why does it matter?"></textarea>
     </div>
-    <div class="idea-field">
-      <label>Description / Proposed Solution</label>
-      <textarea id="idea-description" class="idea-textarea" rows="3" placeholder="How do you envision solving it? Any tools, data sources, or approaches in mind?"></textarea>
-    </div>
     <div style="background:#FEF3C7;border:1.5px solid #F59E0B;border-radius:8px;padding:14px 16px;font-size:12px;color:#92400E;line-height:1.7;">
       <div style="font-weight:800;font-size:13px;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
         ⚠️ Before you submit — have you talked to your team lead?
@@ -7419,7 +7415,6 @@ async function submitIdeaForm() {
   }
 
   const dept  = (document.getElementById('idea-dept').value || '').trim();
-  const desc  = (document.getElementById('idea-description').value || '').trim();
 
   await DataStore.createProject({
     title,
@@ -7434,7 +7429,7 @@ async function submitIdeaForm() {
     end:               null,
     actual_end:        null,
     problem_statement: problem,
-    description:       desc || null,
+    description:       null,
   });
 
   closeIdeaFormDirect();
