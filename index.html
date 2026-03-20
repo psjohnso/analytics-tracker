@@ -5118,7 +5118,7 @@ async function loadResourcesData() {
     }
 
     const dailyHours = {};
-    const week1_hours = 0, week2_hours = 0;
+    let week1_hours = 0, week2_hours = 0;
     ['wk1','wk2'].forEach(function(wk) {
       dayKeys.forEach(function(d) {
         const hrs = computeDayHours(schedule[wk+'_'+d+'_start'], schedule[wk+'_'+d+'_end'], lunch);
@@ -8703,7 +8703,7 @@ function formatDuration(ms) {
 function formatTimeShort(epochMs) {
   if (!epochMs) return '—';
   const d = new Date(epochMs);
-  let h = d.getHours(); var m = d.getMinutes();
+  let h = d.getHours(); const m = d.getMinutes();
   const ampm = h >= 12 ? 'PM' : 'AM';
   h = h % 12 || 12;
   return h + ':' + (m < 10 ? '0' : '') + m + ' ' + ampm;
@@ -10057,7 +10057,7 @@ function onScheduleTypeChange() {
 function updateWeekTotals() {
   const days = ['mon','tue','wed','thu','fri'];
   const lunch = parseInt(document.getElementById('mf-lunch').value) || 0;
-  const wk1 = 0, wk2 = 0;
+  let wk1 = 0, wk2 = 0;
   ['wk1','wk2'].forEach(function(wk) {
     days.forEach(function(d) {
       const s = document.getElementById('mf-' + wk + '-' + d + '-start');
