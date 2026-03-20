@@ -2138,6 +2138,39 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .mf-input:focus { outline:none; border-color:var(--navy); box-shadow:0 0 0 2px rgba(0,38,105,0.15); }
 .mf-daily-hr { text-align:center; padding:6px 2px !important; width:100%; box-sizing:border-box; font-size:13px; font-weight:600; }
 .mf-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:8px; }
+
+/* ── Phase 3: Extracted CSS utility classes ─────────────────────────── */
+.detail-hero-chip { background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px; }
+.detail-section-label-flex { display:flex;align-items:center;justify-content:space-between; }
+.btn-navy-sm { background:var(--navy);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:Lato,sans-serif; }
+.btn-navy-md { background:var(--navy);color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:Lato,sans-serif; }
+.btn-navy-lg { background:var(--navy);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap; }
+.btn-complete-sm { background:#22C55E;color:#fff;border:none;border-radius:4px;width:24px;height:24px;font-size:13px;cursor:pointer;line-height:1;flex-shrink:0; }
+.btn-complete-lg { background:#22C55E;color:#fff;border:none;border-radius:4px;width:26px;height:26px;font-size:14px;cursor:pointer;line-height:1; }
+.btn-timer-stop { background:#EF4444;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap; }
+.btn-timer-pause { background:#F59E0B;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap; }
+.btn-timer-resume { background:#22C55E;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap; }
+.btn-te-save { background:var(--navy);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer; }
+.btn-te-cancel { background:#F3F4F6;border:1px solid #D1D5DB;border-radius:6px;padding:4px 12px;font-size:11px;cursor:pointer; }
+.btn-te-icon { background:none;border:none;cursor:pointer;font-size:12px;padding:4px; }
+.btn-te-del { background:none;border:none;cursor:pointer;font-size:12px;padding:4px;color:#EF4444; }
+.text-muted-sm { font-size:11px;color:var(--text-muted); }
+.text-muted-xs { font-size:10px;color:var(--text-muted); }
+.ae-date-range { font-size:10px;color:#888;display:block;margin-top:2px; }
+.te-edit-form { display:none;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:10px 12px;margin-bottom:8px; }
+.te-edit-grid { display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end; }
+.te-edit-label { font-size:10px;font-weight:700;color:var(--text-muted); }
+.te-edit-actions { display:flex;gap:8px;justify-content:flex-end;margin-top:8px; }
+.mywork-status-header { margin-bottom:4px;margin-top:12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em; }
+.mywork-hrs-badge { font-size:10px;font-weight:700;color:var(--navy);white-space:nowrap;background:#EEF2FF;padding:2px 7px;border-radius:8px; }
+.mywork-lead-badge { font-size:10px;font-weight:700;color:var(--navy);background:#EEF2FF;padding:2px 8px;border-radius:8px;white-space:nowrap; }
+.timer-card { background:#EFF6FF;border:2px solid var(--navy);border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px; }
+.timer-pulse { width:10px;height:10px;border-radius:50%;background:#22C55E;animation:pulse 1.5s infinite;flex-shrink:0; }
+.timer-elapsed { font-size:20px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums; }
+.timer-task-title { font-size:13px;font-weight:700;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.te-row-title { font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.te-row-hours { font-size:14px;font-weight:800;color:var(--navy);white-space:nowrap; }
+.flex-1-min0 { flex:1;min-width:0; }
 </style>
 </head>
 <body>
@@ -2984,7 +3017,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0088';
+const APP_VERSION = '0.9.3.0089';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -3591,9 +3624,9 @@ function renderOverview(area) {
     const initials = name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
     return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
       <div class="assignee-avatar" style="width:36px;height:36px;font-size:12px;">${initials}</div>
-      <div style="flex:1;min-width:0;">
+      <div class="flex-1-min0">
         <div style="font-size:14px;font-weight:700;color:var(--text-dark);">${esc(name)}</div>
-        <div style="font-size:11px;color:var(--text-muted);">${taskCount} tasks · ${inProgress} active</div>
+        <div class="text-muted-sm">${taskCount} tasks · ${inProgress} active</div>
         <div class="stat-bar" style="margin-top:4px;"><div class="stat-bar-fill" style="width:${pct}%;background:var(--navy)"></div></div>
       </div>
       <div style="text-align:right;">
@@ -4067,7 +4100,7 @@ function renderResources(area) {
 
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
           <span style="font-size:13px;font-weight:700;color:var(--navy);">Active Project Allocations</span>
-          <span style="font-size:11px;color:var(--text-muted);">Showing In Progress &amp; On Hold only</span>
+          <span class="text-muted-sm">Showing In Progress &amp; On Hold only</span>
         </div>
         <div class="proj-alloc-table">
         <table>
@@ -4245,7 +4278,7 @@ function aeRenderGrid() {
       '<span class="ae-proj-name ae-proj-link" onclick="openProjectFromAlloc(this)" data-project="' + esc(a.project) + '" title="View project details">' + esc(a.project) + '</span>' +
       '<span class="ae-proj-status" style="color:' + statusCol + ';background:' + chipBg + ';">' + esc(a.status) + '</span>';
     if (pStart || pEnd) {
-      row += '<span style="font-size:10px;color:#888;display:block;margin-top:2px;">';
+      row += '<span class="ae-date-range">';
       if (pStart) row += '&#9654; ' + pStart;
       if (pStart && pEnd) row += '&nbsp;&nbsp;';
       if (pEnd)   row += '&#9632; ' + pEnd;
@@ -6682,9 +6715,9 @@ function buildProjectTimeline(p) {
             // Show a simple bar using project dates only
             const sc = STATUS_COLOR(p.status) || '#9CA3AF';
             return '<div class="detail-section">' +
-              '<div class="detail-section-label" style="display:flex;align-items:center;justify-content:space-between;">' +
+              '<div class="detail-section-label detail-section-label-flex">' +
                 '<span>Project Timeline</span>' +
-                (_devMode ? '<button onclick="toggleStatusHistoryEditor(' + p.id + ',' + p.objectId + ')" style="background:var(--navy);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:Lato,sans-serif;">📅 Edit History</button>' : '') +
+                (_devMode ? '<button onclick="toggleStatusHistoryEditor(' + p.id + ',' + p.objectId + ')" class="btn-navy-sm">📅 Edit History</button>' : '') +
               '</div>' +
               '<div style="position:relative;height:28px;background:' + sc + ';border-radius:8px;" title="' + esc(p.status || '') + '"></div>' +
               '<div style="display:flex;justify-content:space-between;margin-top:4px;">' +
@@ -6743,9 +6776,9 @@ function buildProjectTimeline(p) {
         }
 
         return '<div class="detail-section">' +
-          '<div class="detail-section-label" style="display:flex;align-items:center;justify-content:space-between;">' +
+          '<div class="detail-section-label detail-section-label-flex">' +
             '<span>Project Timeline</span>' +
-            (_devMode ? '<button onclick="toggleStatusHistoryEditor(' + p.id + ',' + p.objectId + ')" style="background:var(--navy);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:Lato,sans-serif;">📅 Edit History</button>' : '') +
+            (_devMode ? '<button onclick="toggleStatusHistoryEditor(' + p.id + ',' + p.objectId + ')" class="btn-navy-sm">📅 Edit History</button>' : '') +
           '</div>' +
           '<div style="position:relative;height:28px;background:#F3F4F6;border-radius:8px;overflow:hidden;">' +
             segments +
@@ -6794,7 +6827,7 @@ function renderProjectDetail(id) {
       <div class="detail-task-cell" style="color:var(--text-muted);">${esc(t.assignee||'—')}</div>
       <div class="detail-task-cell" style="color:var(--text-muted);">${t.working_due||t.due||'—'}</div>
       <div class="detail-task-cell" style="font-weight:700;color:var(--navy);">${hrsDisplay}</div>
-      <div class="detail-task-cell" style="text-align:center;">${canComplete ? `<button onclick="event.stopPropagation();markTaskComplete(${t.idx})" style="background:#22C55E;color:#fff;border:none;border-radius:4px;width:26px;height:26px;font-size:14px;cursor:pointer;line-height:1;" title="Mark as Complete">✓</button>` : ''}</div>
+      <div class="detail-task-cell" style="text-align:center;">${canComplete ? `<button onclick="event.stopPropagation();markTaskComplete(${t.idx})" class="btn-complete-lg" title="Mark as Complete">✓</button>` : ''}</div>
     </div>`;
   }).join('') : `<div style="padding:32px;text-align:center;color:var(--text-muted);font-style:italic;">No tasks linked to this project.</div>`;
 
@@ -6822,10 +6855,10 @@ function renderProjectDetail(id) {
           <span style="width:7px;height:7px;border-radius:50%;background:${statusColor};display:inline-block;"></span>${p.status||'—'}
         </span>
         <span class="priority-badge priority-${p.priority||'null'}">${p.priority||'—'}</span>
-        ${p.category ? `<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;">${esc(p.category)}</span>` : ''}
-        ${p.itd_team ? `<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;">${esc(p.itd_team)}</span>` : ''}
-        ${projTotalHrs > 0 ? `<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;">⏱ ${hoursLabel(projTotalHrs, projMyHrs)}</span>` : ''}
-        ${p.actual_end ? `<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;">✓ Completed ${p.actual_end}</span>` : ''}
+        ${p.category ? `<span class="detail-hero-chip">${esc(p.category)}</span>` : ''}
+        ${p.itd_team ? `<span class="detail-hero-chip">${esc(p.itd_team)}</span>` : ''}
+        ${projTotalHrs > 0 ? `<span class="detail-hero-chip">⏱ ${hoursLabel(projTotalHrs, projMyHrs)}</span>` : ''}
+        ${p.actual_end ? `<span class="detail-hero-chip">✓ Completed ${p.actual_end}</span>` : ''}
       </div>
       ${allMembers.length ? `<div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:6px;">${memberChips}</div>` : ''}
     </div>
@@ -6867,9 +6900,9 @@ function renderProjectDetail(id) {
       </div>` : ''}
 
       <div class="detail-section">
-        <div class="detail-section-label" style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="detail-section-label detail-section-label-flex">
           <span>Tasks (${relTasks.length})${relTasks.length ? ` · <span style="font-weight:400;font-size:12px;color:var(--text-muted);">${getProjectHours(p.title)}h logged</span>` : ''}</span>
-          <button onclick="addTaskToProject(${p.objectId}, '${esc(p.title).replace(/'/g, "\\'")}')" style="background:var(--navy);color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:Lato,sans-serif;">＋ Add Task</button>
+          <button onclick="addTaskToProject(${p.objectId}, '${esc(p.title).replace(/'/g, "\\'")}')" class="btn-navy-md">＋ Add Task</button>
         </div>
         <div class="detail-tasks-table">
           ${relTasks.length ? `<div class="detail-tasks-header">
@@ -6912,8 +6945,8 @@ function renderTaskDetail(idx) {
           <span style="width:7px;height:7px;border-radius:50%;background:${statusColor};display:inline-block;"></span>${t.status||'—'}
         </span>
         <span class="priority-badge priority-${t.priority||'null'}">${t.priority||'—'}</span>
-        ${t.assignee ? `<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;">${esc(t.assignee)}</span>` : ''}
-        ${getTaskHours(t.idx) > 0 ? `<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;">⏱ ${hoursLabel(getTaskHours(t.idx), getMyTaskHours(t.idx))}</span>` : ''}
+        ${t.assignee ? `<span class="detail-hero-chip">${esc(t.assignee)}</span>` : ''}
+        ${getTaskHours(t.idx) > 0 ? `<span class="detail-hero-chip">⏱ ${hoursLabel(getTaskHours(t.idx), getMyTaskHours(t.idx))}</span>` : ''}
       </div>
     </div>
 
@@ -7557,9 +7590,9 @@ function renderIdeaReview() {
           return `<div class="idea-card" id="idea-card-${p.objectId}">
             <div class="idea-card-top">
               <div class="idea-lightbulb">💡</div>
-              <div style="flex:1;min-width:0;">
+              <div class="flex-1-min0">
                 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                  <div class="idea-card-title" onclick="openProjectFromReview(${p.objectId})" style="flex:1;min-width:0;">${esc(p.title)}</div>
+                  <div class="idea-card-title" onclick="openProjectFromReview(${p.objectId})" class="flex-1-min0">${esc(p.title)}</div>
                   ${priBadge}
                 </div>
                 <div class="idea-card-meta">
@@ -8743,9 +8776,9 @@ function buildTimeEntryRowHTML(e, opts) {
   const taskTitle = task ? task.title : 'Task #' + e.task_idx;
   const hrs = e.hours ? (Math.round(e.hours * 100) / 100) + 'h' : '—';
   let html = '<div class="te-entry-row" id="te-row-' + e.oid + '">';
-  html += '<div style="flex:1;min-width:0;">';
-  html += '<div style="font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(taskTitle) + '</div>';
-  html += '<div style="font-size:11px;color:var(--text-muted);">' + formatTimeShort(e.start_time) + ' → ' + formatTimeShort(e.end_time);
+  html += '<div class="flex-1-min0">';
+  html += '<div class="te-row-title">' + esc(taskTitle) + '</div>';
+  html += '<div class="text-muted-sm">' + formatTimeShort(e.start_time) + ' → ' + formatTimeShort(e.end_time);
   if (opts.showCumulative) {
     const cumulHrs = getTaskHours(e.task_idx);
     if (cumulHrs > 0) html += ' · Total: ' + cumulHrs + 'h';
@@ -8753,23 +8786,23 @@ function buildTimeEntryRowHTML(e, opts) {
   html += '</div>';
   if (e.notes) html += '<div style="font-size:10px;color:var(--text-muted);font-style:italic;">' + esc(e.notes) + '</div>';
   html += '</div>';
-  html += '<div style="font-size:14px;font-weight:800;color:var(--navy);white-space:nowrap;">' + hrs + '</div>';
+  html += '<div class="te-row-hours">' + hrs + '</div>';
   if (opts.canResume) {
-    html += '<button onclick="startTimer(' + e.task_idx + ')" style="background:#22C55E;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;" title="Resume this task">▶</button>';
+    html += '<button onclick="startTimer(' + e.task_idx + ')" class="btn-timer-resume" title="Resume this task">▶</button>';
   }
-  html += '<button onclick="toggleEditTimeEntry(' + e.oid + ')" style="background:none;border:none;cursor:pointer;font-size:12px;padding:4px;">✏️</button>';
-  html += '<button onclick="deleteTimeEntry(' + e.oid + ')" style="background:none;border:none;cursor:pointer;font-size:12px;padding:4px;color:#EF4444;">🗑</button>';
+  html += '<button onclick="toggleEditTimeEntry(' + e.oid + ')" class="btn-te-icon">✏️</button>';
+  html += '<button onclick="deleteTimeEntry(' + e.oid + ')" class="btn-te-del">🗑</button>';
   html += '</div>';
   // Inline edit form
-  html += '<div id="te-edit-' + e.oid + '" style="display:none;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:10px 12px;margin-bottom:8px;">';
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end;">';
-  html += '<div><label style="font-size:10px;font-weight:700;color:var(--text-muted);">START</label><input type="datetime-local" id="te-start-' + e.oid + '" class="mf-input" style="font-size:12px;margin-bottom:0;" value="' + toDatetimeLocal(e.start_time) + '"></div>';
-  html += '<div><label style="font-size:10px;font-weight:700;color:var(--text-muted);">END</label><input type="datetime-local" id="te-end-' + e.oid + '" class="mf-input" style="font-size:12px;margin-bottom:0;" value="' + toDatetimeLocal(e.end_time) + '"></div>';
-  html += '<div><label style="font-size:10px;font-weight:700;color:var(--text-muted);">NOTES</label><input type="text" id="te-notes-' + e.oid + '" class="mf-input" style="font-size:12px;margin-bottom:0;" value="' + esc(e.notes || '') + '" placeholder="Work description"></div>';
+  html += '<div id="te-edit-' + e.oid + '" class="te-edit-form">';
+  html += '<div class="te-edit-grid">';
+  html += '<div><label class="te-edit-label">START</label><input type="datetime-local" id="te-start-' + e.oid + '" class="mf-input" style="font-size:12px;margin-bottom:0;" value="' + toDatetimeLocal(e.start_time) + '"></div>';
+  html += '<div><label class="te-edit-label">END</label><input type="datetime-local" id="te-end-' + e.oid + '" class="mf-input" style="font-size:12px;margin-bottom:0;" value="' + toDatetimeLocal(e.end_time) + '"></div>';
+  html += '<div><label class="te-edit-label">NOTES</label><input type="text" id="te-notes-' + e.oid + '" class="mf-input" style="font-size:12px;margin-bottom:0;" value="' + esc(e.notes || '') + '" placeholder="Work description"></div>';
   html += '</div>';
-  html += '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">';
-  html += '<button onclick="toggleEditTimeEntry(' + e.oid + ')" style="background:#F3F4F6;border:1px solid #D1D5DB;border-radius:6px;padding:4px 12px;font-size:11px;cursor:pointer;">Cancel</button>';
-  html += '<button onclick="saveTimeEntryEdit(' + e.oid + ')" style="background:var(--navy);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;">Save</button>';
+  html += '<div class="te-edit-actions">';
+  html += '<button onclick="toggleEditTimeEntry(' + e.oid + ')" class="btn-te-cancel">Cancel</button>';
+  html += '<button onclick="saveTimeEntryEdit(' + e.oid + ')" class="btn-te-save">Save</button>';
   html += '</div></div>';
   return html;
 }
@@ -8788,17 +8821,17 @@ function buildActiveTimersHTML(activeTimers) {
       if (proj) projTitle = proj.title;
     }
     const elapsed = formatDuration(Date.now() - e.start_time);
-    html += '<div style="background:#EFF6FF;border:2px solid var(--navy);border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">';
-    html += '<div style="width:10px;height:10px;border-radius:50%;background:#22C55E;animation:pulse 1.5s infinite;flex-shrink:0;"></div>';
-    html += '<div style="flex:1;min-width:0;">';
-    html += '<div style="font-size:13px;font-weight:700;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(taskTitle) + '</div>';
-    if (projTitle) html += '<div style="font-size:11px;color:var(--text-muted);">' + esc(projTitle) + '</div>';
+    html += '<div class="timer-card">';
+    html += '<div class="timer-pulse"></div>';
+    html += '<div class="flex-1-min0">';
+    html += '<div class="timer-task-title">' + esc(taskTitle) + '</div>';
+    if (projTitle) html += '<div class="text-muted-sm">' + esc(projTitle) + '</div>';
     const cumulHrs = getTaskHours(e.task_idx);
-    html += '<div style="font-size:11px;color:var(--text-muted);">Started ' + formatTimeShort(e.start_time) + (cumulHrs > 0 ? ' · Total: ' + cumulHrs + 'h' : '') + '</div>';
+    html += '<div class="text-muted-sm">Started ' + formatTimeShort(e.start_time) + (cumulHrs > 0 ? ' · Total: ' + cumulHrs + 'h' : '') + '</div>';
     html += '</div>';
-    html += '<div style="font-size:20px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;" id="timer-elapsed-' + e.oid + '">' + elapsed + '</div>';
-    html += '<button onclick="pauseTimer(' + e.oid + ',' + e.task_idx + ')" style="background:#F59E0B;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">⏸ Pause</button>';
-    html += '<button onclick="stopTimer(' + e.oid + ')" style="background:#EF4444;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">⏹ Stop</button>';
+    html += '<div class="timer-elapsed" id="timer-elapsed-' + e.oid + '">' + elapsed + '</div>';
+    html += '<button onclick="pauseTimer(' + e.oid + ',' + e.task_idx + ')" class="btn-timer-pause">⏸ Pause</button>';
+    html += '<button onclick="stopTimer(' + e.oid + ')" class="btn-timer-stop">⏹ Stop</button>';
     html += '</div>';
   });
   html += '</div>';
@@ -9148,13 +9181,13 @@ function buildMyWorkTaskRow(t, statusColor, status, todayStr, hrsLabelFn) {
   out += '<span class="mywork-compact-badge" style="background:' + statusColor + '22;color:' + statusColor + ';">' + esc(status) + '</span>';
   out += '<span class="mywork-compact-title">' + esc(t.title) + '</span>';
   if (tHrs > 0) {
-    out += '<span style="font-size:10px;font-weight:700;color:var(--navy);white-space:nowrap;background:#EEF2FF;padding:2px 7px;border-radius:8px;">⏱ ' + hoursLabel(tHrs, mHrs) + '</span>';
+    out += '<span class="mywork-hrs-badge">⏱ ' + hoursLabel(tHrs, mHrs) + '</span>';
   }
   if (eDue) {
     out += '<span style="font-size:11px;font-weight:600;white-space:nowrap;color:' + (isOverdue ? '#EF4444' : 'var(--text-muted)') + ';">' + (isOverdue ? '⚠ ' : '') + eDue + '</span>';
   }
   if (canComplete) {
-    out += '<button onclick="event.stopPropagation();markTaskComplete(' + t.idx + ')" style="background:#22C55E;color:#fff;border:none;border-radius:4px;width:24px;height:24px;font-size:13px;cursor:pointer;line-height:1;flex-shrink:0;" title="Mark as Complete">✓</button>';
+    out += '<button onclick="event.stopPropagation();markTaskComplete(' + t.idx + ')" class="btn-complete-sm" title="Mark as Complete">✓</button>';
   }
   out += '</div>';
   return out;
@@ -9186,7 +9219,7 @@ function buildMyWorkTasksSection(myTasks, todayStr, viewUserTaskHrsFn) {
     hasTasks = true;
     list.sort(function(a, b) { return (a.due || '9999').localeCompare(b.due || '9999'); });
     const statusColor = STATUS_COLOR(status);
-    html += '<div style="margin-bottom:4px;margin-top:12px;font-size:11px;font-weight:700;color:' + statusColor + ';text-transform:uppercase;letter-spacing:0.06em;">' + esc(status) + ' (' + list.length + ')</div>';
+    html += '<div class="mywork-status-header" style="color:' + statusColor + ';">' + esc(status) + ' (' + list.length + ')</div>';
     list.forEach(function(t) { html += buildMyWorkTaskRow(t, statusColor, status, todayStr, viewUserTaskHrsFn); });
   });
 
@@ -9204,7 +9237,7 @@ function buildMyWorkTasksSection(myTasks, todayStr, viewUserTaskHrsFn) {
       if (!list || !list.length) return;
       list.sort(function(a, b) { return (a.due || '9999').localeCompare(b.due || '9999'); });
       const statusColor = STATUS_COLOR(status);
-      html += '<div style="margin-bottom:4px;margin-top:12px;font-size:11px;font-weight:700;color:' + statusColor + ';text-transform:uppercase;letter-spacing:0.06em;">' + esc(status) + ' (' + list.length + ')</div>';
+      html += '<div class="mywork-status-header" style="color:' + statusColor + ';">' + esc(status) + ' (' + list.length + ')</div>';
       list.forEach(function(t) { html += buildMyWorkTaskRow(t, statusColor, status, todayStr, null); });
     });
     html += '</div>';
@@ -9756,7 +9789,7 @@ function renderMyWork(area) {
     const list = projByStatus[status];
     if (!list || !list.length) return '';
     const statusColor = STATUS_COLOR(status);
-    let out = '<div style="margin-bottom:4px;margin-top:12px;font-size:11px;font-weight:700;color:' + statusColor + ';text-transform:uppercase;letter-spacing:0.06em;">' + esc(status) + ' (' + list.length + ')</div>';
+    let out = '<div class="mywork-status-header" style="color:' + statusColor + ';">' + esc(status) + ' (' + list.length + ')</div>';
     list.forEach(function(p) {
       const taskCount = TASKS.filter(function(t) { return t.project === p.title || (!t.project && t.project_id == p.id); });
       const doneCount = taskCount.filter(function(t) { return t.status === 'Complete'; }).length;
@@ -9767,7 +9800,7 @@ function renderMyWork(area) {
       out += '<span class="mywork-compact-badge" style="background:' + statusColor + '22;color:' + statusColor + ';">' + esc(status) + '</span>';
       out += '<span class="mywork-compact-title">' + esc(p.title) + '</span>';
       out += '<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">' + taskLabel + '</span>';
-      if (isContact) out += '<span style="font-size:10px;font-weight:700;color:var(--navy);background:#EEF2FF;padding:2px 8px;border-radius:8px;white-space:nowrap;">Lead</span>';
+      if (isContact) out += '<span class="mywork-lead-badge">Lead</span>';
       out += '</div>';
     });
     return out;
@@ -9914,7 +9947,7 @@ function renderSettingsPage(area) {
         '<input type="checkbox" id="dev-mode-toggle"' + devChecked + ' onchange="toggleDevMode(this.checked)" style="width:18px;height:18px;cursor:pointer;accent-color:var(--navy);">' +
         'Enable Developer Mode' +
       '</label>' +
-      '<span style="font-size:11px;color:var(--text-muted);">Activates advanced tools across the application. Currently enables: Edit History on project timelines.</span>' +
+      '<span class="text-muted-sm">Activates advanced tools across the application. Currently enables: Edit History on project timelines.</span>' +
     '</div>' +
   '</div>';
 
@@ -10399,7 +10432,7 @@ function renderAbsenceEditor(name) {
       '<button class="settings-btn settings-btn-secondary" onclick="absEditorShift(-1)" ' + (_absEditorWindowStart === 0 ? 'disabled' : '') + '>◀ Prev</button>' +
       '<div style="text-align:center;flex:1;">' +
         '<div style="font-weight:700;color:var(--navy);font-size:14px;">' + startLabel + ' — ' + endLabel + '</div>' +
-        '<div style="font-size:11px;color:var(--text-muted);">W' + (wIdxs[0]+1) + ' – W' + (wIdxs[wIdxs.length-1]+1) + ' · Enter hours off per week (0–40)</div>' +
+        '<div class="text-muted-sm">W' + (wIdxs[0]+1) + ' – W' + (wIdxs[wIdxs.length-1]+1) + ' · Enter hours off per week (0–40)</div>' +
       '</div>' +
       '<button class="settings-btn settings-btn-secondary" onclick="absJumpCurrent()">Today</button>' +
       '<button class="settings-btn settings-btn-secondary" onclick="absEditorShift(1)" ' + (wEnd >= N ? 'disabled' : '') + '>Next ▶</button>' +
@@ -10434,7 +10467,7 @@ function renderAbsenceEditor(name) {
     const wi = wIdxs[ci];
     const cap = p.proj_cap[wi] || 0;
     const isCur = wi === window.currentWeekIdx;
-    html += '<td class="' + (isCur ? 'abs-cur' : '') + '" style="font-size:11px;color:var(--text-muted);">' + cap.toFixed(1) + 'h</td>';
+    html += '<td class="' + (isCur ? 'abs-cur' : '') + '" class="text-muted-sm">' + cap.toFixed(1) + 'h</td>';
   }
 
   html += '</tr></tbody></table></div></div>';
@@ -10544,13 +10577,13 @@ async function absValueChanged(input) {
     <div class="ae-body">
       <div class="ae-grid-wrap">
         <table class="ae-grid" id="ae-grid-table">
-          <thead id="ae-thead"><tr><th class="ae-proj-th">Project</th><th class="ae-wk-th">Feb 23<br><span style="font-size:9px;opacity:.7;">W8</span></th><th class="ae-wk-th ae-cur">Mar 2<br><span style="font-size:9px;opacity:.7;">W9</span></th><th class="ae-wk-th">Mar 9<br><span style="font-size:9px;opacity:.7;">W10</span></th><th class="ae-wk-th">Mar 16<br><span style="font-size:9px;opacity:.7;">W11</span></th><th class="ae-wk-th">Mar 23<br><span style="font-size:9px;opacity:.7;">W12</span></th><th class="ae-wk-th">Mar 30<br><span style="font-size:9px;opacity:.7;">W13</span></th></tr></thead>
-          <tbody id="ae-tbody"><tr><td class="ae-proj-td"><span class="ae-proj-name">BISC - Energov - Add Financial Data to Permit Data</span><span class="ae-proj-status" style="color:#EAB308;background:#EAB30822;">On Hold</span></td><td class="ae-wk-td"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="0" data-wi="7" onchange="aeCellChange(0,7,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-cur"><input type="number" min="0" max="100" value="0" class="ae-pct-input cur-wk" data-ai="0" data-wi="8" onchange="aeCellChange(0,8,this)" onfocus="this.select()"></td><td class="ae-wk-td"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="0" data-wi="9" onchange="aeCellChange(0,9,this)" onfocus="this.select()"></td><td class="ae-wk-td"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="0" data-wi="10" onchange="aeCellChange(0,10,this)" onfocus="this.select()"></td><td class="ae-wk-td"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="0" data-wi="11" onchange="aeCellChange(0,11,this)" onfocus="this.select()"></td><td class="ae-wk-td"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="0" data-wi="12" onchange="aeCellChange(0,12,this)" onfocus="this.select()"></td></tr><tr><td class="ae-proj-td"><span class="ae-proj-name">Git Team Training</span><span class="ae-proj-status" style="color:#EAB308;background:#EAB30822;">On Hold</span><span style="font-size:10px;color:#888;display:block;margin-top:2px;">▶ 2024-09-03&nbsp;&nbsp;■ 2025-01-06</span></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="1" data-wi="7" onchange="aeCellChange(1,7,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-cur ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input cur-wk" data-ai="1" data-wi="8" onchange="aeCellChange(1,8,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="1" data-wi="9" onchange="aeCellChange(1,9,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="1" data-wi="10" onchange="aeCellChange(1,10,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="1" data-wi="11" onchange="aeCellChange(1,11,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="1" data-wi="12" onchange="aeCellChange(1,12,this)" onfocus="this.select()"></td></tr><tr><td class="ae-proj-td"><span class="ae-proj-name">Power BI Development &amp; Design Guidelines</span><span class="ae-proj-status" style="color:#EAB308;background:#EAB30822;">On Hold</span><span style="font-size:10px;color:#888;display:block;margin-top:2px;">▶ 2024-05-06</span></td><td class="ae-wk-td ae-in-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="2" data-wi="7" onchange="aeCellChange(2,7,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-cur ae-in-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input cur-wk" data-ai="2" data-wi="8" onchange="aeCellChange(2,8,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-in-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="2" data-wi="9" onchange="aeCellChange(2,9,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-in-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="2" data-wi="10" onchange="aeCellChange(2,10,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-in-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="2" data-wi="11" onchange="aeCellChange(2,11,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-in-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="2" data-wi="12" onchange="aeCellChange(2,12,this)" onfocus="this.select()"></td></tr><tr><td class="ae-proj-td"><span class="ae-proj-name">Qlik Decommision (Qlik to PowerBI)</span><span class="ae-proj-status" style="color:#22C55E;background:#22C55E22;">Active</span><span style="font-size:10px;color:#888;display:block;margin-top:2px;">▶ 2024-09-23&nbsp;&nbsp;■ 2025-11-28</span></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="3" data-wi="7" onchange="aeCellChange(3,7,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-cur ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input cur-wk" data-ai="3" data-wi="8" onchange="aeCellChange(3,8,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="3" data-wi="9" onchange="aeCellChange(3,9,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="3" data-wi="10" onchange="aeCellChange(3,10,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="3" data-wi="11" onchange="aeCellChange(3,11,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="3" data-wi="12" onchange="aeCellChange(3,12,this)" onfocus="this.select()"></td></tr><tr><td class="ae-proj-td"><span class="ae-proj-name">Safe Cities Dashboard</span><span class="ae-proj-status" style="color:#22C55E;background:#22C55E22;">Active</span><span style="font-size:10px;color:#888;display:block;margin-top:2px;">▶ 2026-02-23&nbsp;&nbsp;■ 2026-06-30</span></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="4" data-wi="7" onchange="aeCellChange(4,7,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-cur ae-in-range"><input type="number" min="0" max="100" value="33" class="ae-pct-input has-val cur-wk" data-ai="4" data-wi="8" onchange="aeCellChange(4,8,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-in-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="4" data-wi="9" onchange="aeCellChange(4,9,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-in-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="4" data-wi="10" onchange="aeCellChange(4,10,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-in-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="4" data-wi="11" onchange="aeCellChange(4,11,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-in-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="4" data-wi="12" onchange="aeCellChange(4,12,this)" onfocus="this.select()"></td></tr><tr><td class="ae-proj-td"><span class="ae-proj-name">Security Dashboard to Power BI - Phase II Automation</span><span class="ae-proj-status" style="color:#22C55E;background:#22C55E22;">Active</span><span style="font-size:10px;color:#888;display:block;margin-top:2px;">▶ 2025-09-29&nbsp;&nbsp;■ 2025-10-31</span></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="5" data-wi="7" onchange="aeCellChange(5,7,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-cur ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input cur-wk" data-ai="5" data-wi="8" onchange="aeCellChange(5,8,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="5" data-wi="9" onchange="aeCellChange(5,9,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="5" data-wi="10" onchange="aeCellChange(5,10,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="5" data-wi="11" onchange="aeCellChange(5,11,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="5" data-wi="12" onchange="aeCellChange(5,12,this)" onfocus="this.select()"></td></tr><tr><td class="ae-proj-td"><span class="ae-proj-name">Vulnerability Management Dashboard Phase 1 - Data Engineering</span><span class="ae-proj-status" style="color:#22C55E;background:#22C55E22;">Active</span><span style="font-size:10px;color:#888;display:block;margin-top:2px;">▶ 2026-02-05&nbsp;&nbsp;■ 2026-02-27</span></td><td class="ae-wk-td ae-in-range"><input type="number" min="0" max="100" value="50" class="ae-pct-input has-val" data-ai="6" data-wi="7" onchange="aeCellChange(6,7,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-cur ae-out-range"><input type="number" min="0" max="100" value="33" class="ae-pct-input has-val cur-wk" data-ai="6" data-wi="8" onchange="aeCellChange(6,8,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="6" data-wi="9" onchange="aeCellChange(6,9,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="6" data-wi="10" onchange="aeCellChange(6,10,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="6" data-wi="11" onchange="aeCellChange(6,11,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="6" data-wi="12" onchange="aeCellChange(6,12,this)" onfocus="this.select()"></td></tr><tr><td class="ae-proj-td"><span class="ae-proj-name">City Manager Dashboard</span><span class="ae-proj-status" style="color:#22C55E;background:#22C55E22;">Active</span><span style="font-size:10px;color:#888;display:block;margin-top:2px;">▶ 2024-10-14&nbsp;&nbsp;■ 2025-06-30</span></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="7" data-wi="7" onchange="aeCellChange(7,7,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-cur ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input cur-wk" data-ai="7" data-wi="8" onchange="aeCellChange(7,8,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="7" data-wi="9" onchange="aeCellChange(7,9,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="7" data-wi="10" onchange="aeCellChange(7,10,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="7" data-wi="11" onchange="aeCellChange(7,11,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="7" data-wi="12" onchange="aeCellChange(7,12,this)" onfocus="this.select()"></td></tr><tr><td class="ae-proj-td"><span class="ae-proj-name">MDW to Snowflake Migration</span><span class="ae-proj-status" style="color:#22C55E;background:#22C55E22;">Active</span><span style="font-size:10px;color:#888;display:block;margin-top:2px;">▶ 2024-11-04&nbsp;&nbsp;■ 2025-12-31</span></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="50" class="ae-pct-input has-val" data-ai="8" data-wi="7" onchange="aeCellChange(8,7,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-cur ae-out-range"><input type="number" min="0" max="100" value="34" class="ae-pct-input has-val cur-wk" data-ai="8" data-wi="8" onchange="aeCellChange(8,8,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="8" data-wi="9" onchange="aeCellChange(8,9,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="8" data-wi="10" onchange="aeCellChange(8,10,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="8" data-wi="11" onchange="aeCellChange(8,11,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="8" data-wi="12" onchange="aeCellChange(8,12,this)" onfocus="this.select()"></td></tr><tr><td class="ae-proj-td"><span class="ae-proj-name">ArcGIS Metrics Dashboard</span><span class="ae-proj-status" style="color:#EAB308;background:#EAB30822;">On Hold</span><span style="font-size:10px;color:#888;display:block;margin-top:2px;">▶ 2025-06-30&nbsp;&nbsp;■ 2025-08-29</span></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="9" data-wi="7" onchange="aeCellChange(9,7,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-cur ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input cur-wk" data-ai="9" data-wi="8" onchange="aeCellChange(9,8,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="9" data-wi="9" onchange="aeCellChange(9,9,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="9" data-wi="10" onchange="aeCellChange(9,10,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="9" data-wi="11" onchange="aeCellChange(9,11,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="9" data-wi="12" onchange="aeCellChange(9,12,this)" onfocus="this.select()"></td></tr><tr><td class="ae-proj-td"><span class="ae-proj-name">Define/Document Critical Analytics Applications</span><span class="ae-proj-status" style="color:#22C55E;background:#22C55E22;">Active</span><span style="font-size:10px;color:#888;display:block;margin-top:2px;">▶ 2025-06-02&nbsp;&nbsp;■ 2025-07-31</span></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="10" data-wi="7" onchange="aeCellChange(10,7,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-cur ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input cur-wk" data-ai="10" data-wi="8" onchange="aeCellChange(10,8,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="10" data-wi="9" onchange="aeCellChange(10,9,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="10" data-wi="10" onchange="aeCellChange(10,10,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="10" data-wi="11" onchange="aeCellChange(10,11,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="10" data-wi="12" onchange="aeCellChange(10,12,this)" onfocus="this.select()"></td></tr><tr><td class="ae-proj-td"><span class="ae-proj-name">Data Governance Framework Training — IT Staff</span><span class="ae-proj-status" style="color:#22C55E;background:#22C55E22;">Active</span><span style="font-size:10px;color:#888;display:block;margin-top:2px;">▶ 2026-02-23&nbsp;&nbsp;■ 2026-04-10</span></td><td class="ae-wk-td ae-out-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="11" data-wi="7" onchange="aeCellChange(11,7,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-cur ae-in-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input cur-wk" data-ai="11" data-wi="8" onchange="aeCellChange(11,8,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-in-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="11" data-wi="9" onchange="aeCellChange(11,9,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-in-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="11" data-wi="10" onchange="aeCellChange(11,10,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-in-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="11" data-wi="11" onchange="aeCellChange(11,11,this)" onfocus="this.select()"></td><td class="ae-wk-td ae-in-range"><input type="number" min="0" max="100" value="0" class="ae-pct-input" data-ai="11" data-wi="12" onchange="aeCellChange(11,12,this)" onfocus="this.select()"></td></tr><tr class="ae-total-row"><td class="ae-proj-td">Total allocated</td><td class="ae-wk-td" id="ae-tot-7"><span class="ae-tot-chip ok">100%</span></td><td class="ae-wk-td ae-cur" id="ae-tot-8"><span class="ae-tot-chip ok">100%</span></td><td class="ae-wk-td" id="ae-tot-9"><span class="ae-tot-chip zero">0%</span></td><td class="ae-wk-td" id="ae-tot-10"><span class="ae-tot-chip zero">0%</span></td><td class="ae-wk-td" id="ae-tot-11"><span class="ae-tot-chip zero">0%</span></td><td class="ae-wk-td" id="ae-tot-12"><span class="ae-tot-chip zero">0%</span></td></tr></tbody>
+          <thead id="ae-thead"></thead>
+          <tbody id="ae-tbody"></tbody>
         </table>
       </div>
     </div>
     <div class="ae-footer">
-      <span style="font-size:11px;color:var(--text-muted);">Totals show combined % per week. Apply updates the live view.</span>
+      <span class="text-muted-sm">Totals show combined % per week. Apply updates the live view.</span>
       <div style="display:flex;gap:8px;">
         <button class="btn-ae-cancel" onclick="closeAllocEditor()">Discard</button>
         <button class="btn-ae-apply" onclick="applyEditorChanges()">✓ Apply Changes</button>
