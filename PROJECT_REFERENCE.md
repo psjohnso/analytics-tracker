@@ -270,6 +270,7 @@ utilization = total_allocated_hours / proj_cap
 | 0.9.3.0087 | Phase 1 code quality: debounce search (200ms); convert all var to const/let (0 var remaining; 1234 const, 134 let) |
 | 0.9.3.0088 | Phase 2: extract sub-functions from 5 monster functions; 8 new helper functions; eliminated duplicate code in time entry rows and task rows |
 | 0.9.3.0089 | Phase 3: move 63 inline styles to 28 CSS classes; clean 18KB stale allocation editor blob; file size 781KB→701KB |
+| 0.9.3.0090 | Phase 4: targeted re-renders with _dataDirty flag; skip buildSidebarFilters on 16 of 35 render() calls; extract updateHeaderStats and updateTabCounts |
 
 ---
 

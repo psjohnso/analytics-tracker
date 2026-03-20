@@ -3017,7 +3017,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0089';
+const APP_VERSION = '0.9.3.0090';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -3033,6 +3033,8 @@ let STATUS_HISTORY = [];        // Array of { project_id, project_title, status,
 
 let currentTab = 'overview';
 let currentDetail = null; // {type:'project'|'task', id}
+let _dataDirty = true; // When true, render() rebuilds sidebar filters + header stats
+function markDataDirty() { _dataDirty = true; }
 let fcPanelOpen = false;
 let fcWindow = 13;  // weeks to display in forecast
 let fcMode = 'util'; // 'util' | 'hours'
@@ -3348,11 +3350,7 @@ function sortData(data, key, dir) {
 }
 
 // ─── RENDER ───────────────────────────────────────────────────────────
-function render() {
-  const sort = document.getElementById('sort-select').value;
-  const area = document.getElementById('content-area');
-
-  // ── Header stats (recalculated on every render) ───────────────────
+function updateHeaderStats() {
   const active = PROJECTS.filter(p => p.status === 'Active').length;
   const complete = PROJECTS.filter(p => p.status === 'Complete').length;
   const openTasks = TASKS.filter(t => ['In Progress','Pending','Waiting for Response'].includes(t.status)).length;
@@ -3360,19 +3358,31 @@ function render() {
   document.getElementById('stat-tasks-open').textContent = openTasks;
   document.getElementById('stat-complete').textContent = complete;
   document.getElementById('stat-total').textContent = PROJECTS.length;
-
-  // ── Sidebar filter counts (recalculated on every render) ──────────
-  buildSidebarFilters();
-
-  document.getElementById('proj-tab-count').textContent = filterProjects().length;
-  document.getElementById('task-tab-count').textContent = filterTasks().length;
-
-  // ── Keep idea badge fresh ─────────────────────────────────────────
   const _ideaBadge = document.getElementById('idea-count-badge');
   if (_ideaBadge) {
     const _ic = PROJECTS.filter(p => p.status === 'Idea').length;
     _ideaBadge.textContent = _ic > 0 ? _ic : '';
   }
+}
+
+function updateTabCounts() {
+  document.getElementById('proj-tab-count').textContent = filterProjects().length;
+  document.getElementById('task-tab-count').textContent = filterTasks().length;
+}
+
+function render() {
+  const sort = document.getElementById('sort-select').value;
+  const area = document.getElementById('content-area');
+
+  // ── Expensive work: only when data has changed ────────────────────
+  if (_dataDirty) {
+    updateHeaderStats();
+    buildSidebarFilters();
+    _dataDirty = false;
+  }
+
+  // ── Tab counts: always update (cheap, depends on active filters) ──
+  updateTabCounts();
 
   // ── Detail page mode ──────────────────────────────────────────────
   if (currentDetail) {
@@ -4428,6 +4438,7 @@ function applyEditorChanges() {
     return p.proj_cap[i] > 0 ? p.weekly_allocated[i] / p.proj_cap[i] : 0;
   });
   closeAllocEditor();
+  markDataDirty();
   render();
 
   // Save changed allocations to REST service (non-blocking)
@@ -4582,6 +4593,7 @@ async function saveAllData() {
 
     hideLoadingOverlay();
     markSynced('Refreshed: ' + PROJECTS.length + ' projects, ' + TASKS.length + ' tasks');
+    markDataDirty();
     render();
   } catch (err) {
     hideLoadingOverlay();
@@ -6577,6 +6589,7 @@ async function handleFormSubmit(andDownload) {
     buildSidebarFilters();
   }
 
+  markDataDirty();
   render();
 
   // After a CREATE: open the detail view for the new record
@@ -6596,6 +6609,7 @@ async function handleFormDelete() {
   else           await DataStore.deleteTask(formEditId);
   closeFormModal();
   closeModalDirect();
+  markDataDirty();
   render();
 }
 
@@ -6619,6 +6633,7 @@ async function markTaskComplete(taskIdx) {
   const today = new Date();
   const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
   await DataStore.updateTask(taskIdx, { status: 'Complete', actual_end: todayStr });
+  markDataDirty();
   render();
 }
 
@@ -6630,6 +6645,7 @@ async function markProjectComplete(objectId) {
   const today = new Date();
   const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
   await DataStore.updateProject(objectId, { status: 'Complete', actual_end: todayStr });
+  markDataDirty();
   render();
 }
 
@@ -6664,8 +6680,10 @@ async function markProjectComplete(objectId) {
   // Step 2: Load data from ArcGIS Online
   const loaded = await loadArcGISData();
   if (loaded) {
+    markDataDirty();
     render();
   } else {
+    markDataDirty();
     render();
   }
 
@@ -6676,6 +6694,7 @@ async function markProjectComplete(objectId) {
   if (_userFullName && isTimeTrackingEnabled()) {
     await loadTimeEntries();
   }
+  markDataDirty();
   render(); // re-render with time data
 })();
 
@@ -7519,6 +7538,7 @@ async function submitIdeaForm() {
 
   // Show a quick confirmation toast
   showToast('💡 Idea submitted! Leadership will review it Monday.');
+  markDataDirty();
   render();
 }
 
@@ -8406,6 +8426,7 @@ async function addStatusHistoryRecord() {
   renderStatusHistoryEditor();
   // Re-render the full page to update the timeline bar, then reopen editor
   const savedProjId = _shEditorProjectId;
+  markDataDirty();
   render();
   _shEditorProjectId = savedProjId;
   renderStatusHistoryEditor();
@@ -8435,6 +8456,7 @@ async function deleteStatusHistoryRecord(histIdx) {
 
   // Re-render page then reopen editor
   const savedProjId = _shEditorProjectId;
+  markDataDirty();
   render();
   _shEditorProjectId = savedProjId;
   renderStatusHistoryEditor();
@@ -10134,6 +10156,7 @@ async function toggleTimeTracking(name, enabled) {
     } else {
       TIME_ENTRIES = [];
     }
+    markDataDirty();
     render();
   }
 }
@@ -10361,6 +10384,7 @@ async function saveMemberForm() {
     initResourcesWeekIndices();
     hideLoadingOverlay();
     markSynced(isRename ? 'Renamed ' + origName + ' → ' + name : isEdit ? 'Updated ' + name : 'Added ' + name);
+    markDataDirty();
     render();
   } catch (err) {
     hideLoadingOverlay();
@@ -10390,6 +10414,7 @@ async function deleteMember(name) {
     initResourcesWeekIndices();
     hideLoadingOverlay();
     markSynced('Removed ' + name);
+    markDataDirty();
     render();
   } catch (err) {
     console.error('[Settings] Delete member failed:', err);
