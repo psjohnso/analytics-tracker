@@ -2984,7 +2984,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0082';
+const APP_VERSION = '0.9.3.0083';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -7529,11 +7529,6 @@ function renderIdeaReview() {
           // Priority badge
           const priBadge = p.priority ? `<span class="priority-badge priority-${p.priority}">${p.priority}</span>` : '<span class="priority-badge priority-null" style="opacity:0.4;">No priority</span>';
 
-          // Urgency section: description starting with "Urgency:" or any description content
-          const isUrgency = p.description && p.description.toLowerCase().startsWith('urgency:');
-          const urgencyText = isUrgency ? p.description.slice(p.description.indexOf(':') + 1).trim() : (p.description || '');
-          const urgencyLabel = isUrgency ? 'Urgency / Timeline' : (p.description ? 'Notes' : '');
-
           return `<div class="idea-card" id="idea-card-${p.objectId}">
             <div class="idea-card-top">
               <div class="idea-lightbulb">💡</div>
@@ -7553,10 +7548,6 @@ function renderIdeaReview() {
               ${p.problem_statement ? `<div class="idea-card-section">
                 <div class="idea-card-section-label">Problem Statement</div>
                 <div class="idea-card-text">${esc(p.problem_statement)}</div>
-              </div>` : ''}
-              ${urgencyText ? `<div class="idea-card-section">
-                <div class="idea-card-section-label" style="${isUrgency ? 'color:#C24200;' : ''}">${urgencyLabel}</div>
-                <div class="idea-card-text">${esc(urgencyText)}</div>
               </div>` : ''}
             </div>
             <div style="padding:0 20px 12px;">
