@@ -2984,7 +2984,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0081';
+const APP_VERSION = '0.9.3.0082';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -7431,6 +7431,8 @@ async function submitIdeaForm() {
   const priority = document.getElementById('idea-priority').value || null;
   const urgency  = (document.getElementById('idea-urgency').value || '').trim();
 
+  var todayStr = new Date().toISOString().slice(0, 10);
+
   await DataStore.createProject({
     title,
     status:            'Idea',
@@ -7440,7 +7442,7 @@ async function submitIdeaForm() {
     partner_dept:      dept || null,
     itd_team:          null,
     category:          null,
-    start:             null,
+    start:             todayStr,
     end:               null,
     actual_end:        null,
     problem_statement: problem,
@@ -7473,24 +7475,34 @@ function renderIdeaReview() {
   const ideas = PROJECTS.filter(p => p.status === 'Idea');
   const today = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
 
+  // Sort by priority: High first, then Medium, Low, unset
+  const priOrder = { High: 0, Medium: 1, Low: 2 };
+  ideas.sort(function(a, b) {
+    var pa = priOrder[a.priority] !== undefined ? priOrder[a.priority] : 3;
+    var pb = priOrder[b.priority] !== undefined ? priOrder[b.priority] : 3;
+    return pa - pb;
+  });
+
   // Promote action buttons config
   const actions = [
-    { label: 'Activate',  status: 'Active',     color: '#22C55E', bg: '#F0FDF4', border: '#86EFAC' },
+    { label: 'Activate',  status: 'Active',     color: '#83AC16', bg: '#F0FDF4', border: '#86EFAC' },
     { label: 'Schedule',  status: 'Scheduled',  color: '#9E0059', bg: '#FDF2F8', border: '#F9A8D4' },
-    { label: 'Queue',     status: 'Future',     color: '#F97316', bg: '#FFF7ED', border: '#FED7AA' },
-    { label: 'Hold',      status: 'On Hold',    color: '#EAB308', bg: '#FEFCE8', border: '#FDE047' },
-    { label: 'Decline',   status: 'Canceled',   color: '#9CA3AF', bg: '#F9FAFB', border: '#D1D5DB' },
+    { label: 'Queue',     status: 'Future',     color: '#C24200', bg: '#FFF7ED', border: '#FED7AA' },
+    { label: 'Hold',      status: 'On Hold',    color: '#FFDB22', bg: '#FEFCE8', border: '#FDE047' },
+    { label: 'Decline',   status: 'Canceled',   color: '#B0B3AE', bg: '#F9FAFB', border: '#D1D5DB' },
   ];
 
-  const actionBtns = actions.map(a =>
-    `<button class="idea-promote-btn"
-       style="background:${a.bg};color:${a.color};border-color:${a.border};"
-       onmouseover="this.style.background='${a.color}';this.style.color='#fff';"
-       onmouseout="this.style.background='${a.bg}';this.style.color='${a.color}';"
-       onclick="promoteIdea(IDEA_ID, '${a.status}')">
-      ${a.label}
-    </button>`
-  ).join('');
+  // Days ago helper
+  function daysAgo(dateStr) {
+    if (!dateStr) return '';
+    var d = new Date(dateStr + 'T00:00:00');
+    var now = new Date();
+    now.setHours(0,0,0,0);
+    var diff = Math.floor((now - d) / 86400000);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Yesterday';
+    return diff + ' days ago';
+  }
 
   const cards = ideas.length === 0
     ? `<div class="review-empty">
@@ -7510,16 +7522,30 @@ function renderIdeaReview() {
             </button>`
           ).join('');
 
-          const submittedDate = p.start || p.created || '—';
+          // Submission date: use start date or try to detect from data
+          const submittedDate = p.start || '';
+          const submittedLabel = submittedDate ? daysAgo(submittedDate) + ' · ' + submittedDate : '';
+
+          // Priority badge
+          const priBadge = p.priority ? `<span class="priority-badge priority-${p.priority}">${p.priority}</span>` : '<span class="priority-badge priority-null" style="opacity:0.4;">No priority</span>';
+
+          // Urgency section: description starting with "Urgency:" or any description content
+          const isUrgency = p.description && p.description.toLowerCase().startsWith('urgency:');
+          const urgencyText = isUrgency ? p.description.slice(p.description.indexOf(':') + 1).trim() : (p.description || '');
+          const urgencyLabel = isUrgency ? 'Urgency / Timeline' : (p.description ? 'Notes' : '');
 
           return `<div class="idea-card" id="idea-card-${p.objectId}">
             <div class="idea-card-top">
               <div class="idea-lightbulb">💡</div>
               <div style="flex:1;min-width:0;">
-                <div class="idea-card-title" onclick="openProjectFromReview(${p.objectId})">${esc(p.title)}</div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                  <div class="idea-card-title" onclick="openProjectFromReview(${p.objectId})" style="flex:1;min-width:0;">${esc(p.title)}</div>
+                  ${priBadge}
+                </div>
                 <div class="idea-card-meta">
                   ${p.contact ? `<span>👤 ${esc(p.contact)}</span>` : ''}
                   ${p.partner_dept ? `<span>🏢 ${esc(p.partner_dept)}</span>` : ''}
+                  ${submittedLabel ? `<span>📅 ${submittedLabel}</span>` : ''}
                 </div>
               </div>
             </div>
@@ -7528,10 +7554,15 @@ function renderIdeaReview() {
                 <div class="idea-card-section-label">Problem Statement</div>
                 <div class="idea-card-text">${esc(p.problem_statement)}</div>
               </div>` : ''}
-              ${p.description ? `<div class="idea-card-section">
-                <div class="idea-card-section-label">Proposed Solution</div>
-                <div class="idea-card-text">${esc(p.description)}</div>
+              ${urgencyText ? `<div class="idea-card-section">
+                <div class="idea-card-section-label" style="${isUrgency ? 'color:#C24200;' : ''}">${urgencyLabel}</div>
+                <div class="idea-card-text">${esc(urgencyText)}</div>
               </div>` : ''}
+            </div>
+            <div style="padding:0 20px 12px;">
+              <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Reviewer Notes</div>
+              <textarea id="idea-notes-${p.objectId}" class="idea-textarea" rows="2" style="font-size:11px;margin-bottom:0;" placeholder="Add notes before promoting (saves to description)…">${!isUrgency && !p.description ? '' : ''}</textarea>
+              <button onclick="saveIdeaReviewNotes(${p.objectId})" style="margin-top:4px;background:var(--navy);color:#fff;border:none;border-radius:5px;padding:4px 12px;font-size:10px;font-weight:700;cursor:pointer;font-family:Lato,sans-serif;">Save Notes</button>
             </div>
             <div class="idea-card-actions">
               <span class="idea-card-actions-label">Move to →</span>
@@ -7555,6 +7586,15 @@ function renderIdeaReview() {
 }
 
 async function promoteIdea(id, newStatus) {
+  // Save any reviewer notes before promoting
+  var notesEl = document.getElementById('idea-notes-' + id);
+  if (notesEl && notesEl.value.trim()) {
+    var proj = PROJECTS.find(function(p) { return p.objectId == id; });
+    var existingDesc = proj ? (proj.description || '') : '';
+    var notes = notesEl.value.trim();
+    var newDesc = existingDesc ? existingDesc + '\n\nReviewer Notes: ' + notes : 'Reviewer Notes: ' + notes;
+    await DataStore.updateProject(id, { description: newDesc });
+  }
   await DataStore.updateProject(id, { status: newStatus });
   markDirty();
   // Animate card out then re-render
@@ -7576,6 +7616,22 @@ async function promoteIdea(id, newStatus) {
     badge.textContent = count > 0 ? count : '';
   }
   showToast(`Project moved to "${newStatus}"`);
+}
+
+async function saveIdeaReviewNotes(id) {
+  var notesEl = document.getElementById('idea-notes-' + id);
+  if (!notesEl) return;
+  var notes = notesEl.value.trim();
+  if (!notes) { alert('No notes to save.'); return; }
+  var proj = PROJECTS.find(function(p) { return p.objectId == id; });
+  if (!proj) return;
+  var existingDesc = proj.description || '';
+  var newDesc = existingDesc ? existingDesc + '\n\nReviewer Notes: ' + notes : 'Reviewer Notes: ' + notes;
+  await DataStore.updateProject(id, { description: newDesc });
+  notesEl.value = '';
+  showToast('Notes saved for "' + proj.title + '"');
+  // Re-render to show updated notes
+  document.getElementById('content-area').innerHTML = renderIdeaReview();
 }
 
 function openProjectFromReview(id) {
