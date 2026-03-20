@@ -2984,7 +2984,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0077';
+const APP_VERSION = '0.9.3.0078';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -9766,7 +9766,11 @@ function renderSettingsPage(area) {
   }
 
   const people = RESOURCES_DATA.people;
-  const names = Object.keys(people).sort();
+  const allNames = Object.keys(people).sort();
+  var showFormerSettings = document.getElementById('settings-show-former');
+  var includeInactiveSettings = showFormerSettings && showFormerSettings.checked;
+  const names = includeInactiveSettings ? allNames : allNames.filter(function(n) { return people[n].active !== false; });
+  var inactiveCount = allNames.length - allNames.filter(function(n) { return people[n].active !== false; }).length;
 
   // Team Members table
   let memberRows = names.map(function(name) {
@@ -9797,7 +9801,13 @@ function renderSettingsPage(area) {
     '<div class="settings-section">' +
       '<div class="settings-section-header">' +
         '<span>Team Members</span>' +
-        '<button class="settings-btn settings-btn-primary" onclick="openMemberForm(\'add\')">＋ Add Member</button>' +
+        '<div style="display:flex;align-items:center;gap:12px;">' +
+          (inactiveCount > 0 ? '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted);cursor:pointer;font-weight:600;">' +
+            '<input type="checkbox" id="settings-show-former"' + (includeInactiveSettings ? ' checked' : '') + ' onchange="renderSettingsPage(document.getElementById(\'content-area\'))" style="width:14px;height:14px;cursor:pointer;">' +
+            'Show former (' + inactiveCount + ')' +
+          '</label>' : '') +
+          '<button class="settings-btn settings-btn-primary" onclick="openMemberForm(\'add\')">＋ Add Member</button>' +
+        '</div>' +
       '</div>' +
       '<table class="member-table">' +
         '<thead><tr><th>Name</th><th>Role</th><th>Team</th><th>Project %</th><th>Schedule</th><th style="text-align:center;">⏱️</th><th style="text-align:center;">Status</th><th style="text-align:right;">Actions</th></tr></thead>' +
