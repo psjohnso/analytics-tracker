@@ -3017,7 +3017,44 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0090';
+const APP_VERSION = '0.9.3.0091';
+
+// ── Auth State ──────────────────────────────────────────────────────
+const Auth = {
+  token: null,
+  loggedIn: false,
+  username: null,
+  fullName: null,
+  canPromote: false,
+  isTeamLead: false,
+  devMode: false,
+  dataLoaded: false,
+};
+
+// ── Editor State ────────────────────────────────────────────────────
+const Editor = {
+  mode: null,
+  editId: null,
+  person: null,
+  draft: null,
+  aeWindowStart: 0,
+  hasUnsaved: false,
+  selectedMember: null,
+  absWindowStart: 0,
+  shProjectId: null,
+  shObjectId: null,
+  aeListenerAdded: false,
+};
+
+// ── Internal State ──────────────────────────────────────────────────
+const Internal = {
+  searchDebounce: null,
+  timerInterval: null,
+  dataDirty: true,
+  taskCatWizardHTML: '',
+  toolWizardHTML: '',
+  catWizardHTML: '',
+};
 
 let PROJECTS = [];
 let TASKS = [];
@@ -3026,15 +3063,13 @@ let TASKS = [];
 // See loadResourcesData() for the query logic that reconstructs this object.
 let RESOURCES_DATA = null;
 let TIME_ENTRIES = [];          // Array of time entry records for the current user
-let _timeEntryTimerInterval = null; // Interval for updating running timers
 let TASK_HOURS = {};            // { task_idx: totalHours } — aggregated across all users
 let TASK_HOURS_BY_PERSON = {};  // { task_idx: { name: hours } } — per person
 let STATUS_HISTORY = [];        // Array of { project_id, project_title, status, changed_date, changed_by, objectId }
 
 let currentTab = 'overview';
 let currentDetail = null; // {type:'project'|'task', id}
-let _dataDirty = true; // When true, render() rebuilds sidebar filters + header stats
-function markDataDirty() { _dataDirty = true; }
+function markDataDirty() { Internal.dataDirty = true; }
 let fcPanelOpen = false;
 let fcWindow = 13;  // weeks to display in forecast
 let fcMode = 'util'; // 'util' | 'hours'
@@ -3237,10 +3272,9 @@ function setFilter(type, val) {
 }
 
 // ─── SEARCH ───────────────────────────────────────────────────────────
-let _searchDebounce = null;
 function onSearch() {
-  clearTimeout(_searchDebounce);
-  _searchDebounce = setTimeout(function() {
+  clearTimeout(Internal.searchDebounce);
+  Internal.searchDebounce = setTimeout(function() {
     activeFilters.search = document.getElementById('search-input').value.toLowerCase();
     currentPage = 1;
     render();
@@ -3375,10 +3409,10 @@ function render() {
   const area = document.getElementById('content-area');
 
   // ── Expensive work: only when data has changed ────────────────────
-  if (_dataDirty) {
+  if (Internal.dataDirty) {
     updateHeaderStats();
     buildSidebarFilters();
-    _dataDirty = false;
+    Internal.dataDirty = false;
   }
 
   // ── Tab counts: always update (cheap, depends on active filters) ──
@@ -4140,20 +4174,16 @@ function shiftChart(delta) {
 // ══════════════════════════════════════════════════════════════════════
 //  ALLOCATION EDITOR
 // ══════════════════════════════════════════════════════════════════════
-let editorPerson  = null;
-let editorDraft   = {};   // { name: [{project,status,fracs:[52]}] }
-let aeWindowStart = 0, aeProjectDates = {};    // first week index currently shown
 let AE_COLS     = 6;    // weeks visible at once
 
-let _aeListenerAdded = false;
 function openAllocEditor(name) {
-  editorPerson = name;
+  Editor.person = name;
   const p = RESOURCES_DATA.people[name];
-  if (!_aeListenerAdded) {
+  if (!Editor.aeListenerAdded) {
     document.getElementById('alloc-editor-backdrop').addEventListener('click', function(e) {
       if (e.target === this) closeAllocEditor();
     });
-    _aeListenerAdded = true;
+    Editor.aeListenerAdded = true;
   }
 
   // Filter to only projects in the main PROJECTS list, deduplicate, then keep
@@ -4187,9 +4217,9 @@ function openAllocEditor(name) {
     if (proj.contact !== name && !members.includes(name)) return;
     draftByName[proj.title] = { project: proj.title, status: proj.status, fracs: new Array(N2).fill(0) };
   });
-  editorDraft[name] = Object.values(draftByName);
+  Editor.draft[name] = Object.values(draftByName);
   const aeStatusOrder = { 'Active': 0, 'On Hold': 1, 'Scheduled': 2, 'Future': 3, 'Idea': 4 };
-  editorDraft[name].sort(function(a, b) {
+  Editor.draft[name].sort(function(a, b) {
     const sa = aeStatusOrder[a.status] != null ? aeStatusOrder[a.status] : 9;
     const sb = aeStatusOrder[b.status] != null ? aeStatusOrder[b.status] : 9;
     if (sa !== sb) return sa - sb;
@@ -4200,7 +4230,7 @@ function openAllocEditor(name) {
   document.getElementById('editor-person-role').textContent =
     p.role + '  ·  ' + Math.round(p.proj_pct * 100) + '% project-available';
 
-  aeWindowStart = Math.max(0, window.currentWeekIdx - 1);
+  Editor.aeWindowStart = Math.max(0, window.currentWeekIdx - 1);
 
   // Build project date map for range highlighting
   aeProjectDates = {};
@@ -4228,12 +4258,12 @@ function openProjectFromAlloc(el) {
 
 function aeShift(dir) {
   const weeks = RESOURCES_DATA.weeks;
-  aeWindowStart = Math.max(0, Math.min(aeWindowStart + dir, weeks.length - AE_COLS));
+  Editor.aeWindowStart = Math.max(0, Math.min(Editor.aeWindowStart + dir, weeks.length - AE_COLS));
   aeRenderGrid();
 }
 
 function aeJumpCurrent() {
-  aeWindowStart = Math.max(0, window.currentWeekIdx - 1);
+  Editor.aeWindowStart = Math.max(0, window.currentWeekIdx - 1);
   aeRenderGrid();
 }
 
@@ -4245,16 +4275,16 @@ function aeMonLabel(wi) {
 
 function aeRenderGrid() {
   const weeks  = RESOURCES_DATA.weeks;
-  const allocs = editorDraft[editorPerson];
-  const wEnd   = Math.min(aeWindowStart + AE_COLS, weeks.length);
+  const allocs = Editor.draft[Editor.person];
+  const wEnd   = Math.min(Editor.aeWindowStart + AE_COLS, weeks.length);
   const wIdxs  = [];
-  for (let i = aeWindowStart; i < wEnd; i++) wIdxs.push(i);
+  for (let i = Editor.aeWindowStart; i < wEnd; i++) wIdxs.push(i);
 
   const startLabel = aeMonLabel(wIdxs[0]);
   const endLabel   = aeMonLabel(wIdxs[wIdxs.length - 1]);
   document.getElementById('ae-range-label').textContent = startLabel + ' — ' + endLabel;
   document.getElementById('ae-range-sub').textContent   = 'W' + (wIdxs[0]+1) + ' – W' + (wIdxs[wIdxs.length-1]+1);
-  document.getElementById('ae-prev-btn').disabled = aeWindowStart === 0;
+  document.getElementById('ae-prev-btn').disabled = Editor.aeWindowStart === 0;
   document.getElementById('ae-next-btn').disabled = wEnd >= weeks.length;
 
   // Header
@@ -4338,14 +4368,14 @@ function aeRenderGrid() {
 function aeCellChange(ai, wi, input) {
   const pct = Math.min(100, Math.max(0, parseFloat(input.value) || 0));
   input.value = pct;
-  editorDraft[editorPerson][ai].fracs[wi] = pct / 100;
+  Editor.draft[Editor.person][ai].fracs[wi] = pct / 100;
   const isCur = wi === window.currentWeekIdx;
   input.className = 'ae-pct-input' + (pct > 0 ? ' has-val' : '') + (isCur ? ' cur-wk' : '');
   aeTotRefresh(wi);
 }
 
 function aeTotRefresh(wi) {
-  const allocs = editorDraft[editorPerson];
+  const allocs = Editor.draft[Editor.person];
   const total  = allocs.reduce(function(s, a) { return s + Math.round((a.fracs[wi] || 0) * 100); }, 0);
   const cell   = document.getElementById('ae-tot-' + wi);
   if (!cell) return;
@@ -4355,7 +4385,7 @@ function aeTotRefresh(wi) {
 }
 
 function applyEditorChanges() {
-  const name = editorPerson;
+  const name = Editor.person;
   const p    = RESOURCES_DATA.people[name];
   const N    = RESOURCES_DATA.weeks.length;
   const weeks = RESOURCES_DATA.weeks;
@@ -4378,7 +4408,7 @@ function applyEditorChanges() {
   // Collect changed allocation weeks for REST write-back
   const editsToSave = [];
 
-  editorDraft[name].forEach(function(da) {
+  Editor.draft[name].forEach(function(da) {
     const origArr = origByCanon[da.project] || [];
 
     // Compute the original merged fracs (same merge logic as openAllocEditor)
@@ -4603,17 +4633,16 @@ async function saveAllData() {
 }
 
 // ── Unsaved-changes tracking ──────────────────────────────────────────
-let _hasUnsaved = false;
 function markDirty() {
-  if (_hasUnsaved) return;
-  _hasUnsaved = true;
+  if (Editor.hasUnsaved) return;
+  Editor.hasUnsaved = true;
   const dot = document.getElementById('unsaved-dot');
   const btn = document.getElementById('btn-save-file');
   if (dot) dot.classList.add('show');
   if (btn) btn.classList.add('dirty');
 }
 function markSaved() {
-  _hasUnsaved = false;
+  Editor.hasUnsaved = false;
   const dot = document.getElementById('unsaved-dot');
   const btn = document.getElementById('btn-save-file');
   if (dot) dot.classList.remove('show');
@@ -4659,7 +4688,6 @@ const IDEA_PROMOTE_GROUP_ID = '2bd32af20dd745d6bdf3807446761973';
 // ══════════════════════════════════════════════════════════════════════
 //  OAUTH 2.0 AUTHENTICATION (ArcGIS Online Implicit Grant)
 // ══════════════════════════════════════════════════════════════════════
-let _agolToken = null;
 
 function getRedirectUri() {
   // Use origin + pathname (no hash or query) as the redirect target
@@ -4722,24 +4750,23 @@ function getStoredToken() {
  * Clear the stored token (used when a request returns a token error).
  */
 function clearAgolToken() {
-  _agolToken = null;
+  Auth.token = null;
   sessionStorage.removeItem('agol_token');
   sessionStorage.removeItem('agol_token_expires');
 }
 
 // ── LOGIN / LOGOUT STATE MANAGEMENT ──────────────────────────────────
-let _isLoggedIn = false;
 
 function toggleAuth() {
-  if (_isLoggedIn) {
+  if (Auth.loggedIn) {
     // Log out: clear token and switch to read-only
     clearAgolToken();
-    _isLoggedIn = false;
-    _agolUsername = null;
-    _userFullName = null;
-    _canPromoteIdeas = false;
-    _isTeamLead = false;
-    _devMode = false;
+    Auth.loggedIn = false;
+    Auth.username = null;
+    Auth.fullName = null;
+    Auth.canPromote = false;
+    Auth.isTeamLead = false;
+    Auth.devMode = false;
     sessionStorage.removeItem('dev_mode');
     const settingsTab = document.getElementById('tab-settings');
     if (settingsTab) settingsTab.style.display = 'none';
@@ -4769,7 +4796,7 @@ function applyAuthState() {
     '#btn-review-ideas',
   ];
 
-  if (_isLoggedIn) {
+  if (Auth.loggedIn) {
     // Signed in — show user info, enable editing
     btn.textContent = 'Sign Out';
     document.body.classList.remove('read-only-mode');
@@ -4789,13 +4816,13 @@ function applyAuthState() {
  */
 async function ensureAgolToken() {
   // 1. Already cached in memory this session
-  if (_agolToken) return _agolToken;
+  if (Auth.token) return Auth.token;
   // 2. Just returned from ArcGIS login — extract from URL hash
-  _agolToken = extractTokenFromHash();
-  if (_agolToken) return _agolToken;
+  Auth.token = extractTokenFromHash();
+  if (Auth.token) return Auth.token;
   // 3. Previously stored in sessionStorage (survives page refreshes)
-  _agolToken = getStoredToken();
-  if (_agolToken) return _agolToken;
+  Auth.token = getStoredToken();
+  if (Auth.token) return Auth.token;
   // 4. No valid token — redirect to ArcGIS Online login
   window.location.replace(agolAuthorizeUrl());
   return null; // page will redirect; execution stops here
@@ -4807,11 +4834,6 @@ async function ensureAgolToken() {
  * the token has expired or been revoked — clear it and re-auth.
  */
 
-let _agolUsername = null;       // ArcGIS Online username of the logged-in user
-let _userFullName = null;      // Full display name for matching to projects/tasks
-let _canPromoteIdeas = false;  // Whether the user is authorized to promote Ideas
-let _isTeamLead = false;       // Whether the user can access Settings tab
-let _devMode = false;          // Developer mode — enables advanced tools like Edit History
 
 /**
  * Fetch the current user's profile from ArcGIS Online.
@@ -4829,9 +4851,9 @@ async function fetchAgolUserInfo(token) {
     }
     const fullName = data.fullName || data.username || '';
     const username = data.username || '';
-    _agolUsername = username;  // Store for permission checks
+    Auth.username = username;  // Store for permission checks
     const displayName = fullName || username;
-    _userFullName = displayName; // Store for My Work tab matching
+    Auth.fullName = displayName; // Store for My Work tab matching
     if (!displayName) return;
 
     // Build initials from full name
@@ -4864,18 +4886,18 @@ async function fetchAgolUserInfo(token) {
         const gResp = await fetch(groupUrl);
         const gData = await gResp.json();
         if (gData.groups && Array.isArray(gData.groups)) {
-          _canPromoteIdeas = gData.groups.some(g => g.id === IDEA_PROMOTE_GROUP_ID);
-          _isTeamLead = _canPromoteIdeas; // same group controls both
-          if (_canPromoteIdeas) {
+          Auth.canPromote = gData.groups.some(g => g.id === IDEA_PROMOTE_GROUP_ID);
+          Auth.isTeamLead = Auth.canPromote; // same group controls both
+          if (Auth.canPromote) {
             const badge = document.getElementById('user-role-badge');
             if (badge) badge.style.display = 'inline-block';
           }
-          if (_isTeamLead) {
+          if (Auth.isTeamLead) {
             const settingsTab = document.getElementById('tab-settings');
             if (settingsTab) settingsTab.style.display = '';
           } else {
             // Non-admin: clear dev mode if it was left in session
-            _devMode = false;
+            Auth.devMode = false;
             sessionStorage.removeItem('dev_mode');
           }
         }
@@ -5052,7 +5074,6 @@ function localToAgolTask(fields) {
 // ══════════════════════════════════════════════════════════════════════
 //  LOAD DATA FROM ARCGIS ONLINE
 // ══════════════════════════════════════════════════════════════════════
-let _agolDataLoaded = false;
 
 // ── Convert ArcGIS date values to YYYY-MM-DD string ──
 // Handles both epoch milliseconds (Date fields) and "YYYY-MM-DD" strings (Date Only fields)
@@ -5363,7 +5384,7 @@ async function loadArcGISData() {
 
     updateLoadingOverlay('All data loaded.');
     await loadStatusHistory();
-    _agolDataLoaded = true;
+    Auth.dataLoaded = true;
     hideLoadingOverlay();
     return true;
   } catch (err) {
@@ -5620,8 +5641,6 @@ const DataStore = {
 // ══════════════════════════════════════════════════════════════════════
 //  FORM MODAL (Create / Edit)
 // ══════════════════════════════════════════════════════════════════════
-let formMode   = null;  // 'new-project' | 'edit-project' | 'new-task' | 'edit-task'
-let formEditId = null;  // id (project) or idx (task) of record being edited
 
 // ── Dynamic enum helpers ──────────────────────────────────────────────
 // mergeEnums(preferred, fromData) returns the preferred list with any
@@ -5774,20 +5793,19 @@ const TASK_CAT_WIZARD_TREE = {
   },
 };
 
-let _taskCatWizardOriginalHTML = '';
 
 function taskCatWizardOpen() {
   const container = document.getElementById('fm-task-category-content');
   if (!container) return;
-  _taskCatWizardOriginalHTML = container.innerHTML;
+  Internal.taskCatWizardHTML = container.innerHTML;
   taskCatWizardRenderStep('q1');
 }
 
 function taskCatWizardClose() {
   const container = document.getElementById('fm-task-category-content');
-  if (!container || !_taskCatWizardOriginalHTML) return;
-  container.innerHTML = _taskCatWizardOriginalHTML;
-  _taskCatWizardOriginalHTML = '';
+  if (!container || !Internal.taskCatWizardHTML) return;
+  container.innerHTML = Internal.taskCatWizardHTML;
+  Internal.taskCatWizardHTML = '';
   initSearchableSelect('fm-category');
 }
 
@@ -5953,20 +5971,19 @@ const TASK_TOOL_WIZARD_TREE = {
   },
 };
 
-let _toolWizardOriginalHTML = '';
 
 function toolWizardOpen() {
   const container = document.getElementById('fm-tool-content');
   if (!container) return;
-  _toolWizardOriginalHTML = container.innerHTML;
+  Internal.toolWizardHTML = container.innerHTML;
   toolWizardRenderStep('q1');
 }
 
 function toolWizardClose() {
   const container = document.getElementById('fm-tool-content');
-  if (!container || !_toolWizardOriginalHTML) return;
-  container.innerHTML = _toolWizardOriginalHTML;
-  _toolWizardOriginalHTML = '';
+  if (!container || !Internal.toolWizardHTML) return;
+  container.innerHTML = Internal.toolWizardHTML;
+  Internal.toolWizardHTML = '';
   initSearchableSelect('fm-tool');
 }
 
@@ -6313,21 +6330,20 @@ const CAT_WIZARD_TREE = {
 };
 
 // Stores the original category field HTML so we can restore it
-let _catWizardOriginalHTML = '';
 
 function catWizardOpen() {
   const container = document.getElementById('fm-category-content');
   if (!container) return;
   // Save the current field content so we can restore it
-  _catWizardOriginalHTML = container.innerHTML;
+  Internal.catWizardHTML = container.innerHTML;
   catWizardRenderStep('q1');
 }
 
 function catWizardClose() {
   const container = document.getElementById('fm-category-content');
-  if (!container || !_catWizardOriginalHTML) return;
-  container.innerHTML = _catWizardOriginalHTML;
-  _catWizardOriginalHTML = '';
+  if (!container || !Internal.catWizardHTML) return;
+  container.innerHTML = Internal.catWizardHTML;
+  Internal.catWizardHTML = '';
   // Re-initialize the searchable select
   initSearchableSelect('fm-category');
 }
@@ -6447,10 +6463,10 @@ function buildTaskForm(t) {
 }
 
 function openFormModal(mode, id) {
-  if (!_isLoggedIn) { alert('You must be signed in to make changes.'); return; }
+  if (!Auth.loggedIn) { alert('You must be signed in to make changes.'); return; }
   refreshEnums(); // Rebuild enum lists from live data so new values are always present
-  formMode   = mode;
-  formEditId = (id !== undefined) ? id : null;
+  Editor.mode   = mode;
+  Editor.editId = (id !== undefined) ? id : null;
   const isProject = mode.indexOf('project') >= 0;
   const isEdit    = mode.indexOf('edit')    >= 0;
   const record    = isEdit ? (isProject ? DataStore.getProject(id) : DataStore.getTask(id)) : null;
@@ -6538,15 +6554,15 @@ function collectTaskFields() {
 }
 
 async function handleFormSubmit(andDownload) {
-  const isProject = formMode.indexOf('project') >= 0;
-  const isEdit    = formMode.indexOf('edit')    >= 0;
+  const isProject = Editor.mode.indexOf('project') >= 0;
+  const isEdit    = Editor.mode.indexOf('edit')    >= 0;
   const fields    = isProject ? collectProjectFields() : collectTaskFields();
   if (!fields) return;
 
   // ── Business rule: project names must be unique ─────────────
   if (isProject && fields.title) {
     const duplicate = PROJECTS.find(function(p) {
-      if (isEdit && p.objectId === formEditId) return false; // skip self when editing
+      if (isEdit && p.objectId === Editor.editId) return false; // skip self when editing
       return p.title.toLowerCase() === fields.title.toLowerCase();
     });
     if (duplicate) {
@@ -6557,9 +6573,9 @@ async function handleFormSubmit(andDownload) {
 
   // ── Access control: only group members can promote Ideas ──
   if (isProject && isEdit) {
-    const origProject = PROJECTS.find(p => p.objectId === formEditId);
+    const origProject = PROJECTS.find(p => p.objectId === Editor.editId);
     if (origProject && origProject.status === 'Idea' && fields.status !== 'Idea') {
-      if (!_canPromoteIdeas) {
+      if (!Auth.canPromote) {
         alert('Permission denied: Only authorized users can change a project\'s status from "Idea" to another status.\n\nYou must be a member of the designated ArcGIS Online group to perform this action. Contact your administrator for access.');
         return;
       }
@@ -6567,12 +6583,12 @@ async function handleFormSubmit(andDownload) {
   }
 
   if (isEdit) {
-    if (isProject) await DataStore.updateProject(formEditId, fields);
-    else           await DataStore.updateTask(formEditId, fields);
+    if (isProject) await DataStore.updateProject(Editor.editId, fields);
+    else           await DataStore.updateTask(Editor.editId, fields);
   } else {
     const created = isProject ? await DataStore.createProject(fields) : await DataStore.createTask(fields);
     // After create: open the new record's detail view
-    formEditId = isProject ? created.objectId : created.idx;
+    Editor.editId = isProject ? created.objectId : created.idx;
   }
 
   closeFormModal();
@@ -6595,18 +6611,18 @@ async function handleFormSubmit(andDownload) {
   // After a CREATE: open the detail view for the new record
   // After an EDIT: just show the updated grid (filters already cleared above)
   if (!isEdit) {
-    if (isProject && formEditId) openProject(formEditId);
-    else if (!isProject && formEditId) openTask(formEditId);
+    if (isProject && Editor.editId) openProject(Editor.editId);
+    else if (!isProject && Editor.editId) openTask(Editor.editId);
   }
 }
 
 async function handleFormDelete() {
-  if (!_isLoggedIn) { alert('You must be signed in to delete records.'); return; }
-  const isProject = formMode.indexOf('project') >= 0;
+  if (!Auth.loggedIn) { alert('You must be signed in to delete records.'); return; }
+  const isProject = Editor.mode.indexOf('project') >= 0;
   const label     = isProject ? 'project' : 'task';
   if (!confirm('Delete this ' + label + '? This cannot be undone.')) return;
-  if (isProject) await DataStore.deleteProject(formEditId);
-  else           await DataStore.deleteTask(formEditId);
+  if (isProject) await DataStore.deleteProject(Editor.editId);
+  else           await DataStore.deleteTask(Editor.editId);
   closeFormModal();
   closeModalDirect();
   markDataDirty();
@@ -6614,19 +6630,19 @@ async function handleFormDelete() {
 }
 
 function confirmDeleteProject(id) {
-  formMode   = 'edit-project';
-  formEditId = id;
+  Editor.mode   = 'edit-project';
+  Editor.editId = id;
   handleFormDelete();
 }
 
 function confirmDeleteTask(taskIdx) {
-  formMode   = 'edit-task';
-  formEditId = taskIdx;
+  Editor.mode   = 'edit-task';
+  Editor.editId = taskIdx;
   handleFormDelete();
 }
 
 async function markTaskComplete(taskIdx) {
-  if (!_isLoggedIn) { alert('You must be signed in.'); return; }
+  if (!Auth.loggedIn) { alert('You must be signed in.'); return; }
   const task = TASKS.find(function(t) { return t.idx === taskIdx; });
   if (!task) return;
   if (!confirm('Mark "' + task.title + '" as Complete?')) return;
@@ -6638,7 +6654,7 @@ async function markTaskComplete(taskIdx) {
 }
 
 async function markProjectComplete(objectId) {
-  if (!_isLoggedIn) { alert('You must be signed in.'); return; }
+  if (!Auth.loggedIn) { alert('You must be signed in.'); return; }
   const proj = PROJECTS.find(function(p) { return p.objectId == objectId; });
   if (!proj) return;
   if (!confirm('Mark "' + proj.title + '" as Complete?')) return;
@@ -6666,7 +6682,7 @@ async function markProjectComplete(objectId) {
   if (!token) return; // redirect to login is in progress
 
   // Mark as logged in and update UI
-  _isLoggedIn = true;
+  Auth.loggedIn = true;
   applyAuthState();
 
   // Show My Work tab immediately for all logged-in users
@@ -6674,7 +6690,7 @@ async function markProjectComplete(objectId) {
   if (myWorkTabEarly) myWorkTabEarly.style.display = '';
 
   // Fetch and display the logged-in user's name (must complete before render
-  // so _isTeamLead and _userFullName are available for My Work tab)
+  // so Auth.isTeamLead and Auth.fullName are available for My Work tab)
   await fetchAgolUserInfo(token);
 
   // Step 2: Load data from ArcGIS Online
@@ -6690,8 +6706,8 @@ async function markProjectComplete(objectId) {
   // Step 3: Load aggregated task hours (visible to all users)
   await loadTaskHours();
 
-  // Step 4: Load personal time entries (requires _userFullName from step 1)
-  if (_userFullName && isTimeTrackingEnabled()) {
+  // Step 4: Load personal time entries (requires Auth.fullName from step 1)
+  if (Auth.fullName && isTimeTrackingEnabled()) {
     await loadTimeEntries();
   }
   markDataDirty();
@@ -6736,7 +6752,7 @@ function buildProjectTimeline(p) {
             return '<div class="detail-section">' +
               '<div class="detail-section-label detail-section-label-flex">' +
                 '<span>Project Timeline</span>' +
-                (_devMode ? '<button onclick="toggleStatusHistoryEditor(' + p.id + ',' + p.objectId + ')" class="btn-navy-sm">📅 Edit History</button>' : '') +
+                (Auth.devMode ? '<button onclick="toggleStatusHistoryEditor(' + p.id + ',' + p.objectId + ')" class="btn-navy-sm">📅 Edit History</button>' : '') +
               '</div>' +
               '<div style="position:relative;height:28px;background:' + sc + ';border-radius:8px;" title="' + esc(p.status || '') + '"></div>' +
               '<div style="display:flex;justify-content:space-between;margin-top:4px;">' +
@@ -6797,7 +6813,7 @@ function buildProjectTimeline(p) {
         return '<div class="detail-section">' +
           '<div class="detail-section-label detail-section-label-flex">' +
             '<span>Project Timeline</span>' +
-            (_devMode ? '<button onclick="toggleStatusHistoryEditor(' + p.id + ',' + p.objectId + ')" class="btn-navy-sm">📅 Edit History</button>' : '') +
+            (Auth.devMode ? '<button onclick="toggleStatusHistoryEditor(' + p.id + ',' + p.objectId + ')" class="btn-navy-sm">📅 Edit History</button>' : '') +
           '</div>' +
           '<div style="position:relative;height:28px;background:#F3F4F6;border-radius:8px;overflow:hidden;">' +
             segments +
@@ -7383,7 +7399,7 @@ function buildForecastPage() {
 // ─── IDEA SUBMISSION ──────────────────────────────────────────────────
 
 function openIdeaForm() {
-  if (!_isLoggedIn) { alert('You must be signed in to submit ideas.'); return; }
+  if (!Auth.loggedIn) { alert('You must be signed in to submit ideas.'); return; }
   refreshEnums();
   const body = document.getElementById('idea-modal-body');
   body.innerHTML = `
@@ -7743,8 +7759,6 @@ function showToast(msg) {
 // ══════════════════════════════════════════════════════════════════════
 //  SETTINGS TAB — Team Member Management & Absence Editing
 // ══════════════════════════════════════════════════════════════════════
-let _settingsSelectedMember = null;
-let _absEditorWindowStart = 0;
 let ABS_COLS = 8;
 
 // ── Dropdown List Editor State ──────────────────────────────────
@@ -8237,8 +8251,8 @@ async function toggleDescListActive(listKey, idx) {
 // ══════════════════════════════════════════════════════════════════════
 
 function isTimeTrackingEnabled() {
-  if (!_userFullName || !RESOURCES_DATA || !RESOURCES_DATA.people[_userFullName]) return false;
-  return RESOURCES_DATA.people[_userFullName].time_tracking === true;
+  if (!Auth.fullName || !RESOURCES_DATA || !RESOURCES_DATA.people[Auth.fullName]) return false;
+  return RESOURCES_DATA.people[Auth.fullName].time_tracking === true;
 }
 
 async function loadTaskHours() {
@@ -8302,7 +8316,7 @@ async function loadStatusHistory() {
 
 async function logStatusChange(projectId, projectTitle, newStatus) {
   const todayStr = new Date().toISOString().slice(0, 10);
-  const who = _userFullName || 'Unknown';
+  const who = Auth.fullName || 'Unknown';
   const record = {
     project_id: projectId,
     project_title: projectTitle,
@@ -8332,27 +8346,25 @@ function getProjectStatusHistory(projectId) {
 }
 
 // ── Status History Editor ──────────────────────────────────────
-let _shEditorProjectId = null;
-let _shEditorObjectId = null;
 
 function toggleStatusHistoryEditor(projectId, objectId) {
   const container = document.getElementById('status-history-editor');
   if (!container) return;
-  if (_shEditorProjectId === projectId && container.innerHTML !== '') {
+  if (Editor.shProjectId === projectId && container.innerHTML !== '') {
     container.innerHTML = '';
-    _shEditorProjectId = null;
+    Editor.shProjectId = null;
     return;
   }
-  _shEditorProjectId = projectId;
-  _shEditorObjectId = objectId;
+  Editor.shProjectId = projectId;
+  Editor.shObjectId = objectId;
   renderStatusHistoryEditor();
 }
 
 function renderStatusHistoryEditor() {
   const container = document.getElementById('status-history-editor');
-  if (!container || !_shEditorProjectId) return;
-  const history = getProjectStatusHistory(_shEditorProjectId);
-  const proj = PROJECTS.find(function(p) { return p.id == _shEditorProjectId; });
+  if (!container || !Editor.shProjectId) return;
+  const history = getProjectStatusHistory(Editor.shProjectId);
+  const proj = PROJECTS.find(function(p) { return p.id == Editor.shProjectId; });
   const projTitle = proj ? proj.title : '';
 
   const statusOpts = ['Future','Scheduled','Active','On Hold','Waiting for Response','Complete','Canceled'];
@@ -8396,12 +8408,12 @@ async function addStatusHistoryRecord() {
   const dateVal = dateEl.value;
   if (!status || !dateVal) { alert('Please select a status and date.'); return; }
 
-  const proj = PROJECTS.find(function(p) { return p.id == _shEditorProjectId; });
+  const proj = PROJECTS.find(function(p) { return p.id == Editor.shProjectId; });
   const projTitle = proj ? proj.title : '';
-  const who = _userFullName || 'Unknown';
+  const who = Auth.fullName || 'Unknown';
 
   const record = {
-    project_id: _shEditorProjectId,
+    project_id: Editor.shProjectId,
     project_title: projTitle,
     status: status,
     changed_date: dateVal,
@@ -8425,15 +8437,15 @@ async function addStatusHistoryRecord() {
 
   renderStatusHistoryEditor();
   // Re-render the full page to update the timeline bar, then reopen editor
-  const savedProjId = _shEditorProjectId;
+  const savedProjId = Editor.shProjectId;
   markDataDirty();
   render();
-  _shEditorProjectId = savedProjId;
+  Editor.shProjectId = savedProjId;
   renderStatusHistoryEditor();
 }
 
 async function deleteStatusHistoryRecord(histIdx) {
-  const history = getProjectStatusHistory(_shEditorProjectId);
+  const history = getProjectStatusHistory(Editor.shProjectId);
   if (histIdx < 0 || histIdx >= history.length) return;
   const record = history[histIdx];
   if (!confirm('Remove "' + record.status + '" entry from ' + record.changed_date + '?')) return;
@@ -8455,10 +8467,10 @@ async function deleteStatusHistoryRecord(histIdx) {
   }
 
   // Re-render page then reopen editor
-  const savedProjId = _shEditorProjectId;
+  const savedProjId = Editor.shProjectId;
   markDataDirty();
   render();
-  _shEditorProjectId = savedProjId;
+  Editor.shProjectId = savedProjId;
   renderStatusHistoryEditor();
 }
 
@@ -8477,13 +8489,13 @@ function getProjectHours(projectTitle) {
 }
 
 function getMyTaskHours(taskIdx, forUser) {
-  const who = forUser || _userFullName;
+  const who = forUser || Auth.fullName;
   if (!who || !TASK_HOURS_BY_PERSON[taskIdx]) return 0;
   return Math.round((TASK_HOURS_BY_PERSON[taskIdx][who] || 0) * 100) / 100;
 }
 
 function getMyProjectHours(projectTitle, forUser) {
-  const who = forUser || _userFullName;
+  const who = forUser || Auth.fullName;
   if (!who) return 0;
   let total = 0;
   TASKS.forEach(function(t) {
@@ -8507,9 +8519,9 @@ function hoursLabel(teamHrs, myHrs, label) {
 }
 
 async function loadTimeEntries() {
-  if (!_userFullName || !isTimeTrackingEnabled()) { TIME_ENTRIES = []; return; }
+  if (!Auth.fullName || !isTimeTrackingEnabled()) { TIME_ENTRIES = []; return; }
   try {
-    const features = await agolQuery(ARCGIS_CONFIG.timeEntriesUrl, "name='" + _userFullName.replace(/'/g, "''") + "'");
+    const features = await agolQuery(ARCGIS_CONFIG.timeEntriesUrl, "name='" + Auth.fullName.replace(/'/g, "''") + "'");
     TIME_ENTRIES = features.map(function(f) {
       const a = f.attributes;
       // work_date is esriFieldTypeDateOnly — comes as "YYYY-MM-DD" string
@@ -8531,7 +8543,7 @@ async function loadTimeEntries() {
         notes: a.notes || '',
       };
     });
-    console.log('[TimeTracking] Loaded', TIME_ENTRIES.length, 'entries for', _userFullName);
+    console.log('[TimeTracking] Loaded', TIME_ENTRIES.length, 'entries for', Auth.fullName);
   } catch (err) {
     console.error('[TimeTracking] Load failed:', err);
     TIME_ENTRIES = [];
@@ -8569,7 +8581,7 @@ function getWeekEntries() {
 }
 
 async function startTimer(taskIdx) {
-  if (!_userFullName) return;
+  if (!Auth.fullName) return;
   const task = TASKS.find(function(t) { return t.idx === taskIdx; });
   if (!task) { alert('Task not found.'); return; }
   const now = new Date();
@@ -8577,7 +8589,7 @@ async function startTimer(taskIdx) {
   try {
     const result = await agolApplyEdits(ARCGIS_CONFIG.timeEntriesUrl, {
       adds: [{ attributes: {
-        name: _userFullName,
+        name: Auth.fullName,
         task_idx: taskIdx,
         project_id: task.project_id || null,
         start_time: now.getTime(),
@@ -8628,11 +8640,11 @@ async function stopTimer(oid) {
  * Only counts hours within the work window each day, minus lunch.
  */
 function calculateWorkHours(startMs, endMs) {
-  if (!_userFullName || !RESOURCES_DATA || !RESOURCES_DATA.people[_userFullName]) {
+  if (!Auth.fullName || !RESOURCES_DATA || !RESOURCES_DATA.people[Auth.fullName]) {
     // No schedule data — fall back to raw calculation
     return Math.round((endMs - startMs) / 3600000 * 100) / 100;
   }
-  const person = RESOURCES_DATA.people[_userFullName];
+  const person = RESOURCES_DATA.people[Auth.fullName];
   const lunchHrs = (person.lunch_minutes || 60) / 60;
   const PAY_REF = new Date('2025-12-28T00:00:00');
   const dayNames = ['sun','mon','tue','wed','thu','fri','sat'];
@@ -8783,8 +8795,8 @@ function toDatetimeLocal(epochMs) {
 }
 
 function startTimerTick() {
-  if (_timeEntryTimerInterval) clearInterval(_timeEntryTimerInterval);
-  _timeEntryTimerInterval = setInterval(function() {
+  if (Internal.timerInterval) clearInterval(Internal.timerInterval);
+  Internal.timerInterval = setInterval(function() {
     const activeTimers = getActiveTimers();
     activeTimers.forEach(function(e) {
       const el = document.getElementById('timer-elapsed-' + e.oid);
@@ -8983,7 +8995,7 @@ let _ganttFilter = {};     // { projectTitle: true/false } — which projects sh
 let _ganttCollapsed = {};  // { projectTitle: true/false } — which projects have tasks hidden
 
 function getMyProjects(viewName) {
-  const name = viewName || _userFullName;
+  const name = viewName || Auth.fullName;
   if (!name) return [];
   return PROJECTS.filter(function(p) {
     if (p.contact === name) return true;
@@ -8993,14 +9005,14 @@ function getMyProjects(viewName) {
 }
 
 function getMyTasks(viewName) {
-  const name = viewName || _userFullName;
+  const name = viewName || Auth.fullName;
   if (!name) return [];
   return TASKS.filter(function(t) { return t.assignee === name; });
 }
 
 function switchMyWorkUser(selectEl) {
   const val = selectEl.value;
-  _myWorkViewUser = (val === _userFullName) ? null : val;
+  _myWorkViewUser = (val === Auth.fullName) ? null : val;
   _ganttFilter = {}; // reset so new user's projects default to all visible
   _ganttCollapsed = {}; // reset collapse state
   renderMyWork(document.getElementById('content-area'));
@@ -9193,6 +9205,9 @@ function buildGanttBars() {
   return html;
 }
 
+function effectiveDue(t) { return t.working_due || t.due || null; }
+function effectiveEnd(p) { return p.working_due || p.end || null; }
+
 function buildMyWorkTaskRow(t, statusColor, status, todayStr, hrsLabelFn) {
   const eDue = effectiveDue(t);
   const isOverdue = eDue && eDue < todayStr;
@@ -9274,13 +9289,13 @@ function buildMyWorkTasksSection(myTasks, todayStr, viewUserTaskHrsFn) {
 }
 
 function renderMyWork(area) {
-  if (!_userFullName) {
+  if (!Auth.fullName) {
     area.innerHTML = '<div class="empty-state">Sign in to see your personalized work view.</div>';
     return;
   }
 
-  const viewUser = _myWorkViewUser || _userFullName;
-  const isViewingSelf = viewUser === _userFullName;
+  const viewUser = _myWorkViewUser || Auth.fullName;
+  const isViewingSelf = viewUser === Auth.fullName;
   const name = viewUser;
   const firstName = name.split(' ')[0];
   const today = new Date();
@@ -9290,8 +9305,7 @@ function renderMyWork(area) {
   const myProjects = getMyProjects(name);
   const myTasks = getMyTasks(name);
   // Helper: effective due date uses working_due when available, falls back to original due
-  function effectiveDue(t) { return t.working_due || t.due || null; }
-  function effectiveEnd(p) { return p.working_due || p.end || null; }
+  // (effectiveDue and effectiveEnd are now top-level functions)
   // Hours helpers scoped to viewed user
   const hrsLabel = isViewingSelf ? 'me' : firstName;
   function viewUserTaskHrs(idx) { return getMyTaskHours(idx, name); }
@@ -9513,19 +9527,19 @@ function renderMyWork(area) {
   }
 
   // Admin user selector
-  if (_isTeamLead && RESOURCES_DATA && RESOURCES_DATA.people) {
+  if (Auth.isTeamLead && RESOURCES_DATA && RESOURCES_DATA.people) {
     const memberNames = Object.keys(RESOURCES_DATA.people).filter(function(n) { return RESOURCES_DATA.people[n].active !== false; }).sort();
     html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:0;">';
     html += '<div class="mywork-subtitle" style="margin-bottom:0;">' + today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) + '</div>';
     html += '<select onchange="switchMyWorkUser(this)" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--navy);font-weight:600;cursor:pointer;">';
     memberNames.forEach(function(n) {
       const selected = (n === name) ? ' selected' : '';
-      const label = (n === _userFullName) ? n + ' (me)' : n;
+      const label = (n === Auth.fullName) ? n + ' (me)' : n;
       html += '<option value="' + esc(n) + '"' + selected + '>' + esc(label) + '</option>';
     });
     html += '</select>';
     if (!isViewingSelf) {
-      html += '<button onclick="switchMyWorkUser({value:\'' + esc(_userFullName).replace(/'/g, "\\'") + '\'})" style="font-size:11px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:#F3F4F6;cursor:pointer;font-weight:600;">← Back to My Work</button>';
+      html += '<button onclick="switchMyWorkUser({value:\'' + esc(Auth.fullName).replace(/'/g, "\\'") + '\'})" style="font-size:11px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:#F3F4F6;cursor:pointer;font-weight:600;">← Back to My Work</button>';
     }
     html += '</div>';
   } else {
@@ -9864,7 +9878,7 @@ function renderMyWork(area) {
 }
 
 function toggleDevMode(enabled) {
-  _devMode = enabled;
+  Auth.devMode = enabled;
   if (enabled) {
     sessionStorage.setItem('dev_mode', '1');
   } else {
@@ -9873,10 +9887,10 @@ function toggleDevMode(enabled) {
 }
 
 // Restore dev mode from session on load
-if (sessionStorage.getItem('dev_mode') === '1') _devMode = true;
+if (sessionStorage.getItem('dev_mode') === '1') Auth.devMode = true;
 
 function renderSettingsPage(area) {
-  if (!_isTeamLead) {
+  if (!Auth.isTeamLead) {
     area.innerHTML = '<div class="empty-state">You do not have access to Settings.</div>';
     return;
   }
@@ -9961,7 +9975,7 @@ function renderSettingsPage(area) {
   '</div>';
 
   // ── Developer Mode ──────────────────────────────────────
-  const devChecked = _devMode ? ' checked' : '';
+  const devChecked = Auth.devMode ? ' checked' : '';
   html += '<div class="settings-section">' +
     '<div class="settings-section-header"><span>Developer Mode</span></div>' +
     '<div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;">' +
@@ -9987,8 +10001,8 @@ function renderSettingsPage(area) {
   renderDescListEditor('task_tool');
 
   // If a member was selected for absence editing, re-render that section
-  if (_settingsSelectedMember && people[_settingsSelectedMember]) {
-    renderAbsenceEditor(_settingsSelectedMember);
+  if (Editor.selectedMember && people[Editor.selectedMember]) {
+    renderAbsenceEditor(Editor.selectedMember);
   }
 }
 
@@ -10145,7 +10159,7 @@ async function toggleTimeTracking(name, enabled) {
     return;
   }
   // Reload time entries if toggling self (separate try/catch)
-  if (name === _userFullName) {
+  if (name === Auth.fullName) {
     if (enabled) {
       try {
         await reloadAllTimeData();
@@ -10241,8 +10255,8 @@ async function cascadeRename(oldName, newName) {
     RESOURCES_DATA.people[newName] = RESOURCES_DATA.people[oldName];
     delete RESOURCES_DATA.people[oldName];
   }
-  // Update _userFullName if renaming self
-  if (_userFullName === oldName) _userFullName = newName;
+  // Update Auth.fullName if renaming self
+  if (Auth.fullName === oldName) Auth.fullName = newName;
 
   console.log('[Rename] Cascade complete:', log.join(', '));
 }
@@ -10407,7 +10421,7 @@ async function deleteMember(name) {
       return;
     }
 
-    if (_settingsSelectedMember === name) _settingsSelectedMember = null;
+    if (Editor.selectedMember === name) Editor.selectedMember = null;
 
     showLoadingOverlay('Removing team member...');
     await loadResourcesData();
@@ -10424,8 +10438,8 @@ async function deleteMember(name) {
 
 // ── Absence Editor ───────────────────────────────────────────────
 function openAbsenceEditor(name) {
-  _settingsSelectedMember = name;
-  _absEditorWindowStart = Math.max(0, window.currentWeekIdx - 3);
+  Editor.selectedMember = name;
+  Editor.absWindowStart = Math.max(0, window.currentWeekIdx - 3);
   renderAbsenceEditor(name);
   // Scroll to the section
   setTimeout(function() {
@@ -10441,9 +10455,9 @@ function renderAbsenceEditor(name) {
   const p = RESOURCES_DATA.people[name];
   const weeks = RESOURCES_DATA.weeks;
   const N = weeks.length;
-  const wEnd = Math.min(_absEditorWindowStart + ABS_COLS, N);
+  const wEnd = Math.min(Editor.absWindowStart + ABS_COLS, N);
   const wIdxs = [];
-  for (let i = _absEditorWindowStart; i < wEnd; i++) wIdxs.push(i);
+  for (let i = Editor.absWindowStart; i < wEnd; i++) wIdxs.push(i);
 
   const startLabel = absMonLabel(wIdxs[0]);
   const endLabel = absMonLabel(wIdxs[wIdxs.length - 1]);
@@ -10451,10 +10465,10 @@ function renderAbsenceEditor(name) {
   let html = '<div class="settings-section">' +
     '<div class="settings-section-header">' +
       '<span>Absences — ' + esc(name) + '</span>' +
-      '<button class="settings-btn settings-btn-secondary" onclick="_settingsSelectedMember=null;render();">✕ Close</button>' +
+      '<button class="settings-btn settings-btn-secondary" onclick="Editor.selectedMember=null;render();">✕ Close</button>' +
     '</div>' +
     '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">' +
-      '<button class="settings-btn settings-btn-secondary" onclick="absEditorShift(-1)" ' + (_absEditorWindowStart === 0 ? 'disabled' : '') + '>◀ Prev</button>' +
+      '<button class="settings-btn settings-btn-secondary" onclick="absEditorShift(-1)" ' + (Editor.absWindowStart === 0 ? 'disabled' : '') + '>◀ Prev</button>' +
       '<div style="text-align:center;flex:1;">' +
         '<div style="font-weight:700;color:var(--navy);font-size:14px;">' + startLabel + ' — ' + endLabel + '</div>' +
         '<div class="text-muted-sm">W' + (wIdxs[0]+1) + ' – W' + (wIdxs[wIdxs.length-1]+1) + ' · Enter hours off per week (0–40)</div>' +
@@ -10508,13 +10522,13 @@ function absMonLabel(wi) {
 
 function absEditorShift(dir) {
   const N = RESOURCES_DATA.weeks.length;
-  _absEditorWindowStart = Math.max(0, Math.min(_absEditorWindowStart + dir, N - ABS_COLS));
-  renderAbsenceEditor(_settingsSelectedMember);
+  Editor.absWindowStart = Math.max(0, Math.min(Editor.absWindowStart + dir, N - ABS_COLS));
+  renderAbsenceEditor(Editor.selectedMember);
 }
 
 function absJumpCurrent() {
-  _absEditorWindowStart = Math.max(0, window.currentWeekIdx - 3);
-  renderAbsenceEditor(_settingsSelectedMember);
+  Editor.absWindowStart = Math.max(0, window.currentWeekIdx - 3);
+  renderAbsenceEditor(Editor.selectedMember);
 }
 
 async function absValueChanged(input) {

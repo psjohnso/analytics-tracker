@@ -271,6 +271,7 @@ utilization = total_allocated_hours / proj_cap
 | 0.9.3.0088 | Phase 2: extract sub-functions from 5 monster functions; 8 new helper functions; eliminated duplicate code in time entry rows and task rows |
 | 0.9.3.0089 | Phase 3: move 63 inline styles to 28 CSS classes; clean 18KB stale allocation editor blob; file size 781KB→701KB |
 | 0.9.3.0090 | Phase 4: targeted re-renders with _dataDirty flag; skip buildSidebarFilters on 16 of 35 render() calls; extract updateHeaderStats and updateTabCounts |
+| 0.9.3.0091 | Phase 5: consolidate 25 globals into 3 namespace objects (Auth, Editor, Internal); 77→55 total globals; 165 reference replacements |
 
 ---
 
