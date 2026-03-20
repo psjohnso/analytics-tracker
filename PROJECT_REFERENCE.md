@@ -258,6 +258,16 @@ utilization = total_allocated_hours / proj_cap
 | 0.9.3.0075 | Add Complete button to project detail page hero actions; markProjectComplete function |
 | 0.9.3.0076 | Active/inactive team members: active flag on team_members; inactive members hidden from form dropdowns, sidebar filters, admin view-as selector; Settings shows Active/Inactive toggle per member; "Show former members" checkbox in sidebar filter |
 | 0.9.3.0077 | Enable team member name editing with cascading rename across all services (projects, tasks, time entries, allocations, absences, status history); confirmation dialog; loading overlay during rename; local arrays updated immediately |
+| 0.9.3.0078 | Settings: add Show former toggle to hide inactive members from team table |
+| 0.9.3.0079 | Idea form: change department to dropdown using Partner Departments list; use active members for Submitted By |
+| 0.9.3.0080 | Idea form: remove Description/Proposed Solution field |
+| 0.9.3.0081 | Idea form: add Priority dropdown and Urgency/Timeline Notes field |
+| 0.9.3.0082 | Idea review: priority badge, urgency section, submission date, sort by priority, reviewer notes |
+| 0.9.3.0083 | Idea review cards: remove description/urgency/notes section |
+| 0.9.3.0084 | Fix: remove stale isUrgency reference that broke idea review rendering |
+| 0.9.3.0085 | Use urgency_notes and reviewer_notes fields; keep description clean for project descriptions |
+| 0.9.3.0086 | Remove 60KB stale form HTML blob baked into source file |
+| 0.9.3.0087 | Phase 1 code quality: debounce search (200ms); convert all var to const/let (0 var remaining; 1234 const, 134 let) |
 
 ---
 

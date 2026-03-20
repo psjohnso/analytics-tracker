@@ -2957,16 +2957,16 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 // cross-origin entries, but we can push buffer entries so the back button cycles
 // through our entries. The popstate handler re-pushes on every back-click.
 (function() {
-  var hasToken = sessionStorage.getItem('agol_token');
-  var hash = window.location.hash.substring(1);
-  var hashHasToken = hash && hash.indexOf('access_token') >= 0;
+  let hasToken = sessionStorage.getItem('agol_token');
+  const hash = window.location.hash.substring(1);
+  const hashHasToken = hash && hash.indexOf('access_token') >= 0;
 
   // If returning from OAuth with token in hash, extract and store it NOW
   // before pushState changes the URL and wipes the hash.
   if (hashHasToken) {
-    var params = new URLSearchParams(hash);
-    var token = params.get('access_token');
-    var expiresIn = params.get('expires_in');
+    const params = new URLSearchParams(hash);
+    const token = params.get('access_token');
+    const expiresIn = params.get('expires_in');
     if (token) {
       sessionStorage.setItem('agol_token', token);
       sessionStorage.setItem('agol_token_expires', String(Date.now() + (parseInt(expiresIn, 10) * 1000)));
@@ -2975,16 +2975,16 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 
   if (hasToken) {
-    var cleanUrl = window.location.pathname + window.location.search;
+    const cleanUrl = window.location.pathname + window.location.search;
     history.replaceState({ _appPage: true }, '', cleanUrl);
-    for (var i = 0; i < 5; i++) history.pushState({ _appPage: true }, '', cleanUrl);
+    for (let i = 0; i < 5; i++) history.pushState({ _appPage: true }, '', cleanUrl);
     window.addEventListener('popstate', function() {
       history.pushState({ _appPage: true }, '', window.location.pathname + window.location.search);
     });
   }
 })();
 
-const APP_VERSION = '0.9.3.0086';
+const APP_VERSION = '0.9.3.0087';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -3088,9 +3088,9 @@ function buildSidebarFilters() {
   PROJECTS.forEach(p => { if(p.category) categories[p.category] = (categories[p.category] || 0) + 1; });
 
   const members = {};
-  var showFormer = document.getElementById('show-former-members');
-  var includeInactive = showFormer && showFormer.checked;
-  var isActiveMember = function(name) {
+  const showFormer = document.getElementById('show-former-members');
+  const includeInactive = showFormer && showFormer.checked;
+  const isActiveMember = function(name) {
     if (includeInactive) return true;
     if (!RESOURCES_DATA || !RESOURCES_DATA.people[name]) return true; // unknown = show
     return RESOURCES_DATA.people[name].active !== false;
@@ -3180,7 +3180,7 @@ function addTaskToProject(projectObjectId, projectTitle) {
   openFormModal('new-task');
   // Pre-fill the project dropdown after the form renders
   setTimeout(function() {
-    var projSelect = document.getElementById('fm-project');
+    const projSelect = document.getElementById('fm-project');
     if (projSelect) {
       projSelect.value = projectTitle;
     }
@@ -3202,10 +3202,14 @@ function setFilter(type, val) {
 }
 
 // ─── SEARCH ───────────────────────────────────────────────────────────
+let _searchDebounce = null;
 function onSearch() {
-  activeFilters.search = document.getElementById('search-input').value.toLowerCase();
-  currentPage = 1;
-  render();
+  clearTimeout(_searchDebounce);
+  _searchDebounce = setTimeout(function() {
+    activeFilters.search = document.getElementById('search-input').value.toLowerCase();
+    currentPage = 1;
+    render();
+  }, 200);
 }
 
 // ─── TAB SWITCH ───────────────────────────────────────────────────────
@@ -4134,10 +4138,10 @@ function openAllocEditor(name) {
     draftByName[proj.title] = { project: proj.title, status: proj.status, fracs: new Array(N2).fill(0) };
   });
   editorDraft[name] = Object.values(draftByName);
-  var aeStatusOrder = { 'Active': 0, 'On Hold': 1, 'Scheduled': 2, 'Future': 3, 'Idea': 4 };
+  const aeStatusOrder = { 'Active': 0, 'On Hold': 1, 'Scheduled': 2, 'Future': 3, 'Idea': 4 };
   editorDraft[name].sort(function(a, b) {
-    var sa = aeStatusOrder[a.status] != null ? aeStatusOrder[a.status] : 9;
-    var sb = aeStatusOrder[b.status] != null ? aeStatusOrder[b.status] : 9;
+    const sa = aeStatusOrder[a.status] != null ? aeStatusOrder[a.status] : 9;
+    const sb = aeStatusOrder[b.status] != null ? aeStatusOrder[b.status] : 9;
     if (sa !== sb) return sa - sb;
     return a.project.localeCompare(b.project);
   });
@@ -4163,9 +4167,9 @@ function closeAllocEditor() {
 }
 
 function openProjectFromAlloc(el) {
-  var projTitle = el.getAttribute('data-project');
+  const projTitle = el.getAttribute('data-project');
   if (!projTitle) return;
-  var proj = PROJECTS.find(function(p) { return p.title === projTitle; });
+  const proj = PROJECTS.find(function(p) { return p.title === projTitle; });
   if (!proj) { alert('Project not found: ' + projTitle); return; }
   closeAllocEditor();
   openProject(proj.objectId);
@@ -4222,7 +4226,7 @@ function aeRenderGrid() {
     return;
   }
 
-  var numRows = allocs.length;
+  const numRows = allocs.length;
   allocs.forEach(function(a, ai) {
     const statusCol = STATUS_COLOR(a.status) || '#9CA3AF';
     const chipBg = statusCol + '22';
@@ -4242,7 +4246,7 @@ function aeRenderGrid() {
     }
     row += '</td>';
 
-    for (var ci = 0; ci < wIdxs.length; ci++) {
+    for (let ci = 0; ci < wIdxs.length; ci++) {
       const wi = wIdxs[ci];
       const pct    = Math.round((a.fracs[wi] || 0) * 100);
       const isCur  = wi === window.currentWeekIdx;
@@ -4256,7 +4260,7 @@ function aeRenderGrid() {
       }
       let cls = 'ae-pct-input' + (hasVal ? ' has-val' : '') + (isCur ? ' cur-wk' : '');
       // tabindex: column-major order so Tab goes down a column, then to next column
-      var tabIdx = ci * numRows + ai + 1;
+      const tabIdx = ci * numRows + ai + 1;
       row += '<td class="ae-wk-td' + (isCur ? ' ae-cur' : '') + rangeClass + '">' +
         '<input type="number" min="0" max="100" value="' + pct + '" class="' + cls + '" ' +
         'tabindex="' + tabIdx + '" ' +
@@ -4316,7 +4320,7 @@ function applyEditorChanges() {
   // Map canonical name → array of original allocation objects
   const origByCanon = {};
   p.allocations.forEach(function(a) {
-    var cn = canonTitle(a.project);
+    const cn = canonTitle(a.project);
     if (!origByCanon[cn]) origByCanon[cn] = [];
     origByCanon[cn].push(a);
   });
@@ -4325,20 +4329,20 @@ function applyEditorChanges() {
   const editsToSave = [];
 
   editorDraft[name].forEach(function(da) {
-    var origArr = origByCanon[da.project] || [];
+    const origArr = origByCanon[da.project] || [];
 
     // Compute the original merged fracs (same merge logic as openAllocEditor)
-    var mergedOrigFracs = new Array(N).fill(0);
+    const mergedOrigFracs = new Array(N).fill(0);
     origArr.forEach(function(a) {
-      for (var i = 0; i < N; i++) mergedOrigFracs[i] += (a.fracs[i] || 0);
+      for (let i = 0; i < N; i++) mergedOrigFracs[i] += (a.fracs[i] || 0);
     });
 
     // Detect which weeks actually changed
-    for (var i = 0; i < N; i++) {
-      var oldFrac = Math.round(mergedOrigFracs[i] * 10000) / 10000;
-      var newFrac = Math.round((da.fracs[i] || 0) * 10000) / 10000;
+    for (let i = 0; i < N; i++) {
+      const oldFrac = Math.round(mergedOrigFracs[i] * 10000) / 10000;
+      const newFrac = Math.round((da.fracs[i] || 0) * 10000) / 10000;
       if (newFrac !== oldFrac) {
-        var newHrs = newFrac * (p.proj_cap[i] || 0);
+        const newHrs = newFrac * (p.proj_cap[i] || 0);
         editsToSave.push({
           name:           name,
           project:        da.project,
@@ -4358,13 +4362,13 @@ function applyEditorChanges() {
       // Update the first allocation, zero out any others (de-duplicate)
       origArr[0].fracs = da.fracs.slice();
       origArr[0].hours = da.fracs.map(function(f, i) { return f * (p.proj_cap[i] || 0); });
-      for (var j = 1; j < origArr.length; j++) {
+      for (let j = 1; j < origArr.length; j++) {
         origArr[j].fracs = new Array(N).fill(0);
         origArr[j].hours = new Array(N).fill(0);
       }
     } else {
       // Brand new allocation
-      var proj = PROJECTS.find(function(x) { return x.title === da.project; });
+      const proj = PROJECTS.find(function(x) { return x.title === da.project; });
       p.allocations.push({
         project:      da.project,
         status:       proj ? proj.status : da.status,
@@ -4426,27 +4430,27 @@ async function saveAllocationsToRest(edits) {
     const projTitleSet4 = new Set(PROJECTS.map(proj => proj.title));
     function canonTitle2(raw) {
       if (projTitleSet4.has(raw)) return raw;
-      var stripped = raw.replace(/\s*-\s*[A-Z][A-Za-z .]+$/, '').trim();
+      const stripped = raw.replace(/\s*-\s*[A-Z][A-Za-z .]+$/, '').trim();
       return projTitleSet4.has(stripped) ? stripped : raw;
     }
 
-    var existingMap = {};
+    const existingMap = {};
     existing.forEach(function(f) {
-      var a = f.attributes;
-      var oid = a.ObjectId || a.OBJECTID || a.objectid || a.FID;
-      var wk = epochToDateStr(a.week_date); // normalizes both number and string to "YYYY-MM-DD"
-      var canon = canonTitle2(a.project || '');
-      var key = canon + '|' + wk;
+      const a = f.attributes;
+      const oid = a.ObjectId || a.OBJECTID || a.objectid || a.FID;
+      const wk = epochToDateStr(a.week_date); // normalizes both number and string to "YYYY-MM-DD"
+      const canon = canonTitle2(a.project || '');
+      const key = canon + '|' + wk;
       if (!existingMap[key]) existingMap[key] = [];
       existingMap[key].push(oid);
     });
 
-    var deletes = [];
-    var adds = [];
+    const deletes = [];
+    const adds = [];
 
     edits.forEach(function(e) {
-      var key = e.project + '|' + e.week_date;
-      var existingOids = existingMap[key] || [];
+      const key = e.project + '|' + e.week_date;
+      const existingOids = existingMap[key] || [];
 
       // Delete all matching existing records for this project+week
       existingOids.forEach(function(oid) {
@@ -4480,15 +4484,15 @@ async function saveAllocationsToRest(edits) {
     }
 
     // Send edits
-    var editPayload = {};
+    const editPayload = {};
     if (deletes.length > 0) editPayload.deletes = deletes;
     if (adds.length > 0)    editPayload.adds = adds;
 
-    var result = await agolApplyEdits(ARCGIS_CONFIG.allocationsUrl, editPayload);
+    const result = await agolApplyEdits(ARCGIS_CONFIG.allocationsUrl, editPayload);
     console.log('[Allocations] applyEdits response:', JSON.stringify(result));
 
     // Check for per-record errors
-    var errors = [];
+    const errors = [];
     if (result.addResults) {
       result.addResults.forEach(function(r, i) {
         if (!r.success) errors.push('Add #' + i + ': ' + (r.error ? r.error.description : 'unknown'));
@@ -4504,7 +4508,7 @@ async function saveAllocationsToRest(edits) {
       console.error('[Allocations] Partial failures:', errors);
       alert('Some allocation changes failed to save:\n' + errors.join('\n'));
     } else {
-      var msg = 'Saved ' + adds.length + ' allocation(s)';
+      const msg = 'Saved ' + adds.length + ' allocation(s)';
       if (deletes.length > 0) msg += ', removed ' + deletes.length + ' old record(s)';
       console.log('[Allocations] ✓', msg);
       markSynced(msg);
@@ -5004,19 +5008,19 @@ function epochToDateStr(val) {
   if (!val && val !== 0) return '';
   // If it's already a YYYY-MM-DD string, return as-is
   if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
-  var d = new Date(val);
-  var yyyy = d.getUTCFullYear();
-  var mm = String(d.getUTCMonth() + 1).padStart(2, '0');
-  var dd = String(d.getUTCDate()).padStart(2, '0');
+  const d = new Date(val);
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(d.getUTCDate()).padStart(2, '0');
   return yyyy + '-' + mm + '-' + dd;
 }
 
 // ── Generate 52 Sunday week-start dates for a given year ──
 function generateWeeks(year) {
-  var weeks = [];
-  var d = new Date(Date.UTC(year, 0, 1)); // Jan 1
+  const weeks = [];
+  const d = new Date(Date.UTC(year, 0, 1)); // Jan 1
   while (d.getUTCDay() !== 0) d.setUTCDate(d.getUTCDate() + 1); // advance to first Sunday
-  for (var i = 0; i < 52; i++) {
+  for (let i = 0; i < 52; i++) {
     weeks.push(epochToDateStr(d.getTime()));
     d.setUTCDate(d.getUTCDate() + 7);
   }
@@ -5031,18 +5035,18 @@ function generateWeeks(year) {
  *   weekly_allocated: number[], utilization: number[] } } }
  */
 async function loadResourcesData() {
-  var N = 52; // weeks per year
+  const N = 52; // weeks per year
 
   // Query 3 services in parallel (weekly_capacity no longer needed —
   // proj_cap is always computed from absences × proj_pct)
-  var results = await Promise.all([
+  const results = await Promise.all([
     agolQuery(ARCGIS_CONFIG.teamMembersUrl),
     agolQuery(ARCGIS_CONFIG.absencesUrl),
     agolQuery(ARCGIS_CONFIG.allocationsUrl),
   ]);
-  var memberFeatures = results[0];
-  var absenceFeatures = results[1];
-  var allocFeatures = results[2];
+  const memberFeatures = results[0];
+  const absenceFeatures = results[1];
+  const allocFeatures = results[2];
 
   // Log first feature from each for field-name debugging
   if (memberFeatures.length) console.log('[Resources] team_members fields:', Object.keys(memberFeatures[0].attributes));
@@ -5050,52 +5054,52 @@ async function loadResourcesData() {
   if (allocFeatures.length) console.log('[Resources] allocations fields:', Object.keys(allocFeatures[0].attributes));
 
   // Generate weeks array (52 Sundays of 2026)
-  var weeks = generateWeeks(2026);
-  var weekIdx = {};
+  const weeks = generateWeeks(2026);
+  const weekIdx = {};
   weeks.forEach(function(w, i) { weekIdx[w] = i; });
 
   // Build people from team_members
-  var people = {};
+  const people = {};
 
   // Pay period reference: 2025-12-28 is a Week A (Sunday) start.
   // Every 14 days alternates A/B. Week A = week1_hours, Week B = week2_hours.
-  var PAY_PERIOD_REF = new Date('2025-12-28T00:00:00');
+  const PAY_PERIOD_REF = new Date('2025-12-28T00:00:00');
   function getPayPeriodWeek(weekDateStr) {
-    var d = new Date(weekDateStr + 'T00:00:00');
-    var diffDays = Math.round((d - PAY_PERIOD_REF) / (1000 * 60 * 60 * 24));
-    var weekNum = Math.floor(diffDays / 7);
+    const d = new Date(weekDateStr + 'T00:00:00');
+    const diffDays = Math.round((d - PAY_PERIOD_REF) / (1000 * 60 * 60 * 24));
+    const weekNum = Math.floor(diffDays / 7);
     return (weekNum % 2 === 0) ? 'A' : 'B';
   }
 
   memberFeatures.forEach(function(f) {
-    var a = f.attributes;
-    var nm = a.name;
+    const a = f.attributes;
+    const nm = a.name;
     if (!nm) return;
     // Case-insensitive field lookup helper (ArcGIS may alter field name casing)
-    var keys = Object.keys(a);
-    var ci = function(target) {
-      var found = keys.find(function(k) { return k.toLowerCase() === target.toLowerCase(); });
+    const keys = Object.keys(a);
+    const ci = function(target) {
+      const found = keys.find(function(k) { return k.toLowerCase() === target.toLowerCase(); });
       return found ? a[found] : undefined;
     };
     // TimeOnly field helper: ArcGIS may return ms since midnight OR "HH:MM:SS" string
-    var toHHMM = function(val) {
+    const toHHMM = function(val) {
       if (val == null || val === '') return null;
       if (typeof val === 'string' && val.indexOf(':') >= 0) return val.slice(0, 5); // "HH:MM:SS" → "HH:MM"
       if (typeof val === 'number') {
-        var totalMin = Math.floor(val / 60000);
-        var h = Math.floor(totalMin / 60);
-        var m = totalMin % 60;
+        const totalMin = Math.floor(val / 60000);
+        const h = Math.floor(totalMin / 60);
+        const m = totalMin % 60;
         return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
       }
       return null;
     };
 
-    var dayKeys = ['mon','tue','wed','thu','fri'];
-    var lunchMin = ci('lunch_minutes');
-    var lunch = (lunchMin != null) ? lunchMin : 60;
+    const dayKeys = ['mon','tue','wed','thu','fri'];
+    const lunchMin = ci('lunch_minutes');
+    const lunch = (lunchMin != null) ? lunchMin : 60;
 
     // Read start/end times for both weeks
-    var schedule = {};
+    const schedule = {};
     ['wk1','wk2'].forEach(function(wk) {
       dayKeys.forEach(function(d) {
         schedule[wk + '_' + d + '_start'] = toHHMM(ci(wk + '_' + d + '_start'));
@@ -5106,18 +5110,18 @@ async function loadResourcesData() {
     // Compute daily hours from start/end/lunch
     function computeDayHours(startStr, endStr, lunchMins) {
       if (!startStr || !endStr) return 0;
-      var sp = startStr.split(':'), ep = endStr.split(':');
-      var startMins = parseInt(sp[0]) * 60 + parseInt(sp[1]);
-      var endMins = parseInt(ep[0]) * 60 + parseInt(ep[1]);
-      var worked = (endMins - startMins) / 60 - (lunchMins / 60);
+      const sp = startStr.split(':'), ep = endStr.split(':');
+      const startMins = parseInt(sp[0]) * 60 + parseInt(sp[1]);
+      const endMins = parseInt(ep[0]) * 60 + parseInt(ep[1]);
+      const worked = (endMins - startMins) / 60 - (lunchMins / 60);
       return Math.max(0, Math.round(worked * 100) / 100);
     }
 
-    var dailyHours = {};
-    var week1_hours = 0, week2_hours = 0;
+    const dailyHours = {};
+    const week1_hours = 0, week2_hours = 0;
     ['wk1','wk2'].forEach(function(wk) {
       dayKeys.forEach(function(d) {
-        var hrs = computeDayHours(schedule[wk+'_'+d+'_start'], schedule[wk+'_'+d+'_end'], lunch);
+        const hrs = computeDayHours(schedule[wk+'_'+d+'_start'], schedule[wk+'_'+d+'_end'], lunch);
         dailyHours[wk + '_' + d] = hrs;
         if (wk === 'wk1') week1_hours += hrs;
         else week2_hours += hrs;
@@ -5149,17 +5153,17 @@ async function loadResourcesData() {
     };
 
     // Auto-derive schedule from schedule_type when all start/end fields are null
-    var p = people[nm];
-    var hasAnySchedule = Object.values(p.schedule).some(function(v) { return v != null; });
+    const p = people[nm];
+    const hasAnySchedule = Object.values(p.schedule).some(function(v) { return v != null; });
     if (!hasAnySchedule) {
-      var sched = p.schedule_type || '5/8';
-      var rdoIdx = p.rdo_day ? ['Monday','Tuesday','Wednesday','Thursday','Friday'].indexOf(p.rdo_day) : -1;
-      var defaultSchedules = {
+      const sched = p.schedule_type || '5/8';
+      const rdoIdx = p.rdo_day ? ['Monday','Tuesday','Wednesday','Thursday','Friday'].indexOf(p.rdo_day) : -1;
+      const defaultSchedules = {
         '5/8':  { start: '08:00', end: '17:00', wkAShort: null, wkBOff: false },
         '4/10': { start: '07:00', end: '18:00', wkAShort: null, wkBOff: false },
         '9/80': { start: '07:00', end: '17:00', wkAShort: '07:00-16:00', wkBOff: true },
       };
-      var def = defaultSchedules[sched] || defaultSchedules['5/8'];
+      const def = defaultSchedules[sched] || defaultSchedules['5/8'];
       ['wk1','wk2'].forEach(function(wk) {
         dayKeys.forEach(function(d, i) {
           if (sched === '4/10' && i === rdoIdx) {
@@ -5185,7 +5189,7 @@ async function loadResourcesData() {
       p.week1_hours = 0; p.week2_hours = 0;
       ['wk1','wk2'].forEach(function(wk) {
         dayKeys.forEach(function(d) {
-          var hrs = computeDayHours(p.schedule[wk+'_'+d+'_start'], p.schedule[wk+'_'+d+'_end'], p.lunch_minutes);
+          const hrs = computeDayHours(p.schedule[wk+'_'+d+'_start'], p.schedule[wk+'_'+d+'_end'], p.lunch_minutes);
           p[wk + '_' + d] = hrs;
           if (wk === 'wk1') p.week1_hours += hrs;
           else p.week2_hours += hrs;
@@ -5196,9 +5200,9 @@ async function loadResourcesData() {
 
   // Fill absences
   absenceFeatures.forEach(function(f) {
-    var a = f.attributes;
-    var nm = a.name;
-    var wk = epochToDateStr(a.week_date);
+    const a = f.attributes;
+    const nm = a.name;
+    const wk = epochToDateStr(a.week_date);
     if (people[nm] && weekIdx[wk] !== undefined) {
       people[nm].absences[weekIdx[wk]] = a.absence_hours || 0;
     }
@@ -5208,21 +5212,21 @@ async function loadResourcesData() {
   // The 0.75 factor accounts for non-project-work time (meetings, email, breaks, etc.)
   // For 9/80 schedules, Week A = week1_hours (44), Week B = week2_hours (36).
   Object.entries(people).forEach(function(entry) {
-    var p = entry[1];
-    for (var i = 0; i < N; i++) {
-      var ppWeek = getPayPeriodWeek(weeks[i]);
-      var scheduledHours = (ppWeek === 'A') ? p.week1_hours : p.week2_hours;
+    const p = entry[1];
+    for (let i = 0; i < N; i++) {
+      const ppWeek = getPayPeriodWeek(weeks[i]);
+      const scheduledHours = (ppWeek === 'A') ? p.week1_hours : p.week2_hours;
       p.proj_cap[i] = (scheduledHours - (p.absences[i] || 0)) * 0.75 * p.proj_pct;
     }
   });
 
   // Build allocations grouped by person+project
-  var allocMap = {}; // key: "name|project"
+  const allocMap = {}; // key: "name|project"
   allocFeatures.forEach(function(f) {
-    var a = f.attributes;
-    var key = a.name + '|' + a.project;
-    var wk = epochToDateStr(a.week_date);
-    var wi = weekIdx[wk];
+    const a = f.attributes;
+    const key = a.name + '|' + a.project;
+    const wk = epochToDateStr(a.week_date);
+    const wi = weekIdx[wk];
     if (wi === undefined) return;
 
     if (!allocMap[key]) {
@@ -5242,7 +5246,7 @@ async function loadResourcesData() {
 
   // Attach allocations to people
   Object.values(allocMap).forEach(function(alloc) {
-    var nm = alloc._name;
+    const nm = alloc._name;
     delete alloc._name;
     if (people[nm]) {
       people[nm].allocations.push(alloc);
@@ -5254,7 +5258,7 @@ async function loadResourcesData() {
   // capacity formula, so we always recalculate from fractions to stay in sync.
   Object.values(people).forEach(function(p) {
     p.allocations.forEach(function(a) {
-      for (var i = 0; i < N; i++) {
+      for (let i = 0; i < N; i++) {
         a.hours[i] = (a.fracs[i] || 0) * p.proj_cap[i];
       }
     });
@@ -5264,8 +5268,8 @@ async function loadResourcesData() {
   // This ensures they're always in sync, even if the weekly_capacity table
   // hasn't been updated after allocation edits.
   Object.values(people).forEach(function(p) {
-    for (var i = 0; i < N; i++) {
-      var totalHrs = 0;
+    for (let i = 0; i < N; i++) {
+      const totalHrs = 0;
       p.allocations.forEach(function(a) { totalHrs += (a.hours[i] || 0); });
       p.weekly_allocated[i] = totalHrs;
       p.utilization[i] = p.proj_cap[i] > 0 ? totalHrs / p.proj_cap[i] : 0;
@@ -5404,12 +5408,12 @@ const DataStore = {
     const i = PROJECTS.findIndex(function(p) { return p.objectId == id; });
     if (i < 0) return null;
     // Detect status change before applying
-    var oldStatus = PROJECTS[i].status;
-    var newStatus = fields.status;
-    var statusChanged = newStatus && newStatus !== oldStatus;
+    const oldStatus = PROJECTS[i].status;
+    const newStatus = fields.status;
+    const statusChanged = newStatus && newStatus !== oldStatus;
     // Auto-set actual_end when status changes to Complete
     if (fields.status === 'Complete' && !fields.actual_end && !PROJECTS[i].actual_end) {
-      var today = new Date();
+      const today = new Date();
       fields.actual_end = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
     }
     const oldTitle = PROJECTS[i].title;
@@ -5515,7 +5519,7 @@ const DataStore = {
     if (i < 0) return null;
     // Auto-set actual_end when status changes to Complete
     if (fields.status === 'Complete' && !fields.actual_end && !TASKS[i].actual_end) {
-      var today = new Date();
+      const today = new Date();
       fields.actual_end = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
     }
     if (fields.project) {
@@ -5651,9 +5655,9 @@ function refreshEnums() {
 
 // Short descriptions for each project category — shown in the searchable dropdown
 // Description maps — initialized empty, populated by refreshEnums() after custom arrays load
-var CATEGORY_DESCRIPTIONS = {};
+let CATEGORY_DESCRIPTIONS = {};
 
-var TASK_CATEGORY_DESCRIPTIONS = {};
+let TASK_CATEGORY_DESCRIPTIONS = {};
 
 // ── Task Category Wizard ──────────────────────────────────────────────
 // Three-question guided walkthrough to help users pick the right task category.
@@ -5717,17 +5721,17 @@ const TASK_CAT_WIZARD_TREE = {
   },
 };
 
-var _taskCatWizardOriginalHTML = '';
+let _taskCatWizardOriginalHTML = '';
 
 function taskCatWizardOpen() {
-  var container = document.getElementById('fm-task-category-content');
+  const container = document.getElementById('fm-task-category-content');
   if (!container) return;
   _taskCatWizardOriginalHTML = container.innerHTML;
   taskCatWizardRenderStep('q1');
 }
 
 function taskCatWizardClose() {
-  var container = document.getElementById('fm-task-category-content');
+  const container = document.getElementById('fm-task-category-content');
   if (!container || !_taskCatWizardOriginalHTML) return;
   container.innerHTML = _taskCatWizardOriginalHTML;
   _taskCatWizardOriginalHTML = '';
@@ -5735,12 +5739,12 @@ function taskCatWizardClose() {
 }
 
 function taskCatWizardRenderStep(stepId) {
-  var container = document.getElementById('fm-task-category-content');
+  const container = document.getElementById('fm-task-category-content');
   if (!container) return;
-  var step = TASK_CAT_WIZARD_TREE[stepId];
+  const step = TASK_CAT_WIZARD_TREE[stepId];
   if (!step) return;
-  var isQ2 = stepId !== 'q1';
-  var html = '<div class="cat-wizard-panel open">';
+  const isQ2 = stepId !== 'q1';
+  let html = '<div class="cat-wizard-panel open">';
   html += '<div class="cat-wizard-q">' + (isQ2 ? 'Step 2 of 2: ' : 'Step 1 of 2: ') + esc(step.question) + '</div>';
   html += '<div class="cat-wizard-opts">';
   step.options.forEach(function(opt) {
@@ -5761,10 +5765,10 @@ function taskCatWizardRenderStep(stepId) {
 }
 
 function taskCatWizardShowResult(categoryName) {
-  var container = document.getElementById('fm-task-category-content');
+  const container = document.getElementById('fm-task-category-content');
   if (!container) return;
-  var desc = TASK_CATEGORY_DESCRIPTIONS[categoryName] || '';
-  var html = '<div class="cat-wizard-panel open">';
+  const desc = TASK_CATEGORY_DESCRIPTIONS[categoryName] || '';
+  let html = '<div class="cat-wizard-panel open">';
   html += '<div class="cat-wizard-result">' +
     '<div class="cat-wizard-result-label">✓ Recommended Category</div>' +
     '<div class="cat-wizard-result-name">' + esc(categoryName) + '</div>' +
@@ -5780,14 +5784,14 @@ function taskCatWizardShowResult(categoryName) {
 
 function taskCatWizardApply(categoryName) {
   taskCatWizardClose();
-  var input = document.getElementById('fm-category');
-  var hidden = document.getElementById('fm-category-val');
+  const input = document.getElementById('fm-category');
+  const hidden = document.getElementById('fm-category-val');
   if (input) input.value = categoryName;
   if (hidden) hidden.value = categoryName;
 }
 
 // ── Task Tool Descriptions ──────────────────────────────────────
-var TASK_TOOL_DESCRIPTIONS = {};
+let TASK_TOOL_DESCRIPTIONS = {};
 
 // ── Task Tool Wizard ──────────────────────────────────────────────
 const TASK_TOOL_WIZARD_TREE = {
@@ -5896,17 +5900,17 @@ const TASK_TOOL_WIZARD_TREE = {
   },
 };
 
-var _toolWizardOriginalHTML = '';
+let _toolWizardOriginalHTML = '';
 
 function toolWizardOpen() {
-  var container = document.getElementById('fm-tool-content');
+  const container = document.getElementById('fm-tool-content');
   if (!container) return;
   _toolWizardOriginalHTML = container.innerHTML;
   toolWizardRenderStep('q1');
 }
 
 function toolWizardClose() {
-  var container = document.getElementById('fm-tool-content');
+  const container = document.getElementById('fm-tool-content');
   if (!container || !_toolWizardOriginalHTML) return;
   container.innerHTML = _toolWizardOriginalHTML;
   _toolWizardOriginalHTML = '';
@@ -5914,13 +5918,13 @@ function toolWizardClose() {
 }
 
 function toolWizardRenderStep(stepId) {
-  var container = document.getElementById('fm-tool-content');
+  const container = document.getElementById('fm-tool-content');
   if (!container) return;
-  var step = TASK_TOOL_WIZARD_TREE[stepId];
+  const step = TASK_TOOL_WIZARD_TREE[stepId];
   if (!step) return;
-  var stepNum = stepId === 'q1' ? 1 : stepId.startsWith('q3') ? 3 : 2;
-  var totalSteps = stepId.startsWith('q3') ? 3 : stepId === 'q1' ? 2 : 2;
-  var html = '<div class="cat-wizard-panel open">';
+  const stepNum = stepId === 'q1' ? 1 : stepId.startsWith('q3') ? 3 : 2;
+  const totalSteps = stepId.startsWith('q3') ? 3 : stepId === 'q1' ? 2 : 2;
+  let html = '<div class="cat-wizard-panel open">';
   html += '<div class="cat-wizard-q">Step ' + stepNum + ': ' + esc(step.question) + '</div>';
   html += '<div class="cat-wizard-opts">';
   step.options.forEach(function(opt) {
@@ -5934,7 +5938,7 @@ function toolWizardRenderStep(stepId) {
   html += '<div style="margin-top:8px;">';
   if (stepId !== 'q1') {
     // Find parent step to go back to
-    var backStep = stepId.startsWith('q3') ? Object.keys(TASK_TOOL_WIZARD_TREE).find(function(k) {
+    const backStep = stepId.startsWith('q3') ? Object.keys(TASK_TOOL_WIZARD_TREE).find(function(k) {
       return TASK_TOOL_WIZARD_TREE[k].options && TASK_TOOL_WIZARD_TREE[k].options.some(function(o) { return o.next === stepId; });
     }) || 'q1' : 'q1';
     html += '<button type="button" class="cat-wizard-back" onclick="toolWizardRenderStep(\'' + backStep + '\')">← Back</button>';
@@ -5945,10 +5949,10 @@ function toolWizardRenderStep(stepId) {
 }
 
 function toolWizardShowResult(toolName) {
-  var container = document.getElementById('fm-tool-content');
+  const container = document.getElementById('fm-tool-content');
   if (!container) return;
-  var desc = TASK_TOOL_DESCRIPTIONS[toolName] || '';
-  var html = '<div class="cat-wizard-panel open">';
+  const desc = TASK_TOOL_DESCRIPTIONS[toolName] || '';
+  let html = '<div class="cat-wizard-panel open">';
   html += '<div class="cat-wizard-result">' +
     '<div class="cat-wizard-result-label">✓ Recommended Tool</div>' +
     '<div class="cat-wizard-result-name">' + esc(toolName) + '</div>' +
@@ -5964,17 +5968,17 @@ function toolWizardShowResult(toolName) {
 
 function toolWizardApply(toolName) {
   toolWizardClose();
-  var input = document.getElementById('fm-tool');
-  var hidden = document.getElementById('fm-tool-val');
+  const input = document.getElementById('fm-tool');
+  const hidden = document.getElementById('fm-tool-val');
   if (input) input.value = toolName;
   if (hidden) hidden.value = toolName;
 }
 
 function fmTaskToolField(currentValue, span2) {
-  var cls = 'fm-field' + (span2 ? ' span2' : '');
+  const cls = 'fm-field' + (span2 ? ' span2' : '');
   // Use active tools only; include current value even if retired so user can see/change it
-  var toolList = FM_TASK_TOOLS_ACTIVE || FM_TASK_TOOLS || [];
-  var descMap = Object.assign({}, TASK_TOOL_DESCRIPTIONS);
+  let toolList = FM_TASK_TOOLS_ACTIVE || FM_TASK_TOOLS || [];
+  const descMap = Object.assign({}, TASK_TOOL_DESCRIPTIONS);
   if (currentValue && !toolList.includes(currentValue)) {
     toolList = [currentValue].concat(toolList);
     // Add retired note to description so it's visible in the dropdown
@@ -6061,9 +6065,9 @@ function fmTaskCategoryField(currentValue, span2) {
 function fmSearchableSelect(id, options, value, placeholder, descriptions) {
   const opts = (value && !options.includes(value)) ? [...options, value] : options;
   let optionsHtml = opts.map(function(o) {
-    var desc = (descriptions && descriptions[o]) ? descriptions[o] : '';
-    var descAttr = desc ? ' data-desc="' + esc(desc) + '"' : '';
-    var descHtml = desc ? '<span class="fm-search-option-desc">' + esc(desc) + '</span>' : '';
+    const desc = (descriptions && descriptions[o]) ? descriptions[o] : '';
+    const descAttr = desc ? ' data-desc="' + esc(desc) + '"' : '';
+    const descHtml = desc ? '<span class="fm-search-option-desc">' + esc(desc) + '</span>' : '';
     return '<div class="fm-search-option" data-value="' + esc(o) + '"' + descAttr + '>' +
       '<span class="fm-search-option-name">' + esc(o) + '</span>' + descHtml + '</div>';
   }).join('');
@@ -6090,8 +6094,8 @@ function initSearchableSelect(id) {
 
   function highlightText(text, query) {
     if (!query) return esc(text);
-    var lower = text.toLowerCase();
-    var idx = lower.indexOf(query);
+    const lower = text.toLowerCase();
+    const idx = lower.indexOf(query);
     if (idx < 0) return esc(text);
     return esc(text.substring(0, idx)) +
       '<span class="fm-search-match">' + esc(text.substring(idx, idx + query.length)) + '</span>' +
@@ -6109,8 +6113,8 @@ function initSearchableSelect(id) {
       if (matchesName || matchesDesc) {
         opt.style.display = '';
         // Rebuild inner HTML with highlighting
-        var nameHtml = '<span class="fm-search-option-name">' + highlightText(val, q) + '</span>';
-        var descHtml = desc ? '<span class="fm-search-option-desc">' + highlightText(desc, q) + '</span>' : '';
+        const nameHtml = '<span class="fm-search-option-name">' + highlightText(val, q) + '</span>';
+        const descHtml = desc ? '<span class="fm-search-option-desc">' + highlightText(desc, q) + '</span>' : '';
         opt.innerHTML = nameHtml + descHtml;
         visibleCount++;
       } else {
@@ -6130,10 +6134,10 @@ function initSearchableSelect(id) {
   function showAllOptions() {
     allOptions.forEach(function(opt) {
       opt.style.display = '';
-      var val = opt.getAttribute('data-value');
-      var desc = opt.getAttribute('data-desc') || '';
-      var nameHtml = '<span class="fm-search-option-name">' + esc(val) + '</span>';
-      var descHtml = desc ? '<span class="fm-search-option-desc">' + esc(desc) + '</span>' : '';
+      const val = opt.getAttribute('data-value');
+      const desc = opt.getAttribute('data-desc') || '';
+      const nameHtml = '<span class="fm-search-option-name">' + esc(val) + '</span>';
+      const descHtml = desc ? '<span class="fm-search-option-desc">' + esc(desc) + '</span>' : '';
       opt.innerHTML = nameHtml + descHtml;
     });
     highlighted = -1;
@@ -6256,7 +6260,7 @@ const CAT_WIZARD_TREE = {
 };
 
 // Stores the original category field HTML so we can restore it
-var _catWizardOriginalHTML = '';
+let _catWizardOriginalHTML = '';
 
 function catWizardOpen() {
   const container = document.getElementById('fm-category-content');
@@ -6406,7 +6410,7 @@ function openFormModal(mode, id) {
   document.getElementById('fm-body').innerHTML           = isProject ? buildProjectForm(record) : buildTaskForm(record);
   // Lock original due date fields on edit — baseline should not change after creation
   if (isEdit) {
-    var origDateField = document.getElementById(isProject ? 'fm-end' : 'fm-due');
+    const origDateField = document.getElementById(isProject ? 'fm-end' : 'fm-due');
     if (origDateField) {
       origDateField.disabled = true;
       origDateField.style.background = '#F3F4F6';
@@ -6488,7 +6492,7 @@ async function handleFormSubmit(andDownload) {
 
   // ── Business rule: project names must be unique ─────────────
   if (isProject && fields.title) {
-    var duplicate = PROJECTS.find(function(p) {
+    const duplicate = PROJECTS.find(function(p) {
       if (isEdit && p.objectId === formEditId) return false; // skip self when editing
       return p.title.toLowerCase() === fields.title.toLowerCase();
     });
@@ -6568,22 +6572,22 @@ function confirmDeleteTask(taskIdx) {
 
 async function markTaskComplete(taskIdx) {
   if (!_isLoggedIn) { alert('You must be signed in.'); return; }
-  var task = TASKS.find(function(t) { return t.idx === taskIdx; });
+  const task = TASKS.find(function(t) { return t.idx === taskIdx; });
   if (!task) return;
   if (!confirm('Mark "' + task.title + '" as Complete?')) return;
-  var today = new Date();
-  var todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+  const today = new Date();
+  const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
   await DataStore.updateTask(taskIdx, { status: 'Complete', actual_end: todayStr });
   render();
 }
 
 async function markProjectComplete(objectId) {
   if (!_isLoggedIn) { alert('You must be signed in.'); return; }
-  var proj = PROJECTS.find(function(p) { return p.objectId == objectId; });
+  const proj = PROJECTS.find(function(p) { return p.objectId == objectId; });
   if (!proj) return;
   if (!confirm('Mark "' + proj.title + '" as Complete?')) return;
-  var today = new Date();
-  var todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+  const today = new Date();
+  const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
   await DataStore.updateProject(objectId, { status: 'Complete', actual_end: todayStr });
   render();
 }
@@ -6727,21 +6731,21 @@ function renderProjectDetail(id) {
 
       ${(() => {
         // Project timeline — full-width bar with status history phases
-        var projStart = p.start || null;
-        var projActualEnd = p.actual_end || null;
-        var history = getProjectStatusHistory(p.id);
+        const projStart = p.start || null;
+        const projActualEnd = p.actual_end || null;
+        const history = getProjectStatusHistory(p.id);
         if (!projStart && !p.status && !history.length) return '';
 
         // Build phases from history, or fall back to single current-status bar
-        var allPhases = [];
-        var todayStr = new Date().toISOString().slice(0, 10);
-        var endDate = projActualEnd || todayStr;
-        var timelineStatuses = ['Active', 'On Hold', 'Waiting for Response'];
+        const allPhases = [];
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const endDate = projActualEnd || todayStr;
+        const timelineStatuses = ['Active', 'On Hold', 'Waiting for Response'];
 
         if (history.length > 0) {
-          for (var hi = 0; hi < history.length; hi++) {
-            var phaseStart = history[hi].changed_date;
-            var phaseEnd = (hi + 1 < history.length) ? history[hi + 1].changed_date : endDate;
+          for (let hi = 0; hi < history.length; hi++) {
+            const phaseStart = history[hi].changed_date;
+            const phaseEnd = (hi + 1 < history.length) ? history[hi + 1].changed_date : endDate;
             allPhases.push({ status: history[hi].status, start: phaseStart, end: phaseEnd });
           }
         } else {
@@ -6750,14 +6754,14 @@ function renderProjectDetail(id) {
         }
 
         // Filter to only show Active, On Hold, Waiting for Response
-        var phases = allPhases.filter(function(ph) { return timelineStatuses.includes(ph.status); });
+        const phases = allPhases.filter(function(ph) { return timelineStatuses.includes(ph.status); });
         if (phases.length === 0) {
           // Nothing to show — fall back to single bar with current status if it qualifies
           if (timelineStatuses.includes(p.status)) {
             phases.push({ status: p.status, start: projStart || todayStr, end: endDate });
           } else {
             // Show a simple bar using project dates only
-            var sc = STATUS_COLOR(p.status) || '#9CA3AF';
+            const sc = STATUS_COLOR(p.status) || '#9CA3AF';
             return '<div class="detail-section">' +
               '<div class="detail-section-label" style="display:flex;align-items:center;justify-content:space-between;">' +
                 '<span>Project Timeline</span>' +
@@ -6774,27 +6778,27 @@ function renderProjectDetail(id) {
         }
 
         // Use project start as the range start if earlier than first phase
-        var rangeStartStr = projStart && projStart < phases[0].start ? projStart : phases[0].start;
+        const rangeStartStr = projStart && projStart < phases[0].start ? projStart : phases[0].start;
 
         // Calculate total days for proportional widths
-        var firstDate = rangeStartStr;
-        var lastDate = phases[phases.length - 1].end;
-        var totalMs = new Date(lastDate + 'T00:00:00') - new Date(firstDate + 'T00:00:00');
-        var totalDays = Math.max(1, Math.ceil(totalMs / 86400000));
+        const firstDate = rangeStartStr;
+        const lastDate = phases[phases.length - 1].end;
+        const totalMs = new Date(lastDate + 'T00:00:00') - new Date(firstDate + 'T00:00:00');
+        const totalDays = Math.max(1, Math.ceil(totalMs / 86400000));
 
         // Build segments
-        var segments = '';
-        var labels = '';
-        var cumulativePct = 0;
+        let segments = '';
+        let labels = '';
+        const cumulativePct = 0;
         phases.forEach(function(ph, idx) {
-          var startMs = new Date(ph.start + 'T00:00:00') - new Date(firstDate + 'T00:00:00');
-          var endMs = new Date(ph.end + 'T00:00:00') - new Date(firstDate + 'T00:00:00');
-          var leftPct = (startMs / 86400000 / totalDays) * 100;
-          var widthPct = Math.max(0.5, ((endMs - startMs) / 86400000 / totalDays) * 100);
-          var sc = STATUS_COLOR(ph.status) || '#9CA3AF';
-          var isFirst = idx === 0;
-          var isLast = idx === phases.length - 1;
-          var radius = (isFirst ? '8px' : '0') + ' ' + (isLast ? '8px' : '0') + ' ' + (isLast ? '8px' : '0') + ' ' + (isFirst ? '8px' : '0');
+          const startMs = new Date(ph.start + 'T00:00:00') - new Date(firstDate + 'T00:00:00');
+          const endMs = new Date(ph.end + 'T00:00:00') - new Date(firstDate + 'T00:00:00');
+          const leftPct = (startMs / 86400000 / totalDays) * 100;
+          const widthPct = Math.max(0.5, ((endMs - startMs) / 86400000 / totalDays) * 100);
+          const sc = STATUS_COLOR(ph.status) || '#9CA3AF';
+          const isFirst = idx === 0;
+          const isLast = idx === phases.length - 1;
+          const radius = (isFirst ? '8px' : '0') + ' ' + (isLast ? '8px' : '0') + ' ' + (isLast ? '8px' : '0') + ' ' + (isFirst ? '8px' : '0');
 
           segments += '<div style="position:absolute;left:' + leftPct + '%;width:' + widthPct + '%;height:100%;background:' + sc + ';border-radius:' + radius + ';" title="' + esc(ph.status) + ': ' + ph.start + ' → ' + ph.end + '"></div>';
 
@@ -6881,7 +6885,7 @@ function renderTaskDetail(idx) {
   const taskBackLabel = taskFromProject ? '← Back to Project'
     : taskBackLabels[taskReturnTab] || '← Back';
 
-  var isCompletable = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
+  const isCompletable = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
 
   return `<div class="detail-page">
     <div class="detail-hero task-hero" style="background:#B45309;">
@@ -7429,7 +7433,7 @@ async function submitIdeaForm() {
   if (!valid) return;
 
   // Business rule: project names must be unique
-  var duplicate = PROJECTS.find(function(p) {
+  const duplicate = PROJECTS.find(function(p) {
     return p.title.toLowerCase() === title.toLowerCase();
   });
   if (duplicate) {
@@ -7441,7 +7445,7 @@ async function submitIdeaForm() {
   const priority = document.getElementById('idea-priority').value || null;
   const urgency  = (document.getElementById('idea-urgency').value || '').trim();
 
-  var todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = new Date().toISOString().slice(0, 10);
 
   await DataStore.createProject({
     title,
@@ -7489,8 +7493,8 @@ function renderIdeaReview() {
   // Sort by priority: High first, then Medium, Low, unset
   const priOrder = { High: 0, Medium: 1, Low: 2 };
   ideas.sort(function(a, b) {
-    var pa = priOrder[a.priority] !== undefined ? priOrder[a.priority] : 3;
-    var pb = priOrder[b.priority] !== undefined ? priOrder[b.priority] : 3;
+    const pa = priOrder[a.priority] !== undefined ? priOrder[a.priority] : 3;
+    const pb = priOrder[b.priority] !== undefined ? priOrder[b.priority] : 3;
     return pa - pb;
   });
 
@@ -7506,10 +7510,10 @@ function renderIdeaReview() {
   // Days ago helper
   function daysAgo(dateStr) {
     if (!dateStr) return '';
-    var d = new Date(dateStr + 'T00:00:00');
-    var now = new Date();
+    const d = new Date(dateStr + 'T00:00:00');
+    const now = new Date();
     now.setHours(0,0,0,0);
-    var diff = Math.floor((now - d) / 86400000);
+    const diff = Math.floor((now - d) / 86400000);
     if (diff === 0) return 'Today';
     if (diff === 1) return 'Yesterday';
     return diff + ' days ago';
@@ -7597,12 +7601,12 @@ function renderIdeaReview() {
 
 async function promoteIdea(id, newStatus) {
   // Save any reviewer notes before promoting
-  var notesEl = document.getElementById('idea-notes-' + id);
+  const notesEl = document.getElementById('idea-notes-' + id);
   if (notesEl && notesEl.value.trim()) {
-    var proj = PROJECTS.find(function(p) { return p.objectId == id; });
-    var existing = proj ? (proj.reviewer_notes || '') : '';
-    var notes = notesEl.value.trim();
-    var newNotes = existing ? existing + '\n' + notes : notes;
+    const proj = PROJECTS.find(function(p) { return p.objectId == id; });
+    const existing = proj ? (proj.reviewer_notes || '') : '';
+    const notes = notesEl.value.trim();
+    const newNotes = existing ? existing + '\n' + notes : notes;
     await DataStore.updateProject(id, { reviewer_notes: newNotes });
   }
   await DataStore.updateProject(id, { status: newStatus });
@@ -7629,14 +7633,14 @@ async function promoteIdea(id, newStatus) {
 }
 
 async function saveIdeaReviewNotes(id) {
-  var notesEl = document.getElementById('idea-notes-' + id);
+  const notesEl = document.getElementById('idea-notes-' + id);
   if (!notesEl) return;
-  var notes = notesEl.value.trim();
+  const notes = notesEl.value.trim();
   if (!notes) { alert('No notes to save.'); return; }
-  var proj = PROJECTS.find(function(p) { return p.objectId == id; });
+  const proj = PROJECTS.find(function(p) { return p.objectId == id; });
   if (!proj) return;
-  var existing = proj.reviewer_notes || '';
-  var newNotes = existing ? existing + '\n' + notes : notes;
+  const existing = proj.reviewer_notes || '';
+  const newNotes = existing ? existing + '\n' + notes : notes;
   await DataStore.updateProject(id, { reviewer_notes: newNotes });
   notesEl.value = '';
   showToast('Notes saved for "' + proj.title + '"');
@@ -7702,14 +7706,14 @@ const _defaultItdTeams = [
 ];
 
 // ObjectIds for the two config records (populated on load from ArcGIS)
-var _configOids = { partner_depts: null, itd_teams: null, proj_categories: null, task_categories: null, task_tools: null };
+const _configOids = { partner_depts: null, itd_teams: null, proj_categories: null, task_categories: null, task_tools: null };
 
 // Start with defaults; overwritten by applyAppConfig() after ArcGIS load
-var _customPartnerDepts = [..._defaultPartnerDepts];
-var _customItdTeams = [..._defaultItdTeams];
+let _customPartnerDepts = [..._defaultPartnerDepts];
+let _customItdTeams = [..._defaultItdTeams];
 
 // Category and tool lists: arrays of {name, desc} objects
-var _customProjCategories = [
+let _customProjCategories = [
   {name:'AI Enablement, Automation & Machine Intelligence', desc:'Leveraging AI, machine learning, or automation to improve city operations and decision-making.'},
   {name:'Application Update & Enhancement', desc:'Maintenance, upgrades, and feature additions to existing applications and tools.'},
   {name:'Data Analysis, Reporting & Insights', desc:'Analyzing city data to produce reports, dashboards, visualizations, or actionable insights.'},
@@ -7727,7 +7731,7 @@ var _customProjCategories = [
   {name:'Training, Enablement & Community', desc:'Training programs, workshops, user enablement, and fostering user communities.'},
   {name:'Other', desc:'Work that doesn\'t fit neatly into any existing category. Consider suggesting a new category if this is used frequently.'},
 ];
-var _customTaskCategories = [
+let _customTaskCategories = [
   {name:'AI & Machine Learning', desc:'Model training, prompt engineering, ML pipelines, AI integration, and evaluation.'},
   {name:'Application Development', desc:'Building new apps — Experience Builder, Hub, Survey123, dashboards, or custom tools.'},
   {name:'Application Maintenance', desc:'Reconfiguring, updating, patching, or fixing existing production applications.'},
@@ -7752,7 +7756,7 @@ var _customTaskCategories = [
   {name:'User Training & Enablement', desc:'Training others, creating training materials, onboarding users, and demos.'},
   {name:'Other', desc:'Work that doesn\'t fit neatly into any existing category. Consider suggesting a new category if this is used frequently.'},
 ];
-var _customTaskTools = [
+let _customTaskTools = [
   {name:'AI Assistant (ChatGPT/Claude/Copilot)', desc:'AI-powered assistants for code generation, analysis, writing, and problem-solving.', active:true},
   {name:'Alation', desc:'Data catalog and governance platform for discovering and documenting data assets.', active:true},
   {name:'ArcGIS Dashboard', desc:'Real-time operational dashboards with maps, charts, and indicators.', active:true},
@@ -7798,7 +7802,7 @@ function buildDescMap(arr) { var m = {}; arr.forEach(function(i) { m[i.name] = i
 // Compact storage: save with short keys (n/d/a) to fit within 4000-char field limit
 function compressDescList(arr) {
   return arr.map(function(i) {
-    var o = { n: i.name, d: i.desc };
+    const o = { n: i.name, d: i.desc };
     if (i.active === false) o.a = false;
     return o;
   });
@@ -7815,13 +7819,13 @@ function expandDescList(arr) {
 function applyAppConfig(features) {
   if (!features || !features.length) return;
   features.forEach(function(f) {
-    var a = f.attributes;
-    var key = a.config_key;
-    var val = a.config_value;
-    var oid = a.ObjectId || a.OBJECTID || a.objectid;
+    const a = f.attributes;
+    const key = a.config_key;
+    const val = a.config_value;
+    const oid = a.ObjectId || a.OBJECTID || a.objectid;
     if (!key || !val) return;
     try {
-      var parsed = JSON.parse(val);
+      const parsed = JSON.parse(val);
       if (!Array.isArray(parsed)) return;
       if (key === 'partner_depts') {
         _customPartnerDepts = parsed;
@@ -7853,29 +7857,29 @@ function applyAppConfig(features) {
 
 // Save a single config key back to ArcGIS Online
 async function saveConfigKey(key, valueArray) {
-  var oid = _configOids[key];
-  var jsonValue = JSON.stringify(valueArray);
+  const oid = _configOids[key];
+  const jsonValue = JSON.stringify(valueArray);
   console.log('[Config] Saving "' + key + '" (' + jsonValue.length + ' chars)');
   try {
     if (oid) {
       // Update existing record
-      var result = await agolApplyEdits(ARCGIS_CONFIG.appConfigUrl, {
+      const result = await agolApplyEdits(ARCGIS_CONFIG.appConfigUrl, {
         updates: [{ attributes: { OBJECTID: oid, config_value: jsonValue } }]
       });
       // Check for per-record failure
       if (result && result.updateResults && result.updateResults[0] && !result.updateResults[0].success) {
-        var err = result.updateResults[0].error || {};
+        const err = result.updateResults[0].error || {};
         throw new Error(err.description || 'Update failed — the config_value field may be too short for ' + jsonValue.length + ' characters. Increase the field length in ArcGIS Online.');
       }
       console.log('[Config] Updated "' + key + '" in ArcGIS Online');
     } else {
       // Create new record
-      var result = await agolApplyEdits(ARCGIS_CONFIG.appConfigUrl, {
+      const result = await agolApplyEdits(ARCGIS_CONFIG.appConfigUrl, {
         adds: [{ attributes: { config_key: key, config_value: jsonValue } }]
       });
       // Check for per-record failure
       if (result && result.addResults && result.addResults[0] && !result.addResults[0].success) {
-        var err = result.addResults[0].error || {};
+        const err = result.addResults[0].error || {};
         throw new Error(err.description || 'Create failed — the config_value field may be too short for ' + jsonValue.length + ' characters. Increase the field length in ArcGIS Online.');
       }
       // Store the new ObjectId for future updates
@@ -7907,18 +7911,18 @@ async function saveCustomLists(listKey) {
 }
 
 function renderListEditor(containerId, title, items, listKey) {
-  var container = document.getElementById(containerId);
+  const container = document.getElementById(containerId);
   if (!container) return;
 
   // Get values from project data that aren't in the custom list
-  var fromData = [];
+  let fromData = [];
   if (listKey === 'dept') {
     fromData = [...new Set(PROJECTS.map(function(p) { return p.partner_dept; }))].filter(function(v) { return v && !items.includes(v); }).sort();
   } else if (listKey === 'team') {
     fromData = [...new Set(PROJECTS.map(function(p) { return p.itd_team; }))].filter(function(v) { return v && !items.includes(v); }).sort();
   }
 
-  var itemsHtml = items.map(function(item, idx) {
+  const itemsHtml = items.map(function(item, idx) {
     return '<div class="list-editor-item">' +
       '<span class="list-editor-item-name">' + esc(item) + '</span>' +
       '<button class="list-editor-remove" title="Remove" onclick="removeListItem(\'' + listKey + '\',' + idx + ')">✕</button>' +
@@ -7926,14 +7930,14 @@ function renderListEditor(containerId, title, items, listKey) {
   }).join('');
 
   // Show data-sourced items (read-only, can't be removed since they come from project data)
-  var dataItemsHtml = fromData.map(function(item) {
+  const dataItemsHtml = fromData.map(function(item) {
     return '<div class="list-editor-item">' +
       '<span class="list-editor-item-name">' + esc(item) + '</span>' +
       '<span class="list-editor-item-from-data">from project data</span>' +
     '</div>';
   }).join('');
 
-  var totalCount = items.length + fromData.length;
+  const totalCount = items.length + fromData.length;
 
   container.innerHTML = '<div class="list-editor-card">' +
     '<div class="list-editor-card-header">' +
@@ -7949,13 +7953,13 @@ function renderListEditor(containerId, title, items, listKey) {
 }
 
 async function addListItem(listKey) {
-  var inputId = 'list-add-input-' + listKey;
-  var input = document.getElementById(inputId);
+  const inputId = 'list-add-input-' + listKey;
+  const input = document.getElementById(inputId);
   if (!input) return;
-  var val = input.value.trim();
+  const val = input.value.trim();
   if (!val) return;
 
-  var list = listKey === 'dept' ? _customPartnerDepts : _customItdTeams;
+  const list = listKey === 'dept' ? _customPartnerDepts : _customItdTeams;
   if (list.includes(val)) {
     alert('This item already exists in the list.');
     return;
@@ -7978,8 +7982,8 @@ async function addListItem(listKey) {
 }
 
 async function removeListItem(listKey, idx) {
-  var list = listKey === 'dept' ? _customPartnerDepts : _customItdTeams;
-  var item = list[idx];
+  const list = listKey === 'dept' ? _customPartnerDepts : _customItdTeams;
+  const item = list[idx];
   if (!confirm('Remove "' + item + '" from the list?')) return;
   list.splice(idx, 1);
 
@@ -8014,31 +8018,31 @@ function getDescListMeta(listKey) {
 }
 
 function renderDescListEditor(listKey) {
-  var meta = getDescListMeta(listKey);
-  var container = document.getElementById(meta.containerId);
+  const meta = getDescListMeta(listKey);
+  const container = document.getElementById(meta.containerId);
   if (!container) return;
-  var list = getDescList(listKey);
+  const list = getDescList(listKey);
 
   // Values from data not in custom list
-  var dataValues = [];
-  var listNames = list.map(function(i) { return i.name; });
+  let dataValues = [];
+  const listNames = list.map(function(i) { return i.name; });
   if (meta.dataSource === 'projects') {
     dataValues = [...new Set(PROJECTS.map(function(p) { return p[meta.dataField]; }))].filter(function(v) { return v && !listNames.includes(v); }).sort();
   } else {
     dataValues = [...new Set(TASKS.map(function(t) { return t[meta.dataField]; }))].filter(function(v) { return v && !listNames.includes(v); }).sort();
   }
 
-  var hasActiveFlag = (listKey === 'task_tool'); // Active/retired toggle for task tools
-  var activeCount = hasActiveFlag ? list.filter(function(i) { return i.active !== false; }).length : list.length;
+  const hasActiveFlag = (listKey === 'task_tool'); // Active/retired toggle for task tools
+  const activeCount = hasActiveFlag ? list.filter(function(i) { return i.active !== false; }).length : list.length;
 
-  var itemsHtml = list.map(function(item, idx) {
-    var isInactive = hasActiveFlag && item.active === false;
-    var inactiveStyle = isInactive ? ' style="opacity:0.5;"' : '';
-    var toggleHtml = '';
+  const itemsHtml = list.map(function(item, idx) {
+    const isInactive = hasActiveFlag && item.active === false;
+    const inactiveStyle = isInactive ? ' style="opacity:0.5;"' : '';
+    let toggleHtml = '';
     if (hasActiveFlag) {
-      var toggleLabel = isInactive ? 'Retired' : 'Active';
-      var toggleColor = isInactive ? '#EF4444' : '#22C55E';
-      var toggleTitle = isInactive ? 'Click to reactivate' : 'Click to retire';
+      const toggleLabel = isInactive ? 'Retired' : 'Active';
+      const toggleColor = isInactive ? '#EF4444' : '#22C55E';
+      const toggleTitle = isInactive ? 'Click to reactivate' : 'Click to retire';
       toggleHtml = '<button class="desc-editor-edit" title="' + toggleTitle + '" onclick="toggleDescListActive(\'' + listKey + '\',' + idx + ')" style="font-size:10px;font-weight:700;color:' + toggleColor + ';letter-spacing:0.03em;">' + toggleLabel + '</button>';
     }
     return '<div class="desc-editor-item"' + inactiveStyle + '>' +
@@ -8054,7 +8058,7 @@ function renderDescListEditor(listKey) {
     '</div>';
   }).join('');
 
-  var dataItemsHtml = dataValues.map(function(v) {
+  const dataItemsHtml = dataValues.map(function(v) {
     return '<div class="desc-editor-item">' +
       '<div class="desc-editor-item-main">' +
         '<span class="desc-editor-item-name">' + esc(v) + '</span>' +
@@ -8063,7 +8067,7 @@ function renderDescListEditor(listKey) {
     '</div>';
   }).join('');
 
-  var countLabel = hasActiveFlag ? activeCount + ' active / ' + list.length + ' total' : (list.length + dataValues.length) + ' items';
+  const countLabel = hasActiveFlag ? activeCount + ' active / ' + list.length + ' total' : (list.length + dataValues.length) + ' items';
 
   container.innerHTML = '<div class="list-editor-card">' +
     '<div class="list-editor-card-header">' +
@@ -8080,19 +8084,19 @@ function renderDescListEditor(listKey) {
 }
 
 async function addDescListItem(listKey) {
-  var nameInput = document.getElementById('desc-add-name-' + listKey);
-  var descInput = document.getElementById('desc-add-desc-' + listKey);
+  const nameInput = document.getElementById('desc-add-name-' + listKey);
+  const descInput = document.getElementById('desc-add-desc-' + listKey);
   if (!nameInput) return;
-  var name = nameInput.value.trim();
-  var desc = descInput ? descInput.value.trim() : '';
+  const name = nameInput.value.trim();
+  const desc = descInput ? descInput.value.trim() : '';
   if (!name) { alert('Please enter a name.'); return; }
 
-  var list = getDescList(listKey);
+  const list = getDescList(listKey);
   if (list.some(function(i) { return i.name.toLowerCase() === name.toLowerCase(); })) {
     alert('An item with this name already exists.');
     return;
   }
-  var newItem = { name: name, desc: desc };
+  const newItem = { name: name, desc: desc };
   // If this list uses active flags, default new items to active
   if (list.length > 0 && list[0].active !== undefined) newItem.active = true;
   list.push(newItem);
@@ -8104,8 +8108,8 @@ async function addDescListItem(listKey) {
 }
 
 async function removeDescListItem(listKey, idx) {
-  var list = getDescList(listKey);
-  var item = list[idx];
+  const list = getDescList(listKey);
+  const item = list[idx];
   if (!confirm('Remove "' + item.name + '" from the list?')) return;
   list.splice(idx, 1);
   refreshEnums();
@@ -8114,16 +8118,16 @@ async function removeDescListItem(listKey, idx) {
 }
 
 function editDescListItem(listKey, idx) {
-  var list = getDescList(listKey);
-  var item = list[idx];
-  var meta = getDescListMeta(listKey);
-  var container = document.getElementById(meta.containerId);
+  const list = getDescList(listKey);
+  const item = list[idx];
+  const meta = getDescListMeta(listKey);
+  const container = document.getElementById(meta.containerId);
   if (!container) return;
 
   // Find the item row and replace with inline edit form
-  var items = container.querySelectorAll('.desc-editor-item');
+  const items = container.querySelectorAll('.desc-editor-item');
   if (!items[idx]) return;
-  var row = items[idx];
+  const row = items[idx];
   row.innerHTML = '<div class="desc-editor-inline-edit">' +
     '<input type="text" id="desc-edit-name-' + listKey + '-' + idx + '" class="fm-input" value="' + esc(item.name) + '" style="font-weight:700;margin-bottom:4px;">' +
     '<input type="text" id="desc-edit-desc-' + listKey + '-' + idx + '" class="fm-input" value="' + esc(item.desc || '') + '" placeholder="Description…" style="font-size:12px;">' +
@@ -8136,14 +8140,14 @@ function editDescListItem(listKey, idx) {
 }
 
 async function saveDescListEdit(listKey, idx) {
-  var nameEl = document.getElementById('desc-edit-name-' + listKey + '-' + idx);
-  var descEl = document.getElementById('desc-edit-desc-' + listKey + '-' + idx);
+  const nameEl = document.getElementById('desc-edit-name-' + listKey + '-' + idx);
+  const descEl = document.getElementById('desc-edit-desc-' + listKey + '-' + idx);
   if (!nameEl) return;
-  var newName = nameEl.value.trim();
-  var newDesc = descEl ? descEl.value.trim() : '';
+  const newName = nameEl.value.trim();
+  const newDesc = descEl ? descEl.value.trim() : '';
   if (!newName) { alert('Name cannot be empty.'); return; }
 
-  var list = getDescList(listKey);
+  const list = getDescList(listKey);
   // Check for duplicate (excluding self)
   if (list.some(function(i, ii) { return ii !== idx && i.name.toLowerCase() === newName.toLowerCase(); })) {
     alert('An item with this name already exists.');
@@ -8157,8 +8161,8 @@ async function saveDescListEdit(listKey, idx) {
 }
 
 async function toggleDescListActive(listKey, idx) {
-  var list = getDescList(listKey);
-  var item = list[idx];
+  const list = getDescList(listKey);
+  const item = list[idx];
   item.active = item.active === false ? true : false;
   refreshEnums();
   renderDescListEditor(listKey);
@@ -8177,14 +8181,14 @@ function isTimeTrackingEnabled() {
 async function loadTaskHours() {
   try {
     // Query all completed time entries and aggregate hours by task_idx and by person
-    var features = await agolQuery(ARCGIS_CONFIG.timeEntriesUrl, 'hours IS NOT NULL');
+    const features = await agolQuery(ARCGIS_CONFIG.timeEntriesUrl, 'hours IS NOT NULL');
     TASK_HOURS = {};        // { task_idx: totalHours } — team total
     TASK_HOURS_BY_PERSON = {}; // { task_idx: { name: hours } }
     features.forEach(function(f) {
-      var a = f.attributes;
-      var idx = a.task_idx;
-      var hrs = a.hours || 0;
-      var who = a.name || '';
+      const a = f.attributes;
+      const idx = a.task_idx;
+      const hrs = a.hours || 0;
+      const who = a.name || '';
       if (idx != null && hrs > 0) {
         TASK_HOURS[idx] = (TASK_HOURS[idx] || 0) + hrs;
         if (!TASK_HOURS_BY_PERSON[idx]) TASK_HOURS_BY_PERSON[idx] = {};
@@ -8208,15 +8212,15 @@ async function reloadAllTimeData() {
 
 async function loadStatusHistory() {
   try {
-    var token = await ensureAgolToken();
+    const token = await ensureAgolToken();
     if (!token) return;
-    var resp = await fetch(ARCGIS_CONFIG.statusHistoryUrl + '/query?' + new URLSearchParams({
+    const resp = await fetch(ARCGIS_CONFIG.statusHistoryUrl + '/query?' + new URLSearchParams({
       where: '1=1', outFields: '*', orderByFields: 'changed_date ASC', resultRecordCount: 5000, f: 'json', token: token
     }));
-    var data = await resp.json();
+    const data = await resp.json();
     if (handleAgolTokenError(data)) return;
     STATUS_HISTORY = (data.features || []).map(function(f) {
-      var a = f.attributes;
+      const a = f.attributes;
       return {
         objectId: a.ObjectId || a.OBJECTID || a.objectid,
         project_id: a.project_id,
@@ -8234,9 +8238,9 @@ async function loadStatusHistory() {
 }
 
 async function logStatusChange(projectId, projectTitle, newStatus) {
-  var todayStr = new Date().toISOString().slice(0, 10);
-  var who = _userFullName || 'Unknown';
-  var record = {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const who = _userFullName || 'Unknown';
+  const record = {
     project_id: projectId,
     project_title: projectTitle,
     status: newStatus,
@@ -8247,7 +8251,7 @@ async function logStatusChange(projectId, projectTitle, newStatus) {
   STATUS_HISTORY.push(record);
   // Save to ArcGIS Online
   try {
-    var result = await agolApplyEdits(ARCGIS_CONFIG.statusHistoryUrl, {
+    const result = await agolApplyEdits(ARCGIS_CONFIG.statusHistoryUrl, {
       adds: [{ attributes: record }]
     });
     if (result && result.addResults && result.addResults[0] && result.addResults[0].objectId) {
@@ -8265,11 +8269,11 @@ function getProjectStatusHistory(projectId) {
 }
 
 // ── Status History Editor ──────────────────────────────────────
-var _shEditorProjectId = null;
-var _shEditorObjectId = null;
+let _shEditorProjectId = null;
+let _shEditorObjectId = null;
 
 function toggleStatusHistoryEditor(projectId, objectId) {
-  var container = document.getElementById('status-history-editor');
+  const container = document.getElementById('status-history-editor');
   if (!container) return;
   if (_shEditorProjectId === projectId && container.innerHTML !== '') {
     container.innerHTML = '';
@@ -8282,16 +8286,16 @@ function toggleStatusHistoryEditor(projectId, objectId) {
 }
 
 function renderStatusHistoryEditor() {
-  var container = document.getElementById('status-history-editor');
+  const container = document.getElementById('status-history-editor');
   if (!container || !_shEditorProjectId) return;
-  var history = getProjectStatusHistory(_shEditorProjectId);
-  var proj = PROJECTS.find(function(p) { return p.id == _shEditorProjectId; });
-  var projTitle = proj ? proj.title : '';
+  const history = getProjectStatusHistory(_shEditorProjectId);
+  const proj = PROJECTS.find(function(p) { return p.id == _shEditorProjectId; });
+  const projTitle = proj ? proj.title : '';
 
-  var statusOpts = ['Future','Scheduled','Active','On Hold','Waiting for Response','Complete','Canceled'];
+  const statusOpts = ['Future','Scheduled','Active','On Hold','Waiting for Response','Complete','Canceled'];
 
-  var rowsHtml = history.map(function(h, idx) {
-    var sc = STATUS_COLOR(h.status) || '#9CA3AF';
+  let rowsHtml = history.map(function(h, idx) {
+    const sc = STATUS_COLOR(h.status) || '#9CA3AF';
     return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #F3F4F6;">' +
       '<span style="width:10px;height:10px;border-radius:50%;background:' + sc + ';flex-shrink:0;"></span>' +
       '<span style="flex:1;font-size:12px;font-weight:600;color:var(--text-body);">' + esc(h.status) + '</span>' +
@@ -8305,7 +8309,7 @@ function renderStatusHistoryEditor() {
     rowsHtml = '<div style="padding:12px 0;font-size:12px;color:var(--text-muted);font-style:italic;">No status history records yet. Add entries below to build the timeline.</div>';
   }
 
-  var statusSelectHtml = statusOpts.map(function(s) {
+  const statusSelectHtml = statusOpts.map(function(s) {
     return '<option value="' + s + '">' + s + '</option>';
   }).join('');
 
@@ -8322,18 +8326,18 @@ function renderStatusHistoryEditor() {
 }
 
 async function addStatusHistoryRecord() {
-  var statusEl = document.getElementById('sh-add-status');
-  var dateEl = document.getElementById('sh-add-date');
+  const statusEl = document.getElementById('sh-add-status');
+  const dateEl = document.getElementById('sh-add-date');
   if (!statusEl || !dateEl) return;
-  var status = statusEl.value;
-  var dateVal = dateEl.value;
+  const status = statusEl.value;
+  const dateVal = dateEl.value;
   if (!status || !dateVal) { alert('Please select a status and date.'); return; }
 
-  var proj = PROJECTS.find(function(p) { return p.id == _shEditorProjectId; });
-  var projTitle = proj ? proj.title : '';
-  var who = _userFullName || 'Unknown';
+  const proj = PROJECTS.find(function(p) { return p.id == _shEditorProjectId; });
+  const projTitle = proj ? proj.title : '';
+  const who = _userFullName || 'Unknown';
 
-  var record = {
+  const record = {
     project_id: _shEditorProjectId,
     project_title: projTitle,
     status: status,
@@ -8344,7 +8348,7 @@ async function addStatusHistoryRecord() {
   STATUS_HISTORY.push(record);
 
   try {
-    var result = await agolApplyEdits(ARCGIS_CONFIG.statusHistoryUrl, {
+    const result = await agolApplyEdits(ARCGIS_CONFIG.statusHistoryUrl, {
       adds: [{ attributes: record }]
     });
     if (result && result.addResults && result.addResults[0] && result.addResults[0].objectId) {
@@ -8358,20 +8362,20 @@ async function addStatusHistoryRecord() {
 
   renderStatusHistoryEditor();
   // Re-render the full page to update the timeline bar, then reopen editor
-  var savedProjId = _shEditorProjectId;
+  const savedProjId = _shEditorProjectId;
   render();
   _shEditorProjectId = savedProjId;
   renderStatusHistoryEditor();
 }
 
 async function deleteStatusHistoryRecord(histIdx) {
-  var history = getProjectStatusHistory(_shEditorProjectId);
+  const history = getProjectStatusHistory(_shEditorProjectId);
   if (histIdx < 0 || histIdx >= history.length) return;
-  var record = history[histIdx];
+  const record = history[histIdx];
   if (!confirm('Remove "' + record.status + '" entry from ' + record.changed_date + '?')) return;
 
   // Remove from local array
-  var globalIdx = STATUS_HISTORY.indexOf(record);
+  const globalIdx = STATUS_HISTORY.indexOf(record);
   if (globalIdx >= 0) STATUS_HISTORY.splice(globalIdx, 1);
 
   // Delete from ArcGIS Online
@@ -8387,7 +8391,7 @@ async function deleteStatusHistoryRecord(histIdx) {
   }
 
   // Re-render page then reopen editor
-  var savedProjId = _shEditorProjectId;
+  const savedProjId = _shEditorProjectId;
   render();
   _shEditorProjectId = savedProjId;
   renderStatusHistoryEditor();
@@ -8398,7 +8402,7 @@ function getTaskHours(taskIdx) {
 }
 
 function getProjectHours(projectTitle) {
-  var total = 0;
+  let total = 0;
   TASKS.forEach(function(t) {
     if (t.project === projectTitle || (!t.project && t.project_id != null)) {
       total += TASK_HOURS[t.idx] || 0;
@@ -8408,18 +8412,18 @@ function getProjectHours(projectTitle) {
 }
 
 function getMyTaskHours(taskIdx, forUser) {
-  var who = forUser || _userFullName;
+  const who = forUser || _userFullName;
   if (!who || !TASK_HOURS_BY_PERSON[taskIdx]) return 0;
   return Math.round((TASK_HOURS_BY_PERSON[taskIdx][who] || 0) * 100) / 100;
 }
 
 function getMyProjectHours(projectTitle, forUser) {
-  var who = forUser || _userFullName;
+  const who = forUser || _userFullName;
   if (!who) return 0;
-  var total = 0;
+  const total = 0;
   TASKS.forEach(function(t) {
     if (t.project === projectTitle) {
-      var byPerson = TASK_HOURS_BY_PERSON[t.idx];
+      const byPerson = TASK_HOURS_BY_PERSON[t.idx];
       if (byPerson && byPerson[who]) total += byPerson[who];
     }
   });
@@ -8429,8 +8433,8 @@ function getMyProjectHours(projectTitle, forUser) {
 // Build a compact hours label like "12.5h · me: 4.5h"
 function hoursLabel(teamHrs, myHrs, label) {
   if (!teamHrs && !myHrs) return '';
-  var tag = label || 'me';
-  var parts = [];
+  const tag = label || 'me';
+  const parts = [];
   if (teamHrs) parts.push(teamHrs + 'h');
   if (myHrs && myHrs !== teamHrs) parts.push(tag + ': ' + myHrs + 'h');
   else if (myHrs && myHrs === teamHrs) return myHrs + 'h';
@@ -8440,14 +8444,14 @@ function hoursLabel(teamHrs, myHrs, label) {
 async function loadTimeEntries() {
   if (!_userFullName || !isTimeTrackingEnabled()) { TIME_ENTRIES = []; return; }
   try {
-    var features = await agolQuery(ARCGIS_CONFIG.timeEntriesUrl, "name='" + _userFullName.replace(/'/g, "''") + "'");
+    const features = await agolQuery(ARCGIS_CONFIG.timeEntriesUrl, "name='" + _userFullName.replace(/'/g, "''") + "'");
     TIME_ENTRIES = features.map(function(f) {
-      var a = f.attributes;
+      const a = f.attributes;
       // work_date is esriFieldTypeDateOnly — comes as "YYYY-MM-DD" string
-      var wd = a.work_date || '';
+      let wd = a.work_date || '';
       // If it came as epoch ms (some ArcGIS versions), convert to string
       if (typeof wd === 'number') {
-        var d = new Date(wd);
+        const d = new Date(wd);
         wd = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
       }
       return {
@@ -8474,23 +8478,23 @@ function getActiveTimers() {
 }
 
 function getTodayEntries() {
-  var now = new Date();
-  var todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+  const now = new Date();
+  const todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
   return TIME_ENTRIES.filter(function(e) {
     return e.work_date === todayStr;
   });
 }
 
 function getWeekEntries() {
-  var now = new Date();
-  var dayOfWeek = now.getDay();
-  var mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  var weekStart = new Date(now);
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const weekStart = new Date(now);
   weekStart.setDate(weekStart.getDate() + mondayOffset);
   weekStart.setHours(0, 0, 0, 0);
-  var dates = [];
-  for (var i = 0; i < 7; i++) {
-    var d = new Date(weekStart);
+  const dates = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStart);
     d.setDate(d.getDate() + i);
     dates.push(d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'));
   }
@@ -8501,12 +8505,12 @@ function getWeekEntries() {
 
 async function startTimer(taskIdx) {
   if (!_userFullName) return;
-  var task = TASKS.find(function(t) { return t.idx === taskIdx; });
+  const task = TASKS.find(function(t) { return t.idx === taskIdx; });
   if (!task) { alert('Task not found.'); return; }
-  var now = new Date();
-  var workDateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+  const now = new Date();
+  const workDateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
   try {
-    var result = await agolApplyEdits(ARCGIS_CONFIG.timeEntriesUrl, {
+    const result = await agolApplyEdits(ARCGIS_CONFIG.timeEntriesUrl, {
       adds: [{ attributes: {
         name: _userFullName,
         task_idx: taskIdx,
@@ -8528,11 +8532,11 @@ async function startTimer(taskIdx) {
 }
 
 async function stopTimer(oid) {
-  var entry = TIME_ENTRIES.find(function(e) { return e.oid === oid; });
+  const entry = TIME_ENTRIES.find(function(e) { return e.oid === oid; });
   if (!entry) return;
-  var now = new Date();
-  var hours = calculateWorkHours(entry.start_time, now.getTime());
-  var rawHours = Math.round((now.getTime() - entry.start_time) / 3600000 * 100) / 100;
+  const now = new Date();
+  const hours = calculateWorkHours(entry.start_time, now.getTime());
+  const rawHours = Math.round((now.getTime() - entry.start_time) / 3600000 * 100) / 100;
   if (hours !== rawHours) {
     console.log('[TimeTracking] Capped hours from', rawHours, 'to', hours, '(schedule-aware)');
   }
@@ -8563,66 +8567,66 @@ function calculateWorkHours(startMs, endMs) {
     // No schedule data — fall back to raw calculation
     return Math.round((endMs - startMs) / 3600000 * 100) / 100;
   }
-  var person = RESOURCES_DATA.people[_userFullName];
-  var lunchHrs = (person.lunch_minutes || 60) / 60;
-  var PAY_REF = new Date('2025-12-28T00:00:00');
-  var dayNames = ['sun','mon','tue','wed','thu','fri','sat'];
+  const person = RESOURCES_DATA.people[_userFullName];
+  const lunchHrs = (person.lunch_minutes || 60) / 60;
+  const PAY_REF = new Date('2025-12-28T00:00:00');
+  const dayNames = ['sun','mon','tue','wed','thu','fri','sat'];
 
-  var totalHours = 0;
-  var current = new Date(startMs);
-  var end = new Date(endMs);
+  let totalHours = 0;
+  const current = new Date(startMs);
+  const end = new Date(endMs);
 
   // Iterate through each calendar day the timer spans
   while (current <= end) {
-    var dow = current.getDay(); // 0=Sun, 1=Mon, ... 6=Sat
+    const dow = current.getDay(); // 0=Sun, 1=Mon, ... 6=Sat
     if (dow >= 1 && dow <= 5) { // Weekdays only
-      var dayKey = dayNames[dow]; // mon, tue, etc.
+      const dayKey = dayNames[dow]; // mon, tue, etc.
 
       // Determine pay period week (A or B) for this day's week start (Sunday)
-      var dayCopy = new Date(current);
+      const dayCopy = new Date(current);
       dayCopy.setDate(dayCopy.getDate() - dow); // back to Sunday
-      var diffDays = Math.round((dayCopy - PAY_REF) / (1000 * 60 * 60 * 24));
-      var weekPrefix = (Math.floor(diffDays / 7) % 2 === 0) ? 'wk1_' : 'wk2_';
+      const diffDays = Math.round((dayCopy - PAY_REF) / (1000 * 60 * 60 * 24));
+      const weekPrefix = (Math.floor(diffDays / 7) % 2 === 0) ? 'wk1_' : 'wk2_';
 
       // Get work start/end for this day
-      var schedStart = person.schedule ? person.schedule[weekPrefix + dayKey + '_start'] : null;
-      var schedEnd = person.schedule ? person.schedule[weekPrefix + dayKey + '_end'] : null;
+      const schedStart = person.schedule ? person.schedule[weekPrefix + dayKey + '_start'] : null;
+      const schedEnd = person.schedule ? person.schedule[weekPrefix + dayKey + '_end'] : null;
 
       if (schedStart && schedEnd) {
         // Parse schedule times to minutes since midnight
-        var sp = schedStart.split(':');
-        var ep = schedEnd.split(':');
-        var workStartMin = parseInt(sp[0]) * 60 + parseInt(sp[1]);
-        var workEndMin = parseInt(ep[0]) * 60 + parseInt(ep[1]);
+        const sp = schedStart.split(':');
+        const ep = schedEnd.split(':');
+        const workStartMin = parseInt(sp[0]) * 60 + parseInt(sp[1]);
+        const workEndMin = parseInt(ep[0]) * 60 + parseInt(ep[1]);
 
         // Timer window for this day (clamp to day boundaries)
-        var dayStart = new Date(current);
+        const dayStart = new Date(current);
         dayStart.setHours(0, 0, 0, 0);
-        var dayEnd = new Date(dayStart);
+        const dayEnd = new Date(dayStart);
         dayEnd.setDate(dayEnd.getDate() + 1);
 
-        var timerStartOnDay = Math.max(startMs, dayStart.getTime());
-        var timerEndOnDay = Math.min(endMs, dayEnd.getTime());
+        const timerStartOnDay = Math.max(startMs, dayStart.getTime());
+        const timerEndOnDay = Math.min(endMs, dayEnd.getTime());
 
         // Convert timer window to minutes since midnight
-        var tStartDate = new Date(timerStartOnDay);
-        var timerStartMin = tStartDate.getHours() * 60 + tStartDate.getMinutes();
-        var tEndDate = new Date(timerEndOnDay);
-        var timerEndMin = tEndDate.getHours() * 60 + tEndDate.getMinutes();
+        const tStartDate = new Date(timerStartOnDay);
+        const timerStartMin = tStartDate.getHours() * 60 + tStartDate.getMinutes();
+        const tEndDate = new Date(timerEndOnDay);
+        const timerEndMin = tEndDate.getHours() * 60 + tEndDate.getMinutes();
         // If timer ends at midnight (next day), treat as end of day
         if (timerEndOnDay >= dayEnd.getTime()) timerEndMin = 24 * 60;
 
         // Calculate overlap between timer window and work window
-        var overlapStart = Math.max(timerStartMin, workStartMin);
-        var overlapEnd = Math.min(timerEndMin, workEndMin);
+        const overlapStart = Math.max(timerStartMin, workStartMin);
+        const overlapEnd = Math.min(timerEndMin, workEndMin);
 
         if (overlapEnd > overlapStart) {
-          var dayHours = (overlapEnd - overlapStart) / 60;
+          let dayHours = (overlapEnd - overlapStart) / 60;
           // Only subtract lunch if the work overlap spans across the midday break.
           // If you started before noon and ended after 1 PM, you presumably took lunch.
           // Afternoon-only or morning-only sessions don't get lunch deducted.
-          var lunchStart = 12 * 60; // noon
-          var lunchEnd = lunchStart + (person.lunch_minutes || 60);
+          const lunchStart = 12 * 60; // noon
+          const lunchEnd = lunchStart + (person.lunch_minutes || 60);
           if (overlapStart < lunchStart && overlapEnd > lunchEnd) {
             dayHours = Math.max(0, dayHours - lunchHrs);
           }
@@ -8658,19 +8662,19 @@ async function deleteTimeEntry(oid) {
 }
 
 async function saveTimeEntryEdit(oid) {
-  var startEl = document.getElementById('te-start-' + oid);
-  var endEl = document.getElementById('te-end-' + oid);
-  var notesEl = document.getElementById('te-notes-' + oid);
+  const startEl = document.getElementById('te-start-' + oid);
+  const endEl = document.getElementById('te-end-' + oid);
+  const notesEl = document.getElementById('te-notes-' + oid);
   if (!startEl) return;
-  var startVal = startEl.value; // datetime-local string
+  const startVal = startEl.value; // datetime-local string
   if (!startVal) { alert('Start time is required.'); return; }
-  var startMs = new Date(startVal).getTime();
-  var endMs = endEl && endEl.value ? new Date(endEl.value).getTime() : null;
-  var hours = endMs ? calculateWorkHours(startMs, endMs) : null;
+  const startMs = new Date(startVal).getTime();
+  const endMs = endEl && endEl.value ? new Date(endEl.value).getTime() : null;
+  const hours = endMs ? calculateWorkHours(startMs, endMs) : null;
   if (hours !== null && hours < 0) { alert('End time must be after start time.'); return; }
-  var startD = new Date(startVal);
-  var workDateStr = startD.getFullYear() + '-' + String(startD.getMonth()+1).padStart(2,'0') + '-' + String(startD.getDate()).padStart(2,'0');
-  var attrs = {
+  const startD = new Date(startVal);
+  const workDateStr = startD.getFullYear() + '-' + String(startD.getMonth()+1).padStart(2,'0') + '-' + String(startD.getDate()).padStart(2,'0');
+  const attrs = {
     OBJECTID: oid,
     start_time: startMs,
     end_time: endMs,
@@ -8690,25 +8694,25 @@ async function saveTimeEntryEdit(oid) {
 }
 
 function formatDuration(ms) {
-  var totalMin = Math.floor(ms / 60000);
-  var h = Math.floor(totalMin / 60);
-  var m = totalMin % 60;
+  const totalMin = Math.floor(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
   return h + 'h ' + (m < 10 ? '0' : '') + m + 'm';
 }
 
 function formatTimeShort(epochMs) {
   if (!epochMs) return '—';
-  var d = new Date(epochMs);
-  var h = d.getHours(); var m = d.getMinutes();
-  var ampm = h >= 12 ? 'PM' : 'AM';
+  const d = new Date(epochMs);
+  let h = d.getHours(); var m = d.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
   h = h % 12 || 12;
   return h + ':' + (m < 10 ? '0' : '') + m + ' ' + ampm;
 }
 
 function toDatetimeLocal(epochMs) {
   if (!epochMs) return '';
-  var d = new Date(epochMs);
-  var pad = function(n) { return n < 10 ? '0' + n : n; };
+  const d = new Date(epochMs);
+  const pad = function(n) { return n < 10 ? '0' + n : n; };
   return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) +
     'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
 }
@@ -8716,45 +8720,45 @@ function toDatetimeLocal(epochMs) {
 function startTimerTick() {
   if (_timeEntryTimerInterval) clearInterval(_timeEntryTimerInterval);
   _timeEntryTimerInterval = setInterval(function() {
-    var activeTimers = getActiveTimers();
+    const activeTimers = getActiveTimers();
     activeTimers.forEach(function(e) {
-      var el = document.getElementById('timer-elapsed-' + e.oid);
+      const el = document.getElementById('timer-elapsed-' + e.oid);
       if (el) el.textContent = formatDuration(Date.now() - e.start_time);
     });
   }, 10000); // update every 10 seconds
 }
 
 function buildTimeTrackingPanel() {
-  var myTasks = getMyTasks();
-  var activeTimers = getActiveTimers();
-  var todayEntries = getTodayEntries().filter(function(e) { return e.end_time; }); // completed only
-  var weekEntries = getWeekEntries().filter(function(e) { return e.end_time; });
-  var todayHours = todayEntries.reduce(function(s, e) { return s + (e.hours || 0); }, 0);
-  var weekHours = weekEntries.reduce(function(s, e) { return s + (e.hours || 0); }, 0);
+  const myTasks = getMyTasks();
+  const activeTimers = getActiveTimers();
+  const todayEntries = getTodayEntries().filter(function(e) { return e.end_time; }); // completed only
+  const weekEntries = getWeekEntries().filter(function(e) { return e.end_time; });
+  const todayHours = todayEntries.reduce(function(s, e) { return s + (e.hours || 0); }, 0);
+  const weekHours = weekEntries.reduce(function(s, e) { return s + (e.hours || 0); }, 0);
 
-  var html = '<div class="mywork-section mywork-full-width" id="mw-time-tracking">';
+  let html = '<div class="mywork-section mywork-full-width" id="mw-time-tracking">';
   html += '<div class="mywork-section-header">⏱️ Time Tracking</div>';
 
   // Active timers
   if (activeTimers.length > 0) {
     html += '<div style="margin-bottom:14px;">';
     activeTimers.forEach(function(e) {
-      var task = TASKS.find(function(t) { return t.idx === e.task_idx; });
-      var taskTitle = task ? task.title : 'Task #' + e.task_idx;
-      var projTitle = '';
+      const task = TASKS.find(function(t) { return t.idx === e.task_idx; });
+      const taskTitle = task ? task.title : 'Task #' + e.task_idx;
+      let projTitle = '';
       if (task && task.project) {
         projTitle = task.project;
       } else if (task && task.project_id) {
-        var proj = PROJECTS.find(function(p) { return p.id == task.project_id; });
+        const proj = PROJECTS.find(function(p) { return p.id == task.project_id; });
         if (proj) projTitle = proj.title;
       }
-      var elapsed = formatDuration(Date.now() - e.start_time);
+      const elapsed = formatDuration(Date.now() - e.start_time);
       html += '<div style="background:#EFF6FF;border:2px solid var(--navy);border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">';
       html += '<div style="width:10px;height:10px;border-radius:50%;background:#22C55E;animation:pulse 1.5s infinite;flex-shrink:0;"></div>';
       html += '<div style="flex:1;min-width:0;">';
       html += '<div style="font-size:13px;font-weight:700;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(taskTitle) + '</div>';
       if (projTitle) html += '<div style="font-size:11px;color:var(--text-muted);">' + esc(projTitle) + '</div>';
-      var cumulHrs = getTaskHours(e.task_idx);
+      const cumulHrs = getTaskHours(e.task_idx);
       html += '<div style="font-size:11px;color:var(--text-muted);">Started ' + formatTimeShort(e.start_time) + (cumulHrs > 0 ? ' · Total: ' + cumulHrs + 'h' : '') + '</div>';
       html += '</div>';
       html += '<div style="font-size:20px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;" id="timer-elapsed-' + e.oid + '">' + elapsed + '</div>';
@@ -8766,18 +8770,18 @@ function buildTimeTrackingPanel() {
   }
 
   // Start new timer — task selector
-  var availableTasks = myTasks.filter(function(t) {
+  const availableTasks = myTasks.filter(function(t) {
     return t.status === 'In Progress' || t.status === 'Waiting for Response' || t.status === 'On Hold';
   });
   html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;">';
   html += '<select id="te-task-select" class="mf-input" style="flex:1;margin-bottom:0;">';
   html += '<option value="">Select a task to start timing…</option>';
   availableTasks.forEach(function(t) {
-    var projLabel = '';
+    let projLabel = '';
     if (t.project) {
       projLabel = ' — ' + t.project;
     } else if (t.project_id) {
-      var proj = PROJECTS.find(function(p) { return p.id == t.project_id; });
+      const proj = PROJECTS.find(function(p) { return p.id == t.project_id; });
       if (proj) projLabel = ' — ' + proj.title;
     }
     html += '<option value="' + t.idx + '">' + esc(t.title + projLabel) + '</option>';
@@ -8796,17 +8800,17 @@ function buildTimeTrackingPanel() {
   if (todayEntries.length > 0) {
     todayEntries.sort(function(a, b) { return b.start_time - a.start_time; });
     // Track which tasks already have active timers (no resume needed)
-    var activeTaskIds = {};
+    const activeTaskIds = {};
     activeTimers.forEach(function(e) { activeTaskIds[e.task_idx] = true; });
     // Track which tasks already have a resume button shown (only show once per task)
-    var resumeShown = {};
+    const resumeShown = {};
     html += '<div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Today\'s Log</div>';
     todayEntries.forEach(function(e) {
-      var task = TASKS.find(function(t) { return t.idx === e.task_idx; });
-      var taskTitle = task ? task.title : 'Task #' + e.task_idx;
-      var hrs = e.hours ? (Math.round(e.hours * 100) / 100) + 'h' : '—';
-      var cumulHrs = getTaskHours(e.task_idx);
-      var canResume = !activeTaskIds[e.task_idx] && !resumeShown[e.task_idx];
+      const task = TASKS.find(function(t) { return t.idx === e.task_idx; });
+      const taskTitle = task ? task.title : 'Task #' + e.task_idx;
+      const hrs = e.hours ? (Math.round(e.hours * 100) / 100) + 'h' : '—';
+      const cumulHrs = getTaskHours(e.task_idx);
+      const canResume = !activeTaskIds[e.task_idx] && !resumeShown[e.task_idx];
       html += '<div class="te-entry-row" id="te-row-' + e.oid + '">';
       html += '<div style="flex:1;min-width:0;">';
       html += '<div style="font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(taskTitle) + '</div>';
@@ -8836,34 +8840,34 @@ function buildTimeTrackingPanel() {
   }
 
   // Recent entries (past 7 days, excluding today) — collapsible
-  var todayStr2 = (function() {
-    var n = new Date();
+  const todayStr2 = (function() {
+    const n = new Date();
     return n.getFullYear() + '-' + String(n.getMonth()+1).padStart(2,'0') + '-' + String(n.getDate()).padStart(2,'0');
   })();
-  var recentEntries = TIME_ENTRIES.filter(function(e) {
+  const recentEntries = TIME_ENTRIES.filter(function(e) {
     if (!e.end_time) return false;
     if (e.work_date === todayStr2) return false; // already in today's log
     // Last 7 days
-    var now = new Date();
-    var weekAgo = new Date(now);
+    const now = new Date();
+    const weekAgo = new Date(now);
     weekAgo.setDate(weekAgo.getDate() - 7);
     weekAgo.setHours(0, 0, 0, 0);
-    var entryDate = new Date(e.work_date + 'T00:00:00');
+    const entryDate = new Date(e.work_date + 'T00:00:00');
     return entryDate >= weekAgo;
   }).sort(function(a, b) { return b.start_time - a.start_time; });
 
   if (recentEntries.length > 0) {
     html += '<div id="te-recent-section" style="display:none;">';
     html += '<div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;margin-top:14px;">Recent (Past 7 Days)</div>';
-    var lastDate = '';
+    let lastDate = '';
     recentEntries.forEach(function(e) {
-      var task = TASKS.find(function(t) { return t.idx === e.task_idx; });
-      var taskTitle = task ? task.title : 'Task #' + e.task_idx;
-      var hrs = e.hours ? (Math.round(e.hours * 100) / 100) + 'h' : '—';
+      const task = TASKS.find(function(t) { return t.idx === e.task_idx; });
+      const taskTitle = task ? task.title : 'Task #' + e.task_idx;
+      const hrs = e.hours ? (Math.round(e.hours * 100) / 100) + 'h' : '—';
       // Date separator
       if (e.work_date !== lastDate) {
-        var dateObj = new Date(e.work_date + 'T00:00:00');
-        var dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        const dateObj = new Date(e.work_date + 'T00:00:00');
+        const dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
         html += '<div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-top:10px;margin-bottom:4px;">' + dateLabel + '</div>';
         lastDate = e.work_date;
       }
@@ -8900,10 +8904,10 @@ function buildTimeTrackingPanel() {
 }
 
 function toggleRecentEntries() {
-  var panel = document.getElementById('te-recent-section');
-  var btn = event.target;
+  const panel = document.getElementById('te-recent-section');
+  const btn = event.target;
   if (!panel) return;
-  var isHidden = panel.style.display === 'none';
+  const isHidden = panel.style.display === 'none';
   panel.style.display = isHidden ? '' : 'none';
   if (isHidden) {
     btn.dataset.origLabel = btn.textContent;
@@ -8914,7 +8918,7 @@ function toggleRecentEntries() {
 }
 
 function toggleEditTimeEntry(oid) {
-  var el = document.getElementById('te-edit-' + oid);
+  const el = document.getElementById('te-edit-' + oid);
   if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
 }
 
@@ -8927,7 +8931,7 @@ let _ganttFilter = {};     // { projectTitle: true/false } — which projects sh
 let _ganttCollapsed = {};  // { projectTitle: true/false } — which projects have tasks hidden
 
 function getMyProjects(viewName) {
-  var name = viewName || _userFullName;
+  const name = viewName || _userFullName;
   if (!name) return [];
   return PROJECTS.filter(function(p) {
     if (p.contact === name) return true;
@@ -8937,13 +8941,13 @@ function getMyProjects(viewName) {
 }
 
 function getMyTasks(viewName) {
-  var name = viewName || _userFullName;
+  const name = viewName || _userFullName;
   if (!name) return [];
   return TASKS.filter(function(t) { return t.assignee === name; });
 }
 
 function switchMyWorkUser(selectEl) {
-  var val = selectEl.value;
+  const val = selectEl.value;
   _myWorkViewUser = (val === _userFullName) ? null : val;
   _ganttFilter = {}; // reset so new user's projects default to all visible
   _ganttCollapsed = {}; // reset collapse state
@@ -8951,10 +8955,10 @@ function switchMyWorkUser(selectEl) {
 }
 
 function toggleMyWorkTasks() {
-  var panel = document.getElementById('mywork-tasks-expand');
-  var btn = document.getElementById('mywork-tasks-toggle');
+  const panel = document.getElementById('mywork-tasks-expand');
+  const btn = document.getElementById('mywork-tasks-toggle');
   if (!panel || !btn) return;
-  var isHidden = panel.style.display === 'none';
+  const isHidden = panel.style.display === 'none';
   panel.style.display = isHidden ? '' : 'none';
   if (isHidden) {
     btn.dataset.origLabel = btn.textContent;
@@ -8965,10 +8969,10 @@ function toggleMyWorkTasks() {
 }
 
 function toggleMyWorkProjects() {
-  var panel = document.getElementById('mywork-proj-expand');
-  var btn = document.getElementById('mywork-proj-toggle');
+  const panel = document.getElementById('mywork-proj-expand');
+  const btn = document.getElementById('mywork-proj-toggle');
   if (!panel || !btn) return;
-  var isHidden = panel.style.display === 'none';
+  const isHidden = panel.style.display === 'none';
   panel.style.display = isHidden ? '' : 'none';
   if (isHidden) {
     btn.dataset.origLabel = btn.textContent;
@@ -8979,10 +8983,10 @@ function toggleMyWorkProjects() {
 }
 
 function toggleGantt() {
-  var panel = document.getElementById('mywork-gantt');
-  var arrow = document.getElementById('gantt-arrow');
+  const panel = document.getElementById('mywork-gantt');
+  const arrow = document.getElementById('gantt-arrow');
   if (!panel) return;
-  var isHidden = panel.style.display === 'none';
+  const isHidden = panel.style.display === 'none';
   panel.style.display = isHidden ? '' : 'none';
   if (arrow) arrow.textContent = isHidden ? '▼' : '▶';
 }
@@ -8993,7 +8997,7 @@ function toggleGanttProject(title) {
 }
 
 function ganttSelectAll(show) {
-  var checks = document.querySelectorAll('.gantt-proj-check');
+  const checks = document.querySelectorAll('.gantt-proj-check');
   checks.forEach(function(cb) {
     _ganttFilter[cb.value] = show;
     cb.checked = show;
@@ -9002,15 +9006,15 @@ function ganttSelectAll(show) {
 }
 
 function toggleGanttDropdown() {
-  var dd = document.getElementById('gantt-filter-dropdown');
+  const dd = document.getElementById('gantt-filter-dropdown');
   if (!dd) return;
-  var isOpen = dd.style.display !== 'none';
+  const isOpen = dd.style.display !== 'none';
   dd.style.display = isOpen ? 'none' : '';
   // Close on outside click
   if (!isOpen) {
     setTimeout(function() {
       function closeHandler(e) {
-        var wrap = document.getElementById('gantt-filter-wrap');
+        const wrap = document.getElementById('gantt-filter-wrap');
         if (wrap && !wrap.contains(e.target)) {
           dd.style.display = 'none';
           document.removeEventListener('click', closeHandler);
@@ -9027,10 +9031,10 @@ function toggleGanttCollapse(title) {
 }
 
 function toggleAttentionMore() {
-  var cards = document.querySelectorAll('.attention-overflow');
-  var btn = document.getElementById('attention-more-toggle');
+  const cards = document.querySelectorAll('.attention-overflow');
+  const btn = document.getElementById('attention-more-toggle');
   if (!cards.length || !btn) return;
-  var isHidden = cards[0].style.display === 'none';
+  const isHidden = cards[0].style.display === 'none';
   cards.forEach(function(c) { c.style.display = isHidden ? '' : 'none'; });
   if (isHidden) {
     btn.dataset.origLabel = btn.textContent;
@@ -9041,37 +9045,37 @@ function toggleAttentionMore() {
 }
 
 function rebuildGanttChart() {
-  var container = document.getElementById('gantt-chart-body');
+  const container = document.getElementById('gantt-chart-body');
   if (!container) return;
   container.innerHTML = buildGanttBars();
   // Update header and dropdown button counts
   if (window._ganttItemsAll) {
-    var vis = window._ganttItemsAll.filter(function(g) { return _ganttFilter[g.title]; }).length;
-    var total = window._ganttItemsAll.length;
-    var headerSpan = document.querySelector('#mywork-gantt') && document.querySelector('#mywork-gantt').closest('.mywork-section') ? document.querySelector('#mywork-gantt').closest('.mywork-section').querySelector('.mywork-section-header span:last-child') : null;
+    const vis = window._ganttItemsAll.filter(function(g) { return _ganttFilter[g.title]; }).length;
+    const total = window._ganttItemsAll.length;
+    const headerSpan = document.querySelector('#mywork-gantt') && document.querySelector('#mywork-gantt').closest('.mywork-section') ? document.querySelector('#mywork-gantt').closest('.mywork-section').querySelector('.mywork-section-header span:last-child') : null;
     if (headerSpan) headerSpan.textContent = '(' + vis + ' of ' + total + ' projects)';
-    var ddBtn = document.querySelector('#gantt-filter-wrap > button');
+    const ddBtn = document.querySelector('#gantt-filter-wrap > button');
     if (ddBtn) ddBtn.innerHTML = '📁 Projects (' + vis + '/' + total + ') <span style="font-size:9px;">▼</span>';
   }
 }
 
 function buildGanttBars() {
   if (!window._ganttItemsAll) return '';
-  var ganttItems = window._ganttItemsAll.filter(function(g) { return _ganttFilter[g.title]; });
-  var todayStr = window._ganttTodayStr;
-  var ganttStartMs = window._ganttStartMs;
-  var ganttTotalDays = window._ganttTotalDays;
-  var monthLabels = window._ganttMonthLabels || [];
+  const ganttItems = window._ganttItemsAll.filter(function(g) { return _ganttFilter[g.title]; });
+  const todayStr = window._ganttTodayStr;
+  const ganttStartMs = window._ganttStartMs;
+  const ganttTotalDays = window._ganttTotalDays;
+  const monthLabels = window._ganttMonthLabels || [];
 
   function ganttPct(dateStr) {
     if (!dateStr) return null;
-    var d = new Date(dateStr + 'T00:00:00');
-    var dayOffset = (d.getTime() - ganttStartMs) / (1000 * 60 * 60 * 24);
+    const d = new Date(dateStr + 'T00:00:00');
+    const dayOffset = (d.getTime() - ganttStartMs) / (1000 * 60 * 60 * 24);
     return Math.max(0, Math.min(100, (dayOffset / ganttTotalDays) * 100));
   }
-  var todayPct = ganttPct(todayStr);
+  const todayPct = ganttPct(todayStr);
 
-  var html = '<div style="overflow-x:auto;"><div style="min-width:700px;position:relative;">';
+  let html = '<div style="overflow-x:auto;"><div style="min-width:700px;position:relative;">';
 
   // Month header
   html += '<div style="position:relative;height:22px;margin-bottom:4px;border-bottom:1px solid var(--border);">';
@@ -9086,15 +9090,15 @@ function buildGanttBars() {
 
   // Rows
   ganttItems.forEach(function(g) {
-    var sc = STATUS_COLOR(g.status) || '#3B82F6';
-    var leftPct = ganttPct(g.start || todayStr);
-    var rightPct = ganttPct(g.end || todayStr);
-    var barWidth = Math.max(1, rightPct - leftPct);
-    var isOverdue = g.end && g.end < todayStr;
-    var isCollapsed = _ganttCollapsed[g.title];
-    var hasTasks = g.tasks && g.tasks.length > 0;
-    var arrow = hasTasks ? (isCollapsed ? '▶' : '▼') : '•';
-    var arrowClick = hasTasks ? ' onclick="event.stopPropagation();toggleGanttCollapse(\'' + esc(g.title).replace(/'/g, "\\'") + '\')" style="cursor:pointer;margin-right:4px;font-size:9px;opacity:0.6;user-select:none;"' : ' style="margin-right:4px;font-size:7px;opacity:0.4;"';
+    const sc = STATUS_COLOR(g.status) || '#3B82F6';
+    const leftPct = ganttPct(g.start || todayStr);
+    const rightPct = ganttPct(g.end || todayStr);
+    const barWidth = Math.max(1, rightPct - leftPct);
+    const isOverdue = g.end && g.end < todayStr;
+    const isCollapsed = _ganttCollapsed[g.title];
+    const hasTasks = g.tasks && g.tasks.length > 0;
+    const arrow = hasTasks ? (isCollapsed ? '▶' : '▼') : '•';
+    const arrowClick = hasTasks ? ' onclick="event.stopPropagation();toggleGanttCollapse(\'' + esc(g.title).replace(/'/g, "\\'") + '\')" style="cursor:pointer;margin-right:4px;font-size:9px;opacity:0.6;user-select:none;"' : ' style="margin-right:4px;font-size:7px;opacity:0.4;"';
 
     html += '<div style="display:flex;align-items:center;margin-bottom:2px;height:28px;">';
     html += '<div style="width:200px;flex-shrink:0;display:flex;align-items:center;overflow:hidden;">';
@@ -9108,13 +9112,13 @@ function buildGanttBars() {
 
     if (!isCollapsed) {
       g.tasks.forEach(function(t) {
-      var tStart = t.start || g.start || todayStr;
-      var tEnd = t.working_due || t.due || g.end || todayStr;
-      var tLeftPct = ganttPct(tStart);
-      var tRightPct = ganttPct(tEnd);
-      var tWidth = Math.max(0.5, tRightPct - tLeftPct);
-      var tOverdue = tEnd < todayStr;
-      var tsc = STATUS_COLOR(t.status) || '#93C5FD';
+      const tStart = t.start || g.start || todayStr;
+      const tEnd = t.working_due || t.due || g.end || todayStr;
+      const tLeftPct = ganttPct(tStart);
+      const tRightPct = ganttPct(tEnd);
+      const tWidth = Math.max(0.5, tRightPct - tLeftPct);
+      const tOverdue = tEnd < todayStr;
+      const tsc = STATUS_COLOR(t.status) || '#93C5FD';
 
       html += '<div style="display:flex;align-items:center;margin-bottom:1px;height:20px;">';
       html += '<div style="width:200px;flex-shrink:0;font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:16px;padding-right:8px;cursor:pointer;" onclick="openTask(' + t.idx + ')" title="' + esc(t.title) + '">› ' + esc(t.title) + '</div>';
@@ -9157,7 +9161,7 @@ function renderMyWork(area) {
   function effectiveDue(t) { return t.working_due || t.due || null; }
   function effectiveEnd(p) { return p.working_due || p.end || null; }
   // Hours helpers scoped to viewed user
-  var hrsLabel = isViewingSelf ? 'me' : firstName;
+  const hrsLabel = isViewingSelf ? 'me' : firstName;
   function viewUserTaskHrs(idx) { return getMyTaskHours(idx, name); }
   function viewUserProjHrs(title) { return getMyProjectHours(title, name); }
 
@@ -9166,29 +9170,29 @@ function renderMyWork(area) {
   const overdueTasks = openTasks.filter(function(t) { var d = effectiveDue(t); return d && d < todayStr; });
   const overdueProjects = myProjects.filter(function(p) {
     if (['Active', 'On Hold', 'Waiting for Response'].indexOf(p.status) < 0) return false;
-    var d = effectiveEnd(p);
+    const d = effectiveEnd(p);
     return d && d < todayStr;
   });
   const dueThisWeek = openTasks.filter(function(t) {
-    var d = effectiveDue(t);
+    const d = effectiveDue(t);
     if (!d || d < todayStr) return false;
-    var dueDate = new Date(d + 'T00:00:00');
-    var daysOut = (dueDate - today) / (1000 * 60 * 60 * 24);
+    const dueDate = new Date(d + 'T00:00:00');
+    const daysOut = (dueDate - today) / (1000 * 60 * 60 * 24);
     return daysOut <= 7;
   });
 
   // ── Resources data for utilization ──────────────────────────
-  var weekUtil = 0;
-  var weekAllocHours = 0;
-  var weekCapHours = 0;
-  var weekAllocations = [];
-  var myScheduleType = '5/8';
-  var myRdoDay = null;
-  var myPayWeek = '';
-  var myScheduledHours = 40;
+  let weekUtil = 0;
+  let weekAllocHours = 0;
+  let weekCapHours = 0;
+  let weekAllocations = [];
+  let myScheduleType = '5/8';
+  let myRdoDay = null;
+  let myPayWeek = '';
+  let myScheduledHours = 40;
   if (RESOURCES_DATA && RESOURCES_DATA.people[name]) {
-    var p = RESOURCES_DATA.people[name];
-    var cwIdx = typeof currentWeekIdx !== 'undefined' ? currentWeekIdx : 0;
+    const p = RESOURCES_DATA.people[name];
+    const cwIdx = typeof currentWeekIdx !== 'undefined' ? currentWeekIdx : 0;
     weekCapHours = p.proj_cap[cwIdx] || 0;
     weekAllocHours = p.weekly_allocated[cwIdx] || 0;
     weekUtil = weekCapHours > 0 ? Math.round(weekAllocHours / weekCapHours * 100) : 0;
@@ -9196,43 +9200,43 @@ function renderMyWork(area) {
     myRdoDay = p.rdo_day || null;
     // Determine pay period week for current week
     if (RESOURCES_DATA.weeks && RESOURCES_DATA.weeks[cwIdx]) {
-      var PAY_PERIOD_REF_MW = new Date('2025-12-28T00:00:00');
-      var cwDate = new Date(RESOURCES_DATA.weeks[cwIdx] + 'T00:00:00');
-      var diffDays = Math.round((cwDate - PAY_PERIOD_REF_MW) / (1000 * 60 * 60 * 24));
+      const PAY_PERIOD_REF_MW = new Date('2025-12-28T00:00:00');
+      const cwDate = new Date(RESOURCES_DATA.weeks[cwIdx] + 'T00:00:00');
+      const diffDays = Math.round((cwDate - PAY_PERIOD_REF_MW) / (1000 * 60 * 60 * 24));
       myPayWeek = (Math.floor(diffDays / 7) % 2 === 0) ? 'A' : 'B';
     }
     myScheduledHours = (myPayWeek === 'A') ? (p.week1_hours || 40) : (p.week2_hours || 40);
     // Daily schedule for current week
-    var prefix = (myPayWeek === 'A') ? 'wk1_' : 'wk2_';
-    var myDailyHours = {
+    const prefix = (myPayWeek === 'A') ? 'wk1_' : 'wk2_';
+    const myDailyHours = {
       Mon: p[prefix + 'mon'] || 0,
       Tue: p[prefix + 'tue'] || 0,
       Wed: p[prefix + 'wed'] || 0,
       Thu: p[prefix + 'thu'] || 0,
       Fri: p[prefix + 'fri'] || 0,
     };
-    var myDailyTimes = {};
+    const myDailyTimes = {};
     ['Mon','Tue','Wed','Thu','Fri'].forEach(function(day) {
-      var d = day.toLowerCase().slice(0, 3);
-      var s = p.schedule ? p.schedule[prefix + d + '_start'] : null;
-      var e = p.schedule ? p.schedule[prefix + d + '_end'] : null;
+      const d = day.toLowerCase().slice(0, 3);
+      const s = p.schedule ? p.schedule[prefix + d + '_start'] : null;
+      const e = p.schedule ? p.schedule[prefix + d + '_end'] : null;
       myDailyTimes[day] = { start: s, end: e };
     });
     weekAllocations = (p.allocations || []).filter(function(a) {
       return a.fracs && a.fracs[cwIdx] > 0;
     }).map(function(a) {
-      var hours = (a.fracs[cwIdx] || 0) * (p.proj_cap[cwIdx] || 0);
+      const hours = (a.fracs[cwIdx] || 0) * (p.proj_cap[cwIdx] || 0);
       return { project: a.project, hours: Math.round(hours * 10) / 10, frac: a.fracs[cwIdx] };
     }).sort(function(a, b) { return b.hours - a.hours; });
   }
 
   // ── Attention Needed alerts ──────────────────────────────────
-  var alerts = [];
+  const alerts = [];
 
   // Overdue open tasks (In Progress, On Hold, Waiting for Response)
   overdueTasks.forEach(function(t) {
-    var d = effectiveDue(t);
-    var daysOver = Math.ceil((today - new Date(d + 'T00:00:00')) / (1000 * 60 * 60 * 24));
+    const d = effectiveDue(t);
+    const daysOver = Math.ceil((today - new Date(d + 'T00:00:00')) / (1000 * 60 * 60 * 24));
     alerts.push({
       icon: '🔴', type: 'task', id: t.idx,
       title: t.title,
@@ -9244,9 +9248,9 @@ function renderMyWork(area) {
 
   // Open tasks due this week
   dueThisWeek.forEach(function(t) {
-    var d = effectiveDue(t);
-    var dueDate = new Date(d + 'T00:00:00');
-    var daysLeft = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+    const d = effectiveDue(t);
+    const dueDate = new Date(d + 'T00:00:00');
+    const daysLeft = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
     alerts.push({
       icon: '🟡', type: 'task', id: t.idx,
       title: t.title,
@@ -9258,7 +9262,7 @@ function renderMyWork(area) {
 
   // Incomplete project data — all projects (except Complete/Canceled) where user is contact or member
   myProjects.filter(function(p) { return p.status !== 'Complete' && p.status !== 'Canceled'; }).forEach(function(p) {
-    var missing = [];
+    const missing = [];
     if (!p.description) missing.push('description');
     if (!p.end) missing.push('end date');
     if (!p.category) missing.push('category');
@@ -9277,7 +9281,7 @@ function renderMyWork(area) {
 
   // Incomplete task data — all tasks (except Complete/Canceled)
   myTasks.filter(function(t) { return t.status !== 'Complete' && t.status !== 'Canceled'; }).forEach(function(t) {
-    var missing = [];
+    const missing = [];
     if (!t.description) missing.push('description');
     if (!t.due) missing.push('due date');
     if (!t.category) missing.push('category');
@@ -9293,11 +9297,11 @@ function renderMyWork(area) {
   });
 
   // Overdue projects — Active or On Hold projects past their working due / end date
-  var overdueProjectStatuses = ['Active', 'On Hold', 'Waiting for Response'];
+  const overdueProjectStatuses = ['Active', 'On Hold', 'Waiting for Response'];
   myProjects.filter(function(p) { return overdueProjectStatuses.indexOf(p.status) >= 0; }).forEach(function(p) {
-    var d = effectiveEnd(p);
+    const d = effectiveEnd(p);
     if (!d || d >= todayStr) return;
-    var daysOver = Math.ceil((today - new Date(d + 'T00:00:00')) / (1000 * 60 * 60 * 24));
+    const daysOver = Math.ceil((today - new Date(d + 'T00:00:00')) / (1000 * 60 * 60 * 24));
     alerts.push({
       icon: '🔴', type: 'project', id: p.objectId,
       title: p.title,
@@ -9309,10 +9313,10 @@ function renderMyWork(area) {
 
   // Projects due this week — Active or On Hold projects with working due within 7 days
   myProjects.filter(function(p) { return overdueProjectStatuses.indexOf(p.status) >= 0; }).forEach(function(p) {
-    var d = effectiveEnd(p);
+    const d = effectiveEnd(p);
     if (!d || d < todayStr) return; // already overdue or no date
-    var dueDate = new Date(d + 'T00:00:00');
-    var daysLeft = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+    const dueDate = new Date(d + 'T00:00:00');
+    const daysLeft = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
     if (daysLeft <= 7) {
       alerts.push({
         icon: '🟡', type: 'project', id: p.objectId,
@@ -9325,14 +9329,14 @@ function renderMyWork(area) {
   });
 
   // Stale projects — Active, On Hold, or Waiting for Response projects not updated in over 14 days
-  var staleStatuses = ['Active', 'On Hold', 'Waiting for Response'];
+  const staleStatuses = ['Active', 'On Hold', 'Waiting for Response'];
   myProjects.filter(function(p) { return staleStatuses.indexOf(p.status) >= 0; }).forEach(function(p) {
-    var editDate = p.EditDate || p.editDate || p.edit_date || null;
+    const editDate = p.EditDate || p.editDate || p.edit_date || null;
     if (!editDate) return; // no edit tracking — skip
-    var daysSinceUpdate = Math.floor((Date.now() - editDate) / (1000 * 60 * 60 * 24));
+    const daysSinceUpdate = Math.floor((Date.now() - editDate) / (1000 * 60 * 60 * 24));
     if (daysSinceUpdate > 14) {
-      var lastUpdated = new Date(editDate);
-      var dateStr = lastUpdated.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const lastUpdated = new Date(editDate);
+      const dateStr = lastUpdated.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       alerts.push({
         icon: '⏳', type: 'project', id: p.objectId,
         title: p.title,
@@ -9346,9 +9350,9 @@ function renderMyWork(area) {
   // Future/Scheduled projects past their start date — should be moved to Active
   myProjects.filter(function(p) { return p.status === 'Future' || p.status === 'Scheduled'; }).forEach(function(p) {
     if (!p.start) return;
-    var startDate = new Date(p.start + 'T00:00:00');
+    const startDate = new Date(p.start + 'T00:00:00');
     if (startDate <= today) {
-      var daysPast = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+      const daysPast = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
       alerts.push({
         icon: '🚀', type: 'project', id: p.objectId,
         title: p.title,
@@ -9363,7 +9367,7 @@ function renderMyWork(area) {
 
   // ── Build HTML ──────────────────────────────────────────────
   // Sticky header sits outside mywork-page so it spans full content-area width
-  var html = '';
+  let html = '';
 
   // ── Sticky header: greeting + date/picker + jump links ──────
   html += '<div class="mywork-sticky-header">';
@@ -9378,13 +9382,13 @@ function renderMyWork(area) {
 
   // Admin user selector
   if (_isTeamLead && RESOURCES_DATA && RESOURCES_DATA.people) {
-    var memberNames = Object.keys(RESOURCES_DATA.people).filter(function(n) { return RESOURCES_DATA.people[n].active !== false; }).sort();
+    const memberNames = Object.keys(RESOURCES_DATA.people).filter(function(n) { return RESOURCES_DATA.people[n].active !== false; }).sort();
     html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:0;">';
     html += '<div class="mywork-subtitle" style="margin-bottom:0;">' + today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) + '</div>';
     html += '<select onchange="switchMyWorkUser(this)" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--navy);font-weight:600;cursor:pointer;">';
     memberNames.forEach(function(n) {
-      var selected = (n === name) ? ' selected' : '';
-      var label = (n === _userFullName) ? n + ' (me)' : n;
+      const selected = (n === name) ? ' selected' : '';
+      const label = (n === _userFullName) ? n + ' (me)' : n;
       html += '<option value="' + esc(n) + '"' + selected + '>' + esc(label) + '</option>';
     });
     html += '</select>';
@@ -9397,13 +9401,13 @@ function renderMyWork(area) {
   }
 
   // Quick preview: count gantt-eligible projects for nav link visibility
-  var ganttItems_preview = myProjects.filter(function(p) {
+  const ganttItems_preview = myProjects.filter(function(p) {
     if (['Active', 'On Hold', 'Scheduled'].indexOf(p.status) < 0) return false;
     return p.start || p.actual_end || p.working_due || p.end;
   });
 
   // ── Jump links nav bar ───────────────────────────────────────
-  var jumpLinks = [];
+  const jumpLinks = [];
   if (isViewingSelf && isTimeTrackingEnabled()) jumpLinks.push({ id: 'mw-time-tracking', label: '⏱️ Time' });
   jumpLinks.push({ id: 'mw-my-week', label: '📅 Week' });
   jumpLinks.push({ id: 'mw-attention', label: '⚡ Attention' });
@@ -9424,11 +9428,11 @@ function renderMyWork(area) {
   html += '<div class="mywork-columns">';
 
   // ── KPIs — spans both columns ──────────────────────────────
-  var utilClass = weekUtil > 100 ? 'alert' : weekUtil > 85 ? 'warn' : 'good';
+  const utilClass = weekUtil > 100 ? 'alert' : weekUtil > 85 ? 'warn' : 'good';
   html += '<div class="mywork-kpis mywork-full-width">';
   html += '<div class="mywork-kpi"><div class="mywork-kpi-value">' + activeProjects.length + '</div><div class="mywork-kpi-label">Active Projects</div></div>';
   html += '<div class="mywork-kpi"><div class="mywork-kpi-value">' + openTasks.length + '</div><div class="mywork-kpi-label">Open Tasks</div></div>';
-  var totalOverdue = overdueTasks.length + overdueProjects.length;
+  const totalOverdue = overdueTasks.length + overdueProjects.length;
   html += '<div class="mywork-kpi"><div class="mywork-kpi-value' + (totalOverdue > 0 ? ' alert' : '') + '">' + totalOverdue + '</div><div class="mywork-kpi-label">Overdue</div></div>';
   html += '<div class="mywork-kpi"><div class="mywork-kpi-value' + (dueThisWeek.length > 0 ? ' warn' : '') + '">' + dueThisWeek.length + '</div><div class="mywork-kpi-label">Due This Week</div></div>';
   html += '<div class="mywork-kpi"><div class="mywork-kpi-value ' + utilClass + '">' + weekUtil + '%</div><div class="mywork-kpi-label">Utilization</div></div>';
@@ -9451,7 +9455,7 @@ function renderMyWork(area) {
     html += '<strong>' + esc(myScheduleType) + '</strong> schedule';
     if (myPayWeek) html += ' · Week ' + myPayWeek + ' (' + myScheduledHours + 'h)';
     if (myRdoDay) {
-      var rdoThisWeek = myScheduleType === '9/80' ? (myPayWeek === 'B') : true;
+      const rdoThisWeek = myScheduleType === '9/80' ? (myPayWeek === 'B') : true;
       html += ' · RDO: ' + esc(myRdoDay) + (rdoThisWeek ? ' (this week)' : ' (next week)');
     }
     html += '</div>';
@@ -9460,25 +9464,25 @@ function renderMyWork(area) {
     if (typeof myDailyHours !== 'undefined') {
       function formatTimeCompact(t) {
         if (!t) return '';
-        var parts = t.split(':');
-        var h = parseInt(parts[0]);
-        var m = parseInt(parts[1]);
-        var ampm = h >= 12 ? 'p' : 'a';
+        const parts = t.split(':');
+        let h = parseInt(parts[0]);
+        const m = parseInt(parts[1]);
+        const ampm = h >= 12 ? 'p' : 'a';
         h = h % 12 || 12;
         return m > 0 ? h + ':' + (m < 10 ? '0' : '') + m + ampm : h + ampm;
       }
       html += '<div style="display:flex;gap:6px;margin-bottom:12px;">';
       ['Mon','Tue','Wed','Thu','Fri'].forEach(function(day) {
-        var hrs = myDailyHours[day] || 0;
-        var times = myDailyTimes ? myDailyTimes[day] : null;
-        var isOff = hrs === 0;
-        var bg = isOff ? '#F3F4F6' : 'var(--navy)';
-        var color = isOff ? 'var(--text-muted)' : '#fff';
-        var timeLabel = '';
+        const hrs = myDailyHours[day] || 0;
+        const times = myDailyTimes ? myDailyTimes[day] : null;
+        const isOff = hrs === 0;
+        const bg = isOff ? '#F3F4F6' : 'var(--navy)';
+        const color = isOff ? 'var(--text-muted)' : '#fff';
+        let timeLabel = '';
         if (!isOff && times && times.start && times.end) {
           timeLabel = formatTimeCompact(times.start) + '–' + formatTimeCompact(times.end);
         }
-        var hrsLabel = isOff ? 'OFF' : hrs + 'h';
+        const hrsLabel = isOff ? 'OFF' : hrs + 'h';
         html += '<div style="flex:1;text-align:center;padding:6px 4px;background:' + bg + ';color:' + color + ';border-radius:6px;font-size:11px;font-weight:700;">';
         html += '<div style="font-size:10px;font-weight:600;opacity:0.7;margin-bottom:2px;">' + day + '</div>';
         html += hrsLabel;
@@ -9491,17 +9495,17 @@ function renderMyWork(area) {
     if (weekAllocations.length === 0) {
       html += '<div class="mywork-empty">No allocations recorded for this week.</div>';
     } else {
-      var availableHours = Math.max(0, weekCapHours - weekAllocHours);
+      const availableHours = Math.max(0, weekCapHours - weekAllocHours);
       html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">';
       html += '<strong>' + Math.round(weekAllocHours * 10) / 10 + 'h</strong> allocated of <strong>' + Math.round(weekCapHours * 10) / 10 + 'h</strong> capacity';
       html += ' · <strong style="color:' + (availableHours > 0 ? '#22C55E' : '#EF4444') + ';">' + Math.round(availableHours * 10) / 10 + 'h</strong> available';
       html += '</div>';
     weekAllocations.forEach(function(a) {
-      var pct = weekCapHours > 0 ? (a.hours / weekCapHours * 100) : 0;
-      var barColor = pct > 40 ? 'var(--navy)' : pct > 20 ? '#3B82F6' : '#93C5FD';
-      var proj = PROJECTS.find(function(p) { return p.title === a.project; });
-      var onclick = proj ? ' onclick="openProject(' + proj.objectId + ')"' : '';
-      var cursor = proj ? 'pointer' : 'default';
+      const pct = weekCapHours > 0 ? (a.hours / weekCapHours * 100) : 0;
+      const barColor = pct > 40 ? 'var(--navy)' : pct > 20 ? '#3B82F6' : '#93C5FD';
+      const proj = PROJECTS.find(function(p) { return p.title === a.project; });
+      const onclick = proj ? ' onclick="openProject(' + proj.objectId + ')"' : '';
+      const cursor = proj ? 'pointer' : 'default';
       html += '<div class="mywork-compact-row" style="cursor:' + cursor + ';"' + onclick + '>';
       html += '<span class="mywork-compact-title"><span style="font-size:10px;font-weight:700;color:var(--text-muted);margin-right:4px;">Project:</span>' + esc(a.project) + '</span>';
       html += '<span style="font-size:12px;font-weight:700;color:var(--navy);white-space:nowrap;min-width:50px;text-align:right;">' + a.hours + 'h</span>';
@@ -9521,13 +9525,13 @@ function renderMyWork(area) {
   } else {
     html += '<div class="mywork-alert-grid">';
     alerts.forEach(function(a, idx) {
-      var onclick = a.type === 'project' ? 'openProject(' + a.id + ')' : 'openTask(' + a.id + ')';
-      var hiddenStyle = idx >= 15 ? ' style="display:none;"' : '';
-      var extraClass = idx >= 15 ? ' attention-overflow' : '';
+      const onclick = a.type === 'project' ? 'openProject(' + a.id + ')' : 'openTask(' + a.id + ')';
+      const hiddenStyle = idx >= 15 ? ' style="display:none;"' : '';
+      const extraClass = idx >= 15 ? ' attention-overflow' : '';
       html += '<div class="mywork-alert-card' + extraClass + '"' + hiddenStyle + ' onclick="' + onclick + '">';
       html += '<div class="mywork-alert-icon">' + a.icon + '</div>';
       html += '<div class="mywork-alert-body">';
-      var typeLabel = a.type === 'project' ? 'Project: ' : 'Task: ';
+      const typeLabel = a.type === 'project' ? 'Project: ' : 'Task: ';
       html += '<div class="mywork-alert-title"><span style="font-weight:700;color:var(--text-muted);">' + typeLabel + '</span>' + esc(a.title) + '</div>';
       html += '<div class="mywork-alert-meta">' + esc(a.meta) + '</div>';
       html += '<div class="mywork-alert-reason">' + esc(a.reason) + '</div>';
@@ -9535,23 +9539,23 @@ function renderMyWork(area) {
     });
     html += '</div>';
     if (alerts.length > 15) {
-      var remaining = alerts.length - 15;
+      const remaining = alerts.length - 15;
       html += '<button class="mywork-expand-btn" id="attention-more-toggle" onclick="toggleAttentionMore()">Show ' + remaining + ' more item' + (remaining !== 1 ? 's' : '') + '</button>';
     }
   }
   html += '</div>';
 
   // ── GANTT CHART — spans both columns ──────────────────────────
-  var ganttItems = [];
+  const ganttItems = [];
   // Gather active/on-hold projects with date ranges
   myProjects.filter(function(p) {
     return ['Active', 'On Hold', 'Scheduled'].indexOf(p.status) >= 0;
   }).forEach(function(p) {
-    var pStart = p.start || null;
-    var pEnd = p.actual_end || p.working_due || p.end || null;
+    const pStart = p.start || null;
+    const pEnd = p.actual_end || p.working_due || p.end || null;
     if (!pStart && !pEnd) return;
     // Get tasks for this project
-    var projTasks = myTasks.filter(function(t) {
+    const projTasks = myTasks.filter(function(t) {
       return (t.project === p.title) && t.status !== 'Complete' && t.status !== 'Canceled';
     });
     ganttItems.push({
@@ -9562,7 +9566,7 @@ function renderMyWork(area) {
 
   if (ganttItems.length > 0) {
     // Initialize filter: default all ON if _ganttFilter is empty or has stale keys
-    var hasAnyFilter = Object.keys(_ganttFilter).length > 0;
+    const hasAnyFilter = Object.keys(_ganttFilter).length > 0;
     ganttItems.forEach(function(g) {
       if (!hasAnyFilter || _ganttFilter[g.title] === undefined) _ganttFilter[g.title] = true;
     });
@@ -9572,33 +9576,33 @@ function renderMyWork(area) {
     window._ganttTodayStr = todayStr;
 
     // Compute timeline range from ALL items (not just visible) so bars stay stable when toggling
-    var allDates = [];
+    const allDates = [];
     ganttItems.forEach(function(g) {
       if (g.start) allDates.push(g.start);
       if (g.end) allDates.push(g.end);
       g.tasks.forEach(function(t) {
         if (t.start) allDates.push(t.start);
-        var tEnd = t.working_due || t.due;
+        const tEnd = t.working_due || t.due;
         if (tEnd) allDates.push(tEnd);
       });
     });
     allDates.push(todayStr);
     allDates.sort();
-    var ganttStart = new Date(allDates[0] + 'T00:00:00');
-    var ganttEnd = new Date(allDates[allDates.length - 1] + 'T00:00:00');
+    const ganttStart = new Date(allDates[0] + 'T00:00:00');
+    const ganttEnd = new Date(allDates[allDates.length - 1] + 'T00:00:00');
     ganttStart.setDate(ganttStart.getDate() - 7);
     ganttEnd.setDate(ganttEnd.getDate() + 14);
     window._ganttStartMs = ganttStart.getTime();
     window._ganttTotalDays = Math.max(1, Math.ceil((ganttEnd - ganttStart) / (1000 * 60 * 60 * 24)));
 
     // Month labels
-    var monthLabels = [];
-    var cursor = new Date(ganttStart);
+    const monthLabels = [];
+    const cursor = new Date(ganttStart);
     cursor.setDate(1);
     if (cursor < ganttStart) cursor.setMonth(cursor.getMonth() + 1);
     while (cursor <= ganttEnd) {
-      var dayOff = (cursor - ganttStart) / (1000 * 60 * 60 * 24);
-      var mPct = Math.max(0, Math.min(100, (dayOff / window._ganttTotalDays) * 100));
+      const dayOff = (cursor - ganttStart) / (1000 * 60 * 60 * 24);
+      const mPct = Math.max(0, Math.min(100, (dayOff / window._ganttTotalDays) * 100));
       if (mPct >= 0 && mPct <= 98) {
         monthLabels.push({ label: cursor.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }), pct: mPct });
       }
@@ -9606,7 +9610,7 @@ function renderMyWork(area) {
     }
     window._ganttMonthLabels = monthLabels;
 
-    var visibleCount = ganttItems.filter(function(g) { return _ganttFilter[g.title]; }).length;
+    const visibleCount = ganttItems.filter(function(g) { return _ganttFilter[g.title]; }).length;
 
     html += '<div class="mywork-section mywork-full-width" id="mw-timeline">';
     html += '<div class="mywork-section-header" style="cursor:pointer;user-select:none;" onclick="toggleGantt()"><span id="gantt-arrow">▶</span> 📊 Timeline <span style="font-size:11px;font-weight:400;color:var(--text-muted);">(' + visibleCount + ' of ' + ganttItems.length + ' projects)</span></div>';
@@ -9625,8 +9629,8 @@ function renderMyWork(area) {
     html += '<button onclick="ganttSelectAll(false)" style="font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:#F3F4F6;cursor:pointer;font-weight:700;">None</button>';
     html += '</div>';
     ganttItems.forEach(function(g) {
-      var sc = STATUS_COLOR(g.status) || '#3B82F6';
-      var checked = _ganttFilter[g.title] ? ' checked' : '';
+      const sc = STATUS_COLOR(g.status) || '#3B82F6';
+      const checked = _ganttFilter[g.title] ? ' checked' : '';
       html += '<label style="display:flex;align-items:center;gap:8px;padding:5px 12px;font-size:11px;cursor:pointer;white-space:nowrap;" onmouseenter="this.style.background=\'#F3F4F6\'" onmouseleave="this.style.background=\'#fff\'">';
       html += '<input type="checkbox" class="gantt-proj-check" value="' + esc(g.title) + '"' + checked + ' onchange="toggleGanttProject(\'' + esc(g.title).replace(/'/g, "\\'") + '\')">';
       html += '<span style="width:10px;height:10px;border-radius:2px;background:' + sc + ';flex-shrink:0;"></span>';
@@ -9638,9 +9642,9 @@ function renderMyWork(area) {
 
     // Legend
     html += '<span style="width:1px;height:16px;background:var(--border);"></span>';
-    var legendStatuses = ['Active', 'On Hold', 'Scheduled', 'In Progress', 'Waiting for Response'];
+    const legendStatuses = ['Active', 'On Hold', 'Scheduled', 'In Progress', 'Waiting for Response'];
     legendStatuses.forEach(function(s) {
-      var c = STATUS_COLOR(s);
+      const c = STATUS_COLOR(s);
       if (!c) return;
       html += '<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted);white-space:nowrap;">';
       html += '<span style="width:10px;height:6px;border-radius:2px;background:' + c + ';opacity:0.85;"></span>' + s + '</span>';
@@ -9663,25 +9667,25 @@ function renderMyWork(area) {
   html += '<div>';
   html += '<div class="mywork-section" id="mw-projects">';
   html += '<div class="mywork-section-header">📁 My Projects <span class="badge-count">' + myProjects.length + '</span></div>';
-  var projByStatus = {};
+  const projByStatus = {};
   myProjects.forEach(function(p) {
-    var s = p.status || 'Unknown';
+    const s = p.status || 'Unknown';
     if (!projByStatus[s]) projByStatus[s] = [];
     projByStatus[s].push(p);
   });
 
   // Helper to render a group of projects by status
   function renderProjGroup(status) {
-    var list = projByStatus[status];
+    const list = projByStatus[status];
     if (!list || !list.length) return '';
-    var statusColor = STATUS_COLOR(status);
-    var out = '<div style="margin-bottom:4px;margin-top:12px;font-size:11px;font-weight:700;color:' + statusColor + ';text-transform:uppercase;letter-spacing:0.06em;">' + esc(status) + ' (' + list.length + ')</div>';
+    const statusColor = STATUS_COLOR(status);
+    let out = '<div style="margin-bottom:4px;margin-top:12px;font-size:11px;font-weight:700;color:' + statusColor + ';text-transform:uppercase;letter-spacing:0.06em;">' + esc(status) + ' (' + list.length + ')</div>';
     list.forEach(function(p) {
-      var taskCount = TASKS.filter(function(t) { return t.project === p.title || (!t.project && t.project_id == p.id); });
-      var doneCount = taskCount.filter(function(t) { return t.status === 'Complete'; }).length;
-      var totalCount = taskCount.length;
-      var taskLabel = totalCount > 0 ? doneCount + '/' + totalCount + ' tasks done' : 'No tasks';
-      var isContact = p.contact === name;
+      const taskCount = TASKS.filter(function(t) { return t.project === p.title || (!t.project && t.project_id == p.id); });
+      const doneCount = taskCount.filter(function(t) { return t.status === 'Complete'; }).length;
+      const totalCount = taskCount.length;
+      const taskLabel = totalCount > 0 ? doneCount + '/' + totalCount + ' tasks done' : 'No tasks';
+      const isContact = p.contact === name;
       out += '<div class="mywork-compact-row" onclick="openProject(' + p.objectId + ')">';
       out += '<span class="mywork-compact-badge" style="background:' + statusColor + '22;color:' + statusColor + ';">' + esc(status) + '</span>';
       out += '<span class="mywork-compact-title">' + esc(p.title) + '</span>';
@@ -9693,10 +9697,10 @@ function renderMyWork(area) {
   }
 
   // Default visible: Active, Scheduled, Idea
-  var defaultProjStatuses = ['Active', 'Scheduled', 'Idea'];
-  var hasDefaultProj = false;
+  const defaultProjStatuses = ['Active', 'Scheduled', 'Idea'];
+  const hasDefaultProj = false;
   defaultProjStatuses.forEach(function(status) {
-    var chunk = renderProjGroup(status);
+    const chunk = renderProjGroup(status);
     if (chunk) { hasDefaultProj = true; html += chunk; }
   });
   if (!hasDefaultProj && myProjects.length === 0) {
@@ -9704,10 +9708,10 @@ function renderMyWork(area) {
   }
 
   // Expandable: On Hold, Future
-  var expandProjStatuses = ['On Hold', 'Future'];
-  var expandProjItems = expandProjStatuses.filter(function(s) { return projByStatus[s] && projByStatus[s].length > 0; });
+  const expandProjStatuses = ['On Hold', 'Future'];
+  const expandProjItems = expandProjStatuses.filter(function(s) { return projByStatus[s] && projByStatus[s].length > 0; });
   if (expandProjItems.length > 0) {
-    var expandProjLabel = expandProjItems.map(function(s) { return s + ' (' + projByStatus[s].length + ')'; }).join(', ');
+    const expandProjLabel = expandProjItems.map(function(s) { return s + ' (' + projByStatus[s].length + ')'; }).join(', ');
     html += '<div id="mywork-proj-expand" style="display:none;">';
     expandProjItems.forEach(function(status) { html += renderProjGroup(status); });
     html += '</div>';
@@ -9724,36 +9728,36 @@ function renderMyWork(area) {
   html += '<div class="mywork-section" id="mw-tasks">';
 
   // Count tasks by visibility group
-  var tasksByStatus = {};
+  const tasksByStatus = {};
   myTasks.forEach(function(t) {
-    var s = t.status || 'Unknown';
+    const s = t.status || 'Unknown';
     if (!tasksByStatus[s]) tasksByStatus[s] = [];
     tasksByStatus[s].push(t);
   });
-  var pendingCount = (tasksByStatus['Pending'] || []).length;
-  var onHoldCount = (tasksByStatus['On Hold'] || []).length;
-  var completeCount = (tasksByStatus['Complete'] || []).length;
-  var canceledCount = (tasksByStatus['Canceled'] || []).length;
-  var hiddenCount = pendingCount + onHoldCount + completeCount + canceledCount;
+  const pendingCount = (tasksByStatus['Pending'] || []).length;
+  const onHoldCount = (tasksByStatus['On Hold'] || []).length;
+  const completeCount = (tasksByStatus['Complete'] || []).length;
+  const canceledCount = (tasksByStatus['Canceled'] || []).length;
+  const hiddenCount = pendingCount + onHoldCount + completeCount + canceledCount;
 
   html += '<div class="mywork-section-header">✅ My Tasks <span class="badge-count">' + myTasks.length + '</span></div>';
 
   // Default visible statuses: In Progress, Waiting for Response
-  var defaultStatuses = ['In Progress', 'Waiting for Response'];
-  var hasTasks = false;
+  const defaultStatuses = ['In Progress', 'Waiting for Response'];
+  let hasTasks = false;
   defaultStatuses.forEach(function(status) {
-    var list = tasksByStatus[status];
+    const list = tasksByStatus[status];
     if (!list || !list.length) return;
     hasTasks = true;
     list.sort(function(a, b) { return (a.due || '9999').localeCompare(b.due || '9999'); });
-    var statusColor = STATUS_COLOR(status);
+    const statusColor = STATUS_COLOR(status);
     html += '<div style="margin-bottom:4px;margin-top:12px;font-size:11px;font-weight:700;color:' + statusColor + ';text-transform:uppercase;letter-spacing:0.06em;">' + esc(status) + ' (' + list.length + ')</div>';
     list.forEach(function(t) {
-      var eDue = effectiveDue(t);
-      var isOverdue = eDue && eDue < todayStr;
-      var tHrs = getTaskHours(t.idx);
-      var mHrs = viewUserTaskHrs(t.idx);
-      var canComplete = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
+      const eDue = effectiveDue(t);
+      const isOverdue = eDue && eDue < todayStr;
+      const tHrs = getTaskHours(t.idx);
+      const mHrs = viewUserTaskHrs(t.idx);
+      const canComplete = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
       html += '<div class="mywork-compact-row" onclick="openTask(' + t.idx + ')">';
       html += '<span class="mywork-compact-badge" style="background:' + statusColor + '22;color:' + statusColor + ';">' + esc(status) + '</span>';
       html += '<span class="mywork-compact-title">' + esc(t.title) + '</span>';
@@ -9775,23 +9779,23 @@ function renderMyWork(area) {
   }
 
   // Expandable sections: Pending, On Hold
-  var expandStatuses = ['Pending', 'On Hold'];
-  var expandItems = expandStatuses.filter(function(s) { return tasksByStatus[s] && tasksByStatus[s].length > 0; });
+  const expandStatuses = ['Pending', 'On Hold'];
+  const expandItems = expandStatuses.filter(function(s) { return tasksByStatus[s] && tasksByStatus[s].length > 0; });
   if (expandItems.length > 0) {
-    var expandLabel = expandItems.map(function(s) { return s + ' (' + tasksByStatus[s].length + ')'; }).join(', ');
+    const expandLabel = expandItems.map(function(s) { return s + ' (' + tasksByStatus[s].length + ')'; }).join(', ');
     html += '<div id="mywork-tasks-expand" style="display:none;">';
     expandItems.forEach(function(status) {
-      var list = tasksByStatus[status];
+      const list = tasksByStatus[status];
       if (!list || !list.length) return;
       list.sort(function(a, b) { return (a.due || '9999').localeCompare(b.due || '9999'); });
-      var statusColor = STATUS_COLOR(status);
+      const statusColor = STATUS_COLOR(status);
       html += '<div style="margin-bottom:4px;margin-top:12px;font-size:11px;font-weight:700;color:' + statusColor + ';text-transform:uppercase;letter-spacing:0.06em;">' + esc(status) + ' (' + list.length + ')</div>';
       list.forEach(function(t) {
-        var eDue = effectiveDue(t);
-        var isOverdue = eDue && eDue < todayStr;
-        var tHrs = getTaskHours(t.idx);
-        var mHrs = getMyTaskHours(t.idx);
-        var canComplete = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
+        const eDue = effectiveDue(t);
+        const isOverdue = eDue && eDue < todayStr;
+        const tHrs = getTaskHours(t.idx);
+        const mHrs = getMyTaskHours(t.idx);
+        const canComplete = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
         html += '<div class="mywork-compact-row" onclick="openTask(' + t.idx + ')">';
         html += '<span class="mywork-compact-badge" style="background:' + statusColor + '22;color:' + statusColor + ';">' + esc(status) + '</span>';
         html += '<span class="mywork-compact-title">' + esc(t.title) + '</span>';
@@ -9845,20 +9849,20 @@ function renderSettingsPage(area) {
 
   const people = RESOURCES_DATA.people;
   const allNames = Object.keys(people).sort();
-  var showFormerSettings = document.getElementById('settings-show-former');
-  var includeInactiveSettings = showFormerSettings && showFormerSettings.checked;
+  const showFormerSettings = document.getElementById('settings-show-former');
+  const includeInactiveSettings = showFormerSettings && showFormerSettings.checked;
   const names = includeInactiveSettings ? allNames : allNames.filter(function(n) { return people[n].active !== false; });
-  var inactiveCount = allNames.length - allNames.filter(function(n) { return people[n].active !== false; }).length;
+  const inactiveCount = allNames.length - allNames.filter(function(n) { return people[n].active !== false; }).length;
 
   // Team Members table
   let memberRows = names.map(function(name) {
-    var p = people[name];
-    var schedLabel = p.schedule_type || '5/8';
+    const p = people[name];
+    const schedLabel = p.schedule_type || '5/8';
     if (p.rdo_day) schedLabel += ' · ' + p.rdo_day + ' off';
-    var ttChecked = p.time_tracking ? ' checked' : '';
-    var isInactive = p.active === false;
-    var rowStyle = isInactive ? ' style="opacity:0.5;"' : '';
-    var activeLabel = isInactive ? '<span style="color:#EF4444;font-weight:700;font-size:10px;">Inactive</span>' : '<span style="color:#83AC16;font-weight:700;font-size:10px;">Active</span>';
+    const ttChecked = p.time_tracking ? ' checked' : '';
+    const isInactive = p.active === false;
+    const rowStyle = isInactive ? ' style="opacity:0.5;"' : '';
+    const activeLabel = isInactive ? '<span style="color:#EF4444;font-weight:700;font-size:10px;">Inactive</span>' : '<span style="color:#83AC16;font-weight:700;font-size:10px;">Active</span>';
     return '<tr' + rowStyle + '>' +
       '<td style="font-weight:700;color:var(--navy);">' + esc(name) + '</td>' +
       '<td>' + esc(p.role) + '</td>' +
@@ -9875,7 +9879,7 @@ function renderSettingsPage(area) {
     '</tr>';
   }).join('');
 
-  var html = '<div class="settings-page">' +
+  let html = '<div class="settings-page">' +
     '<div class="settings-section">' +
       '<div class="settings-section-header">' +
         '<span>Team Members</span>' +
@@ -9919,7 +9923,7 @@ function renderSettingsPage(area) {
   '</div>';
 
   // ── Developer Mode ──────────────────────────────────────
-  var devChecked = _devMode ? ' checked' : '';
+  const devChecked = _devMode ? ' checked' : '';
   html += '<div class="settings-section">' +
     '<div class="settings-section-header"><span>Developer Mode</span></div>' +
     '<div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;">' +
@@ -9955,7 +9959,7 @@ function openMemberForm(mode, name) {
   document.getElementById('mf-title').textContent = mode === 'edit' ? 'Edit Team Member' : 'Add Team Member';
   document.getElementById('mf-oid').value = '';
   if (mode === 'edit' && RESOURCES_DATA && RESOURCES_DATA.people[name]) {
-    var p = RESOURCES_DATA.people[name];
+    const p = RESOURCES_DATA.people[name];
     document.getElementById('mf-name').value = name;
     document.getElementById('mf-name').dataset.origName = name;
     document.getElementById('mf-role').value = p.role;
@@ -9966,11 +9970,11 @@ function openMemberForm(mode, name) {
     document.getElementById('mf-rdo-day').value = p.rdo_day || '';
     document.getElementById('mf-lunch').value = String(p.lunch_minutes != null ? p.lunch_minutes : 60);
     // Daily start/end times
-    var days = ['mon','tue','wed','thu','fri'];
+    const days = ['mon','tue','wed','thu','fri'];
     ['wk1','wk2'].forEach(function(wk) {
       days.forEach(function(d) {
-        var startEl = document.getElementById('mf-' + wk + '-' + d + '-start');
-        var endEl = document.getElementById('mf-' + wk + '-' + d + '-end');
+        const startEl = document.getElementById('mf-' + wk + '-' + d + '-start');
+        const endEl = document.getElementById('mf-' + wk + '-' + d + '-end');
         if (startEl) startEl.value = p.schedule[wk + '_' + d + '_start'] || '';
         if (endEl) endEl.value = p.schedule[wk + '_' + d + '_end'] || '';
       });
@@ -9990,11 +9994,11 @@ function openMemberForm(mode, name) {
     document.getElementById('mf-rdo-day').value = '';
     document.getElementById('mf-lunch').value = '60';
     // Default 5/8: 8am-5pm every day
-    var days2 = ['mon','tue','wed','thu','fri'];
+    const days2 = ['mon','tue','wed','thu','fri'];
     ['wk1','wk2'].forEach(function(wk) {
       days2.forEach(function(d) {
-        var startEl = document.getElementById('mf-' + wk + '-' + d + '-start');
-        var endEl = document.getElementById('mf-' + wk + '-' + d + '-end');
+        const startEl = document.getElementById('mf-' + wk + '-' + d + '-start');
+        const endEl = document.getElementById('mf-' + wk + '-' + d + '-end');
         if (startEl) startEl.value = '08:00';
         if (endEl) endEl.value = '17:00';
       });
@@ -10008,14 +10012,14 @@ function openMemberForm(mode, name) {
 
 // Auto-fill start/end times when schedule type changes
 function onScheduleTypeChange() {
-  var type = document.getElementById('mf-schedule-type').value;
-  var rdo = document.getElementById('mf-rdo-day').value;
-  var days = ['mon','tue','wed','thu','fri'];
-  var rdoIdx = rdo ? ['Monday','Tuesday','Wednesday','Thursday','Friday'].indexOf(rdo) : -1;
+  const type = document.getElementById('mf-schedule-type').value;
+  const rdo = document.getElementById('mf-rdo-day').value;
+  const days = ['mon','tue','wed','thu','fri'];
+  const rdoIdx = rdo ? ['Monday','Tuesday','Wednesday','Thursday','Friday'].indexOf(rdo) : -1;
 
   function setDay(wk, d, start, end) {
-    var s = document.getElementById('mf-' + wk + '-' + d + '-start');
-    var e = document.getElementById('mf-' + wk + '-' + d + '-end');
+    const s = document.getElementById('mf-' + wk + '-' + d + '-start');
+    const e = document.getElementById('mf-' + wk + '-' + d + '-end');
     if (s) s.value = start || '';
     if (e) e.value = end || '';
   }
@@ -10051,18 +10055,18 @@ function onScheduleTypeChange() {
 }
 
 function updateWeekTotals() {
-  var days = ['mon','tue','wed','thu','fri'];
-  var lunch = parseInt(document.getElementById('mf-lunch').value) || 0;
-  var wk1 = 0, wk2 = 0;
+  const days = ['mon','tue','wed','thu','fri'];
+  const lunch = parseInt(document.getElementById('mf-lunch').value) || 0;
+  const wk1 = 0, wk2 = 0;
   ['wk1','wk2'].forEach(function(wk) {
     days.forEach(function(d) {
-      var s = document.getElementById('mf-' + wk + '-' + d + '-start');
-      var e = document.getElementById('mf-' + wk + '-' + d + '-end');
+      const s = document.getElementById('mf-' + wk + '-' + d + '-start');
+      const e = document.getElementById('mf-' + wk + '-' + d + '-end');
       if (s && e && s.value && e.value) {
-        var sp = s.value.split(':'), ep = e.value.split(':');
-        var startMins = parseInt(sp[0]) * 60 + parseInt(sp[1]);
-        var endMins = parseInt(ep[0]) * 60 + parseInt(ep[1]);
-        var hrs = Math.max(0, (endMins - startMins) / 60 - lunch / 60);
+        const sp = s.value.split(':'), ep = e.value.split(':');
+        const startMins = parseInt(sp[0]) * 60 + parseInt(sp[1]);
+        const endMins = parseInt(ep[0]) * 60 + parseInt(ep[1]);
+        const hrs = Math.max(0, (endMins - startMins) / 60 - lunch / 60);
         if (wk === 'wk1') wk1 += hrs;
         else wk2 += hrs;
       }
@@ -10074,14 +10078,14 @@ function updateWeekTotals() {
 
 async function toggleTimeTracking(name, enabled) {
   try {
-    var existing = await agolQuery(ARCGIS_CONFIG.teamMembersUrl, "name='" + name.replace(/'/g, "''") + "'");
+    const existing = await agolQuery(ARCGIS_CONFIG.teamMembersUrl, "name='" + name.replace(/'/g, "''") + "'");
     if (existing.length === 0) { alert('Could not find record for ' + name); return; }
-    var oid = existing[0].attributes.OBJECTID || existing[0].attributes.ObjectId || existing[0].attributes.objectid;
-    var attrs = { OBJECTID: oid };
+    const oid = existing[0].attributes.OBJECTID || existing[0].attributes.ObjectId || existing[0].attributes.objectid;
+    const attrs = { OBJECTID: oid };
     // Use case-insensitive field name detection
     if (RESOURCES_DATA && RESOURCES_DATA._memberFieldNames) {
-      var fieldNames = RESOURCES_DATA._memberFieldNames;
-      var fn = fieldNames.find(function(f) { return f.toLowerCase() === 'time_tracking'; });
+      const fieldNames = RESOURCES_DATA._memberFieldNames;
+      const fn = fieldNames.find(function(f) { return f.toLowerCase() === 'time_tracking'; });
       if (fn) {
         attrs[fn] = enabled ? 'true' : 'false';
       } else {
@@ -10091,7 +10095,7 @@ async function toggleTimeTracking(name, enabled) {
     } else {
       attrs.time_tracking = enabled ? 'true' : 'false';
     }
-    var result = await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, { updates: [{ attributes: attrs }] });
+    const result = await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, { updates: [{ attributes: attrs }] });
     console.log('[Settings] Time tracking for', name, ':', enabled, result);
     // Update local data
     if (RESOURCES_DATA && RESOURCES_DATA.people[name]) {
@@ -10119,17 +10123,17 @@ async function toggleTimeTracking(name, enabled) {
 }
 
 async function cascadeRename(oldName, newName) {
-  var log = [];
-  var escaped = oldName.replace(/'/g, "''");
+  const log = [];
+  const escaped = oldName.replace(/'/g, "''");
 
   // Helper: query + batch update a service
   async function renameInService(url, whereField, attrs) {
     try {
-      var features = await agolQuery(url, whereField + "='" + escaped + "'");
+      const features = await agolQuery(url, whereField + "='" + escaped + "'");
       if (features.length === 0) return;
-      var updates = features.map(function(f) {
-        var oid = f.attributes.OBJECTID || f.attributes.ObjectId || f.attributes.objectid || f.attributes.FID;
-        var upd = Object.assign({ OBJECTID: oid }, attrs);
+      const updates = features.map(function(f) {
+        const oid = f.attributes.OBJECTID || f.attributes.ObjectId || f.attributes.objectid || f.attributes.FID;
+        const upd = Object.assign({ OBJECTID: oid }, attrs);
         return { attributes: upd };
       });
       await agolApplyEdits(url, { updates: updates });
@@ -10145,13 +10149,13 @@ async function cascadeRename(oldName, newName) {
 
   // 2. Projects: other_members (comma-separated, need to query and do string replace)
   try {
-    var projFeatures = await agolQuery(ARCGIS_CONFIG.projectsUrl, "other_members LIKE '%" + escaped + "%'");
+    const projFeatures = await agolQuery(ARCGIS_CONFIG.projectsUrl, "other_members LIKE '%" + escaped + "%'");
     if (projFeatures.length > 0) {
-      var updates = projFeatures.map(function(f) {
-        var oid = f.attributes.OBJECTID || f.attributes.ObjectId || f.attributes.objectid;
-        var om = f.attributes.other_members || '';
+      const updates = projFeatures.map(function(f) {
+        const oid = f.attributes.OBJECTID || f.attributes.ObjectId || f.attributes.objectid;
+        const om = f.attributes.other_members || '';
         // Replace the name in the comma-separated list
-        var parts = om.split(',').map(function(s) { return s.trim() === oldName ? newName : s.trim(); });
+        const parts = om.split(',').map(function(s) { return s.trim() === oldName ? newName : s.trim(); });
         return { attributes: { OBJECTID: oid, other_members: parts.join(', ') } };
       });
       await agolApplyEdits(ARCGIS_CONFIG.projectsUrl, { updates: updates });
@@ -10205,14 +10209,14 @@ async function cascadeRename(oldName, newName) {
 }
 
 async function toggleMemberActive(name) {
-  var p = RESOURCES_DATA && RESOURCES_DATA.people[name];
+  const p = RESOURCES_DATA && RESOURCES_DATA.people[name];
   if (!p) return;
-  var newActive = p.active === false ? true : false;
+  const newActive = p.active === false ? true : false;
   try {
-    var existing = await agolQuery(ARCGIS_CONFIG.teamMembersUrl, "name='" + name.replace(/'/g, "''") + "'");
+    const existing = await agolQuery(ARCGIS_CONFIG.teamMembersUrl, "name='" + name.replace(/'/g, "''") + "'");
     if (existing.length === 0) { alert('Could not find record for ' + name); return; }
-    var oid = existing[0].attributes.OBJECTID || existing[0].attributes.ObjectId || existing[0].attributes.objectid;
-    var attrs = { OBJECTID: oid, active: newActive ? 'true' : 'false' };
+    const oid = existing[0].attributes.OBJECTID || existing[0].attributes.ObjectId || existing[0].attributes.objectid;
+    const attrs = { OBJECTID: oid, active: newActive ? 'true' : 'false' };
     await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, { updates: [{ attributes: attrs }] });
     console.log('[Settings] Member active for', name, ':', newActive);
     p.active = newActive;
@@ -10229,28 +10233,28 @@ function closeMemberForm() {
 }
 
 async function saveMemberForm() {
-  var name = document.getElementById('mf-name').value.trim();
-  var role = document.getElementById('mf-role').value.trim();
-  var team = document.getElementById('mf-team').value.trim();
-  var skill = document.getElementById('mf-skill').value.trim();
-  var projPct = parseFloat(document.getElementById('mf-proj-pct').value) || 0;
-  var scheduleType = document.getElementById('mf-schedule-type').value || '5/8';
-  var rdoDay = document.getElementById('mf-rdo-day').value || null;
-  var lunchMinutes = parseInt(document.getElementById('mf-lunch').value) || 60;
-  var origName = document.getElementById('mf-name').dataset.origName || '';
+  const name = document.getElementById('mf-name').value.trim();
+  const role = document.getElementById('mf-role').value.trim();
+  const team = document.getElementById('mf-team').value.trim();
+  const skill = document.getElementById('mf-skill').value.trim();
+  const projPct = parseFloat(document.getElementById('mf-proj-pct').value) || 0;
+  const scheduleType = document.getElementById('mf-schedule-type').value || '5/8';
+  const rdoDay = document.getElementById('mf-rdo-day').value || null;
+  const lunchMinutes = parseInt(document.getElementById('mf-lunch').value) || 60;
+  const origName = document.getElementById('mf-name').dataset.origName || '';
 
   // Collect start/end times and convert "HH:MM" to ms since midnight for TimeOnly fields
-  var days = ['mon','tue','wed','thu','fri'];
+  const days = ['mon','tue','wed','thu','fri'];
   function hhmmToTimeStr(val) {
     if (!val) return null;
     // HTML time inputs return "HH:MM" — append :00 for seconds
     return val.length === 5 ? val + ':00' : val;
   }
-  var scheduleFields = {};
+  const scheduleFields = {};
   ['wk1','wk2'].forEach(function(wk) {
     days.forEach(function(d) {
-      var startEl = document.getElementById('mf-' + wk + '-' + d + '-start');
-      var endEl = document.getElementById('mf-' + wk + '-' + d + '-end');
+      const startEl = document.getElementById('mf-' + wk + '-' + d + '-start');
+      const endEl = document.getElementById('mf-' + wk + '-' + d + '-end');
       scheduleFields[wk + '_' + d + '_start'] = startEl ? hhmmToTimeStr(startEl.value) : null;
       scheduleFields[wk + '_' + d + '_end'] = endEl ? hhmmToTimeStr(endEl.value) : null;
     });
@@ -10259,7 +10263,7 @@ async function saveMemberForm() {
   if (!name) { alert('Name is required.'); return; }
   if (projPct < 0 || projPct > 100) { alert('Project % must be 0–100.'); return; }
 
-  var memberAttrs = {
+  const memberAttrs = {
     name: name,
     role: role,
     team: team,
@@ -10269,16 +10273,16 @@ async function saveMemberForm() {
 
   // Only include schedule fields if the service supports them
   if (RESOURCES_DATA && RESOURCES_DATA._memberFieldNames) {
-    var fieldNames = RESOURCES_DATA._memberFieldNames;
-    var fn = function(target) { return fieldNames.find(function(f) { return f.toLowerCase() === target.toLowerCase(); }) || null; };
-    var stField = fn('schedule_type');
+    const fieldNames = RESOURCES_DATA._memberFieldNames;
+    const fn = function(target) { return fieldNames.find(function(f) { return f.toLowerCase() === target.toLowerCase(); }) || null; };
+    const stField = fn('schedule_type');
     if (stField) {
       memberAttrs[stField] = scheduleType;
-      var rd = fn('rdo_day'); if (rd) memberAttrs[rd] = rdoDay;
-      var lm = fn('lunch_minutes'); if (lm) memberAttrs[lm] = lunchMinutes;
+      const rd = fn('rdo_day'); if (rd) memberAttrs[rd] = rdoDay;
+      const lm = fn('lunch_minutes'); if (lm) memberAttrs[lm] = lunchMinutes;
       // Start/end time fields
       Object.keys(scheduleFields).forEach(function(key) {
-        var field = fn(key);
+        const field = fn(key);
         if (field) memberAttrs[field] = scheduleFields[key];
       });
     } else {
@@ -10286,8 +10290,8 @@ async function saveMemberForm() {
     }
   }
 
-  var isEdit = origName !== '';
-  var isRename = isEdit && origName !== name;
+  const isEdit = origName !== '';
+  const isRename = isEdit && origName !== name;
 
   if (isRename) {
     if (!confirm('Renaming "' + origName + '" to "' + name + '" will update all projects, tasks, time entries, allocations, and absences.\n\nThis may take a moment. Continue?')) return;
@@ -10302,12 +10306,12 @@ async function saveMemberForm() {
   try {
     if (isEdit) {
       // Find existing OID using original name
-      var existing = await agolQuery(ARCGIS_CONFIG.teamMembersUrl, "name='" + origName.replace(/'/g, "''") + "'");
+      const existing = await agolQuery(ARCGIS_CONFIG.teamMembersUrl, "name='" + origName.replace(/'/g, "''") + "'");
       if (existing.length === 0) { alert('Could not find existing record for ' + origName); return; }
-      var oid = existing[0].attributes.OBJECTID || existing[0].attributes.ObjectId || existing[0].attributes.objectid || existing[0].attributes.FID;
+      const oid = existing[0].attributes.OBJECTID || existing[0].attributes.ObjectId || existing[0].attributes.objectid || existing[0].attributes.FID;
       memberAttrs.OBJECTID = oid;
       console.log('[Settings] Saving member update:', JSON.stringify(memberAttrs));
-      var result = await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, {
+      const result = await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, {
         updates: [{ attributes: memberAttrs }]
       });
       console.log('[Settings] Updated member:', name, result);
@@ -10319,14 +10323,14 @@ async function saveMemberForm() {
       }
     } else {
       console.log('[Settings] Saving new member:', JSON.stringify(memberAttrs));
-      var result = await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, {
+      const result = await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, {
         adds: [{ attributes: memberAttrs }]
       });
       console.log('[Settings] Added member:', name, result);
     }
 
     // Check for errors
-    var errors = [];
+    const errors = [];
     if (result.addResults) result.addResults.forEach(function(r) { if (!r.success) errors.push(r.error ? r.error.description : 'unknown'); });
     if (result.updateResults) result.updateResults.forEach(function(r) { if (!r.success) errors.push(r.error ? r.error.description : 'unknown'); });
     if (errors.length > 0) {
@@ -10352,10 +10356,10 @@ async function saveMemberForm() {
 async function deleteMember(name) {
   if (!confirm('Remove "' + name + '" from the team?\n\nThis will delete their team member record. Their allocation and absence history will remain in the database.')) return;
   try {
-    var existing = await agolQuery(ARCGIS_CONFIG.teamMembersUrl, "name='" + name.replace(/'/g, "''") + "'");
+    const existing = await agolQuery(ARCGIS_CONFIG.teamMembersUrl, "name='" + name.replace(/'/g, "''") + "'");
     if (existing.length === 0) { alert('Could not find record for ' + name); return; }
-    var oid = existing[0].attributes.ObjectId || existing[0].attributes.OBJECTID || existing[0].attributes.objectid || existing[0].attributes.FID;
-    var result = await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, { deletes: [oid] });
+    const oid = existing[0].attributes.ObjectId || existing[0].attributes.OBJECTID || existing[0].attributes.objectid || existing[0].attributes.FID;
+    const result = await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, { deletes: [oid] });
     console.log('[Settings] Deleted member:', name, result);
 
     if (result.deleteResults && result.deleteResults[0] && !result.deleteResults[0].success) {
@@ -10384,26 +10388,26 @@ function openAbsenceEditor(name) {
   renderAbsenceEditor(name);
   // Scroll to the section
   setTimeout(function() {
-    var el = document.getElementById('settings-absence-section');
+    const el = document.getElementById('settings-absence-section');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, 50);
 }
 
 function renderAbsenceEditor(name) {
-  var section = document.getElementById('settings-absence-section');
+  const section = document.getElementById('settings-absence-section');
   if (!section || !RESOURCES_DATA || !RESOURCES_DATA.people[name]) return;
 
-  var p = RESOURCES_DATA.people[name];
-  var weeks = RESOURCES_DATA.weeks;
-  var N = weeks.length;
-  var wEnd = Math.min(_absEditorWindowStart + ABS_COLS, N);
-  var wIdxs = [];
-  for (var i = _absEditorWindowStart; i < wEnd; i++) wIdxs.push(i);
+  const p = RESOURCES_DATA.people[name];
+  const weeks = RESOURCES_DATA.weeks;
+  const N = weeks.length;
+  const wEnd = Math.min(_absEditorWindowStart + ABS_COLS, N);
+  const wIdxs = [];
+  for (let i = _absEditorWindowStart; i < wEnd; i++) wIdxs.push(i);
 
-  var startLabel = absMonLabel(wIdxs[0]);
-  var endLabel = absMonLabel(wIdxs[wIdxs.length - 1]);
+  const startLabel = absMonLabel(wIdxs[0]);
+  const endLabel = absMonLabel(wIdxs[wIdxs.length - 1]);
 
-  var html = '<div class="settings-section">' +
+  let html = '<div class="settings-section">' +
     '<div class="settings-section-header">' +
       '<span>Absences — ' + esc(name) + '</span>' +
       '<button class="settings-btn settings-btn-secondary" onclick="_settingsSelectedMember=null;render();">✕ Close</button>' +
@@ -10420,19 +10424,19 @@ function renderAbsenceEditor(name) {
     '<div class="abs-grid"><table><thead><tr><th style="text-align:left;min-width:60px;">Week</th>';
 
   // Header row: week labels
-  for (var ci = 0; ci < wIdxs.length; ci++) {
-    var wi = wIdxs[ci];
-    var isCur = wi === window.currentWeekIdx;
+  for (let ci = 0; ci < wIdxs.length; ci++) {
+    const wi = wIdxs[ci];
+    const isCur = wi === window.currentWeekIdx;
     html += '<th class="' + (isCur ? 'abs-cur' : '') + '">' + absMonLabel(wi) + '</th>';
   }
   html += '</tr></thead><tbody><tr><td style="text-align:left;font-weight:700;color:var(--navy);font-size:12px;">Hours Off</td>';
 
   // Input cells
-  for (var ci = 0; ci < wIdxs.length; ci++) {
-    var wi = wIdxs[ci];
-    var hrs = p.absences[wi] || 0;
-    var isCur = wi === window.currentWeekIdx;
-    var hasVal = hrs > 0;
+  for (let ci = 0; ci < wIdxs.length; ci++) {
+    const wi = wIdxs[ci];
+    const hrs = p.absences[wi] || 0;
+    const isCur = wi === window.currentWeekIdx;
+    const hasVal = hrs > 0;
     html += '<td class="' + (isCur ? 'abs-cur' : '') + '">' +
       '<input type="number" min="0" max="40" step="1" value="' + hrs + '" ' +
       'class="abs-input' + (hasVal ? ' has-val' : '') + '" ' +
@@ -10443,10 +10447,10 @@ function renderAbsenceEditor(name) {
 
   // Capacity row (read-only, shows computed proj_cap)
   html += '</tr><tr><td style="text-align:left;font-size:11px;color:var(--text-muted);">Proj Capacity</td>';
-  for (var ci = 0; ci < wIdxs.length; ci++) {
-    var wi = wIdxs[ci];
-    var cap = p.proj_cap[wi] || 0;
-    var isCur = wi === window.currentWeekIdx;
+  for (let ci = 0; ci < wIdxs.length; ci++) {
+    const wi = wIdxs[ci];
+    const cap = p.proj_cap[wi] || 0;
+    const isCur = wi === window.currentWeekIdx;
     html += '<td class="' + (isCur ? 'abs-cur' : '') + '" style="font-size:11px;color:var(--text-muted);">' + cap.toFixed(1) + 'h</td>';
   }
 
@@ -10456,13 +10460,13 @@ function renderAbsenceEditor(name) {
 
 function absMonLabel(wi) {
   if (!RESOURCES_DATA || !RESOURCES_DATA.weeks[wi]) return '';
-  var d = new Date(RESOURCES_DATA.weeks[wi] + 'T00:00:00');
+  const d = new Date(RESOURCES_DATA.weeks[wi] + 'T00:00:00');
   d.setDate(d.getDate() + 1); // Sun→Mon
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 function absEditorShift(dir) {
-  var N = RESOURCES_DATA.weeks.length;
+  const N = RESOURCES_DATA.weeks.length;
   _absEditorWindowStart = Math.max(0, Math.min(_absEditorWindowStart + dir, N - ABS_COLS));
   renderAbsenceEditor(_settingsSelectedMember);
 }
@@ -10473,16 +10477,16 @@ function absJumpCurrent() {
 }
 
 async function absValueChanged(input) {
-  var name = input.dataset.name;
-  var wi = parseInt(input.dataset.wi);
-  var hrs = Math.min(40, Math.max(0, parseFloat(input.value) || 0));
+  const name = input.dataset.name;
+  const wi = parseInt(input.dataset.wi);
+  const hrs = Math.min(40, Math.max(0, parseFloat(input.value) || 0));
   input.value = hrs;
   input.className = 'abs-input' + (hrs > 0 ? ' has-val' : '');
 
-  var p = RESOURCES_DATA.people[name];
+  const p = RESOURCES_DATA.people[name];
   if (!p) return;
 
-  var oldHrs = p.absences[wi] || 0;
+  const oldHrs = p.absences[wi] || 0;
   p.absences[wi] = hrs;
 
   // Recalculate proj_cap for this week: (40 - absences) × 75% productivity × proj_pct
@@ -10492,7 +10496,7 @@ async function absValueChanged(input) {
   p.allocations.forEach(function(a) {
     a.hours[wi] = (a.fracs[wi] || 0) * p.proj_cap[wi];
   });
-  var totalHrs = 0;
+  const totalHrs = 0;
   p.allocations.forEach(function(a) { totalHrs += (a.hours[wi] || 0); });
   p.weekly_allocated[wi] = totalHrs;
   p.utilization[wi] = p.proj_cap[wi] > 0 ? totalHrs / p.proj_cap[wi] : 0;
@@ -10501,14 +10505,14 @@ async function absValueChanged(input) {
   renderAbsenceEditor(name);
 
   // Save to REST
-  var weekDate = RESOURCES_DATA.weeks[wi];
+  const weekDate = RESOURCES_DATA.weeks[wi];
   try {
     // Find existing absence record for this person+week
-    var existing = await agolQuery(ARCGIS_CONFIG.absencesUrl,
+    const existing = await agolQuery(ARCGIS_CONFIG.absencesUrl,
       "name='" + name.replace(/'/g, "''") + "' AND week_date='" + weekDate + "'");
 
     if (existing.length > 0) {
-      var oid = existing[0].attributes.OBJECTID || existing[0].attributes.ObjectId || existing[0].attributes.objectid || existing[0].attributes.FID;
+      const oid = existing[0].attributes.OBJECTID || existing[0].attributes.ObjectId || existing[0].attributes.objectid || existing[0].attributes.FID;
       if (hrs > 0) {
         // Update existing
         await agolApplyEdits(ARCGIS_CONFIG.absencesUrl, {
