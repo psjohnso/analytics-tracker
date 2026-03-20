@@ -2984,7 +2984,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0087';
+const APP_VERSION = '0.9.3.0088';
 
 let PROJECTS = [];
 let TASKS = [];
@@ -3762,16 +3762,8 @@ function initResourcesWeekIndices() {
   }
 }
 
-function renderResources(area) {
-  if (!RESOURCES_DATA) { area.innerHTML = '<div class="empty-state">Resources data is loading…</div>'; return; }
-  const weeks = RESOURCES_DATA.weeks;
-  const people = RESOURCES_DATA.people;
-  const currentWeekIdx = window.currentWeekIdx;
-  const dataWeekIdx    = window.dataWeekIdx;
-  // chartWindowStart defaults to 0 (Jan 4) so user sees full year from the start
-
-  // ── Person cards ──────────────────────────────────────────────
-  const personCards = Object.entries(people).map(([name, p]) => {
+function buildResourcePersonCards(people, currentWeekIdx) {
+  return Object.entries(people).map(([name, p]) => {
     const curUtil = (p.utilization[currentWeekIdx] || 0) * 100;
     const utilColor = curUtil > 90 ? '#EF4444' : curUtil > 70 ? '#F59E0B' : '#83AC16';
     const initials = name.split(' ').map(w => w[0]).join('').slice(0,2);
@@ -3785,6 +3777,65 @@ function renderResources(area) {
       <span class="person-util-badge" style="background:${utilColor}22;color:${utilColor};">${curUtil.toFixed(0)}%</span>
     </div>`;
   }).join('');
+}
+
+function buildResourceAllocTableRows(allocs, projColorMap, calWeekIdx) {
+  return allocs
+    .filter(a => a.fracs.some(f=>f>0) && (a.status === 'Active' || a.status === 'On Hold'))
+    .sort((a,b) => b.hours.reduce((s,v)=>s+v,0) - a.hours.reduce((s,v)=>s+v,0))
+    .map(a => {
+      const totalHrs = a.hours.reduce((s,v)=>s+v,0);
+      const col = projColorMap[a.project];
+      const statusCol = STATUS_COLOR(a.status) || '#9CA3AF';
+      const spStart = Math.max(0, calWeekIdx-3);
+      const spWeeks = a.fracs.slice(spStart, spStart+8);
+      const spMax = Math.max(...spWeeks, 0.01);
+      const sparks = spWeeks.map((f, i) => {
+        const h = Math.round((f/spMax)*20);
+        const isNow = (spStart+i) === calWeekIdx;
+        return `<div class="spark-bar" style="height:${h}px;background:${isNow?col:col+'88'};"></div>`;
+      }).join('');
+      const cwFrac = (a.fracs[calWeekIdx]||0)*100;
+      return `<tr>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="width:10px;height:10px;border-radius:2px;background:${col};flex-shrink:0;"></span>
+            ${a.analytics_id != null
+              ? `<span style="font-weight:600;color:var(--navy);cursor:pointer;text-decoration:underline;text-underline-offset:2px;text-decoration-color:rgba(0,38,105,0.3);"
+                  onclick="openProject(${(PROJECTS.find(x => x.id == a.analytics_id)||{}).objectId || 0})"
+                  onmouseenter="this.style.color='#C24200'"
+                  onmouseleave="this.style.color='var(--navy)'"
+                  title="View project details">${esc(a.project)}</span>`
+              : `<span style="font-weight:600;color:var(--navy);">${esc(a.project)}</span>`
+            }
+          </div>
+        </td>
+        <td><span class="status-pill" style="background:${statusCol}22;color:${statusCol};font-size:11px;">${esc(a.status||'—')}</span></td>
+        <td style="font-size:12px;color:var(--text-muted);">${esc(a.type||'—')}</td>
+        <td>
+          <div class="util-bar-wrap">
+            <div class="util-bar-bg"><div class="util-bar-fill" style="width:${Math.min(cwFrac,100).toFixed(0)}%;background:${col};"></div></div>
+            <span style="font-size:12px;color:var(--navy);font-weight:600;min-width:36px;">${cwFrac.toFixed(0)}%</span>
+          </div>
+        </td>
+        <td>
+          <div class="sparkline-cell">${sparks}</div>
+        </td>
+        <td style="font-size:12px;font-weight:600;color:var(--navy);">${totalHrs.toFixed(1)}h</td>
+      </tr>`;
+    }).join('');
+}
+
+function renderResources(area) {
+  if (!RESOURCES_DATA) { area.innerHTML = '<div class="empty-state">Resources data is loading…</div>'; return; }
+  const weeks = RESOURCES_DATA.weeks;
+  const people = RESOURCES_DATA.people;
+  const currentWeekIdx = window.currentWeekIdx;
+  const dataWeekIdx    = window.dataWeekIdx;
+  // chartWindowStart defaults to 0 (Jan 4) so user sees full year from the start
+
+  // ── Person cards ──────────────────────────────────────────────
+  const personCards = buildResourcePersonCards(people, currentWeekIdx);
 
   // ── Selected person data ──────────────────────────────────────
   const p = people[selectedPerson];
@@ -3951,51 +4002,7 @@ function renderResources(area) {
   ).join('');
 
   // ── Project allocation table ──────────────────────────────────
-  const tableRows = allocs
-    .filter(a => a.fracs.some(f=>f>0) && (a.status === 'Active' || a.status === 'On Hold'))
-    .sort((a,b) => b.hours.reduce((s,v)=>s+v,0) - a.hours.reduce((s,v)=>s+v,0))
-    .map(a => {
-      const totalHrs = a.hours.reduce((s,v)=>s+v,0);
-      const col = projColorMap[a.project];
-      const statusCol = STATUS_COLOR(a.status) || '#9CA3AF';
-      // Sparkline: 8 weeks around current
-      const spStart = Math.max(0, calWeekIdx-3);
-      const spWeeks = a.fracs.slice(spStart, spStart+8);
-      const spMax = Math.max(...spWeeks, 0.01);
-      const sparks = spWeeks.map((f, i) => {
-        const h = Math.round((f/spMax)*20);
-        const isNow = (spStart+i) === calWeekIdx;
-        return `<div class="spark-bar" style="height:${h}px;background:${isNow?col:col+'88'};"></div>`;
-      }).join('');
-      const cwFrac = (a.fracs[calWeekIdx]||0)*100;
-      return `<tr>
-        <td>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="width:10px;height:10px;border-radius:2px;background:${col};flex-shrink:0;"></span>
-            ${a.analytics_id != null
-              ? `<span style="font-weight:600;color:var(--navy);cursor:pointer;text-decoration:underline;text-underline-offset:2px;text-decoration-color:rgba(0,38,105,0.3);"
-                  onclick="openProject(${(PROJECTS.find(x => x.id == a.analytics_id)||{}).objectId || 0})"
-                  onmouseenter="this.style.color='#C24200'"
-                  onmouseleave="this.style.color='var(--navy)'"
-                  title="View project details">${esc(a.project)}</span>`
-              : `<span style="font-weight:600;color:var(--navy);">${esc(a.project)}</span>`
-            }
-          </div>
-        </td>
-        <td><span class="status-pill" style="background:${statusCol}22;color:${statusCol};font-size:11px;">${esc(a.status||'—')}</span></td>
-        <td style="font-size:12px;color:var(--text-muted);">${esc(a.type||'—')}</td>
-        <td>
-          <div class="util-bar-wrap">
-            <div class="util-bar-bg"><div class="util-bar-fill" style="width:${Math.min(cwFrac,100).toFixed(0)}%;background:${col};"></div></div>
-            <span style="font-size:12px;color:var(--navy);font-weight:600;min-width:36px;">${cwFrac.toFixed(0)}%</span>
-          </div>
-        </td>
-        <td>
-          <div class="sparkline-cell">${sparks}</div>
-        </td>
-        <td style="font-size:12px;font-weight:600;color:var(--navy);">${totalHrs.toFixed(1)}h</td>
-      </tr>`;
-    }).join('');
+  const tableRows = buildResourceAllocTableRows(allocs, projColorMap, calWeekIdx);
 
   const periodLabel = (() => {
     const s = new Date(weeks[wStart]+'T00:00:00'); s.setDate(s.getDate()+1); // Sun→Mon
@@ -5208,6 +5215,15 @@ async function loadResourcesData() {
     }
   });
 
+  // Compute capacity, allocations, and utilization
+  computeCapacityAndAllocations(people, weeks, weekIdx, allocFeatures, N, getPayPeriodWeek);
+
+  RESOURCES_DATA = { weeks: weeks, people: people, _memberFieldNames: memberFeatures.length ? Object.keys(memberFeatures[0].attributes) : [] };
+  console.log('[Resources] Loaded:', memberFeatures.length, 'members,', absenceFeatures.length, 'absence records,',
+    allocFeatures.length, 'allocation records');
+}
+
+function computeCapacityAndAllocations(people, weeks, weekIdx, allocFeatures, N, getPayPeriodWeek) {
   // Compute proj_cap from formula: (scheduled_hours - absence_hours) × 75% productivity × proj_pct
   // The 0.75 factor accounts for non-project-work time (meetings, email, breaks, etc.)
   // For 9/80 schedules, Week A = week1_hours (44), Week B = week2_hours (36).
@@ -5253,9 +5269,7 @@ async function loadResourcesData() {
     }
   });
 
-  // Recompute allocation hours from fractions and local proj_cap.
-  // The stored hours in the REST service may have been computed with an older
-  // capacity formula, so we always recalculate from fractions to stay in sync.
+  // Recompute allocation hours from fractions and local proj_cap
   Object.values(people).forEach(function(p) {
     p.allocations.forEach(function(a) {
       for (let i = 0; i < N; i++) {
@@ -5264,9 +5278,7 @@ async function loadResourcesData() {
     });
   });
 
-  // Compute weekly_allocated and utilization from actual allocation data.
-  // This ensures they're always in sync, even if the weekly_capacity table
-  // hasn't been updated after allocation edits.
+  // Compute weekly_allocated and utilization
   Object.values(people).forEach(function(p) {
     for (let i = 0; i < N; i++) {
       let totalHrs = 0;
@@ -5275,10 +5287,6 @@ async function loadResourcesData() {
       p.utilization[i] = p.proj_cap[i] > 0 ? totalHrs / p.proj_cap[i] : 0;
     }
   });
-
-  RESOURCES_DATA = { weeks: weeks, people: people, _memberFieldNames: memberFeatures.length ? Object.keys(memberFeatures[0].attributes) : [] };
-  console.log('[Resources] Loaded:', memberFeatures.length, 'members,', absenceFeatures.length, 'absence records,',
-    allocFeatures.length, 'allocation records');
 }
 
 async function loadArcGISData() {
@@ -6640,96 +6648,7 @@ async function markProjectComplete(objectId) {
 
 
 // ─── PROJECT DETAIL PAGE ──────────────────────────────────────────────
-function renderProjectDetail(id) {
-  const p = PROJECTS.find(x => x.objectId == id);
-  if (!p) return '<div class="empty-state">Project not found.</div>';
-  const relTasks = TASKS.filter(function(t) {
-    // Primary: match on project title (unique, most reliable)
-    if (t.project && t.project === p.title) return true;
-    // Fallback: match on project_id only if task has no project title
-    if (!t.project && t.project_id != null && t.project_id == p.id) return true;
-    return false;
-  });
-  const statusColor = STATUS_COLOR(p.status) || '#9CA3AF';
-  const returnTab = currentDetail._returnTab || 'projects';
-  const backLabels = { mywork: '← Back to My Work', resources: '← Back to Resources', tasks: '← Back to Tasks', forecast: '← Back to Forecast' };
-  const backLabel = backLabels[returnTab] || '← Back to Projects';
-
-  const allMembers = (() => {
-    const arr = [p.contact, ...(p.other_members||'').split(',').map(s=>s.trim())].filter(Boolean);
-    return [...new Set(arr)];
-  })();
-
-  const memberChips = allMembers.map(name => {
-    const av = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    return `<span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:20px;padding:4px 12px 4px 6px;font-size:12px;white-space:nowrap;">
-      <span style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.25);font-size:8px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">${av}</span>${esc(name)}</span>`;
-  }).join('');
-
-  const taskRows = relTasks.length ? relTasks.map(t => {
-    const sc = STATUS_COLOR(t.status) || '#9CA3AF';
-    const taskHrs = getTaskHours(t.idx);
-    const myHrs = getMyTaskHours(t.idx);
-    const hrsDisplay = taskHrs > 0 ? hoursLabel(taskHrs, myHrs) : '—';
-    const canComplete = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
-    return `<div class="detail-task-row" onclick="openTaskFromProject(${t.idx})">
-      <div class="detail-task-title">${esc(t.title)}</div>
-      <div class="detail-task-cell"><span class="status-pill" style="background:${sc}22;color:${sc};"><span style="width:5px;height:5px;border-radius:50%;background:${sc};display:inline-block;"></span>${t.status||'—'}</span></div>
-      <div class="detail-task-cell"><span class="priority-badge priority-${t.priority||'null'}">${t.priority||'—'}</span></div>
-      <div class="detail-task-cell" style="color:var(--text-muted);">${esc(t.assignee||'—')}</div>
-      <div class="detail-task-cell" style="color:var(--text-muted);">${t.working_due||t.due||'—'}</div>
-      <div class="detail-task-cell" style="font-weight:700;color:var(--navy);">${hrsDisplay}</div>
-      <div class="detail-task-cell" style="text-align:center;">${canComplete ? `<button onclick="event.stopPropagation();markTaskComplete(${t.idx})" style="background:#22C55E;color:#fff;border:none;border-radius:4px;width:26px;height:26px;font-size:14px;cursor:pointer;line-height:1;" title="Mark as Complete">✓</button>` : ''}</div>
-    </div>`;
-  }).join('') : `<div style="padding:32px;text-align:center;color:var(--text-muted);font-style:italic;">No tasks linked to this project.</div>`;
-
-  // Project hours total
-  const projTotalHrs = getProjectHours(p.title);
-  const projMyHrs = getMyProjectHours(p.title);
-  const projHrsRow = relTasks.length && projTotalHrs > 0 ? `<div class="detail-task-row" style="background:#F0F4FF;cursor:default;font-weight:700;">
-    <div class="detail-task-title" style="font-weight:800;color:var(--navy);">Total</div>
-    <div class="detail-task-cell"></div><div class="detail-task-cell"></div><div class="detail-task-cell"></div><div class="detail-task-cell"></div>
-    <div class="detail-task-cell" style="font-weight:800;color:var(--navy);">${hoursLabel(projTotalHrs, projMyHrs)}</div>
-    <div class="detail-task-cell"></div>
-  </div>` : '';
-
-  return `<div class="detail-page">
-    <div class="detail-hero" style="background:linear-gradient(135deg, var(--navy) 0%, #003580 55%, ${statusColor}cc 100%);">
-      <div class="detail-hero-actions">
-        ${p.status && p.status !== 'Complete' && p.status !== 'Canceled' ? `<button class="modal-edit-btn" style="background:rgba(34,197,94,0.25);border-color:rgba(34,197,94,0.5);" onclick="markProjectComplete(${p.objectId})">✓ Complete</button>` : ''}
-        <button class="modal-edit-btn" onclick="openFormModal('edit-project',${p.objectId})">✏ Edit</button>
-        <button class="modal-del-btn" onclick="confirmDeleteProject(${p.objectId})">🗑 Delete</button>
-      </div>
-      <button class="detail-back-btn" onclick="goBackFromDetail()">${backLabel}</button>
-      <div class="detail-hero-title">${esc(p.title)}</div>
-      <div class="detail-hero-badges">
-        <span class="status-pill" style="background:rgba(255,255,255,0.15);color:white;font-size:12px;">
-          <span style="width:7px;height:7px;border-radius:50%;background:${statusColor};display:inline-block;"></span>${p.status||'—'}
-        </span>
-        <span class="priority-badge priority-${p.priority||'null'}">${p.priority||'—'}</span>
-        ${p.category ? `<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;">${esc(p.category)}</span>` : ''}
-        ${p.itd_team ? `<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;">${esc(p.itd_team)}</span>` : ''}
-        ${projTotalHrs > 0 ? `<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;">⏱ ${hoursLabel(projTotalHrs, projMyHrs)}</span>` : ''}
-        ${p.actual_end ? `<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;">✓ Completed ${p.actual_end}</span>` : ''}
-      </div>
-      ${allMembers.length ? `<div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:6px;">${memberChips}</div>` : ''}
-    </div>
-
-    <div class="detail-content">
-      <div class="detail-section">
-        <div class="detail-section-label">Project Details</div>
-        <div class="detail-meta-grid">
-          <div class="detail-meta-item"><label>Primary Contact</label><p>${esc(p.contact||'—')}</p></div>
-          <div class="detail-meta-item"><label>Partner Department</label><p>${esc(p.partner_dept||'—')}</p></div>
-          <div class="detail-meta-item"><label>ITD Team</label><p>${esc(p.itd_team||'—')}</p></div>
-          <div class="detail-meta-item"><label>Category</label><p>${esc(p.category||'—')}</p></div>
-          <div class="detail-meta-item"><label>Start Date</label><p>${p.start||'—'}</p></div>
-          <div class="detail-meta-item"><label>Working Due Date</label><p>${p.working_due || p.end || '—'}</p></div>
-          ${p.actual_end ? `<div class="detail-meta-item"><label>Actual End</label><p>${p.actual_end}</p></div>` : ''}
-        </div>
-      </div>
-
-      ${(() => {
+function buildProjectTimeline(p) {
         // Project timeline — full-width bar with status history phases
         const projStart = p.start || null;
         const projActualEnd = p.actual_end || null;
@@ -6834,7 +6753,98 @@ function renderProjectDetail(id) {
           '<div style="position:relative;height:28px;margin-top:2px;">' + labels + '</div>' +
           '<div id="status-history-editor"></div>' +
         '</div>';
-      })()}
+}
+
+function renderProjectDetail(id) {
+  const p = PROJECTS.find(x => x.objectId == id);
+  if (!p) return '<div class="empty-state">Project not found.</div>';
+  const relTasks = TASKS.filter(function(t) {
+    // Primary: match on project title (unique, most reliable)
+    if (t.project && t.project === p.title) return true;
+    // Fallback: match on project_id only if task has no project title
+    if (!t.project && t.project_id != null && t.project_id == p.id) return true;
+    return false;
+  });
+  const statusColor = STATUS_COLOR(p.status) || '#9CA3AF';
+  const returnTab = currentDetail._returnTab || 'projects';
+  const backLabels = { mywork: '← Back to My Work', resources: '← Back to Resources', tasks: '← Back to Tasks', forecast: '← Back to Forecast' };
+  const backLabel = backLabels[returnTab] || '← Back to Projects';
+
+  const allMembers = (() => {
+    const arr = [p.contact, ...(p.other_members||'').split(',').map(s=>s.trim())].filter(Boolean);
+    return [...new Set(arr)];
+  })();
+
+  const memberChips = allMembers.map(name => {
+    const av = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    return `<span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:20px;padding:4px 12px 4px 6px;font-size:12px;white-space:nowrap;">
+      <span style="width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,0.25);font-size:8px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">${av}</span>${esc(name)}</span>`;
+  }).join('');
+
+  const taskRows = relTasks.length ? relTasks.map(t => {
+    const sc = STATUS_COLOR(t.status) || '#9CA3AF';
+    const taskHrs = getTaskHours(t.idx);
+    const myHrs = getMyTaskHours(t.idx);
+    const hrsDisplay = taskHrs > 0 ? hoursLabel(taskHrs, myHrs) : '—';
+    const canComplete = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
+    return `<div class="detail-task-row" onclick="openTaskFromProject(${t.idx})">
+      <div class="detail-task-title">${esc(t.title)}</div>
+      <div class="detail-task-cell"><span class="status-pill" style="background:${sc}22;color:${sc};"><span style="width:5px;height:5px;border-radius:50%;background:${sc};display:inline-block;"></span>${t.status||'—'}</span></div>
+      <div class="detail-task-cell"><span class="priority-badge priority-${t.priority||'null'}">${t.priority||'—'}</span></div>
+      <div class="detail-task-cell" style="color:var(--text-muted);">${esc(t.assignee||'—')}</div>
+      <div class="detail-task-cell" style="color:var(--text-muted);">${t.working_due||t.due||'—'}</div>
+      <div class="detail-task-cell" style="font-weight:700;color:var(--navy);">${hrsDisplay}</div>
+      <div class="detail-task-cell" style="text-align:center;">${canComplete ? `<button onclick="event.stopPropagation();markTaskComplete(${t.idx})" style="background:#22C55E;color:#fff;border:none;border-radius:4px;width:26px;height:26px;font-size:14px;cursor:pointer;line-height:1;" title="Mark as Complete">✓</button>` : ''}</div>
+    </div>`;
+  }).join('') : `<div style="padding:32px;text-align:center;color:var(--text-muted);font-style:italic;">No tasks linked to this project.</div>`;
+
+  // Project hours total
+  const projTotalHrs = getProjectHours(p.title);
+  const projMyHrs = getMyProjectHours(p.title);
+  const projHrsRow = relTasks.length && projTotalHrs > 0 ? `<div class="detail-task-row" style="background:#F0F4FF;cursor:default;font-weight:700;">
+    <div class="detail-task-title" style="font-weight:800;color:var(--navy);">Total</div>
+    <div class="detail-task-cell"></div><div class="detail-task-cell"></div><div class="detail-task-cell"></div><div class="detail-task-cell"></div>
+    <div class="detail-task-cell" style="font-weight:800;color:var(--navy);">${hoursLabel(projTotalHrs, projMyHrs)}</div>
+    <div class="detail-task-cell"></div>
+  </div>` : '';
+
+  return `<div class="detail-page">
+    <div class="detail-hero" style="background:linear-gradient(135deg, var(--navy) 0%, #003580 55%, ${statusColor}cc 100%);">
+      <div class="detail-hero-actions">
+        ${p.status && p.status !== 'Complete' && p.status !== 'Canceled' ? `<button class="modal-edit-btn" style="background:rgba(34,197,94,0.25);border-color:rgba(34,197,94,0.5);" onclick="markProjectComplete(${p.objectId})">✓ Complete</button>` : ''}
+        <button class="modal-edit-btn" onclick="openFormModal('edit-project',${p.objectId})">✏ Edit</button>
+        <button class="modal-del-btn" onclick="confirmDeleteProject(${p.objectId})">🗑 Delete</button>
+      </div>
+      <button class="detail-back-btn" onclick="goBackFromDetail()">${backLabel}</button>
+      <div class="detail-hero-title">${esc(p.title)}</div>
+      <div class="detail-hero-badges">
+        <span class="status-pill" style="background:rgba(255,255,255,0.15);color:white;font-size:12px;">
+          <span style="width:7px;height:7px;border-radius:50%;background:${statusColor};display:inline-block;"></span>${p.status||'—'}
+        </span>
+        <span class="priority-badge priority-${p.priority||'null'}">${p.priority||'—'}</span>
+        ${p.category ? `<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;">${esc(p.category)}</span>` : ''}
+        ${p.itd_team ? `<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;">${esc(p.itd_team)}</span>` : ''}
+        ${projTotalHrs > 0 ? `<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;">⏱ ${hoursLabel(projTotalHrs, projMyHrs)}</span>` : ''}
+        ${p.actual_end ? `<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.9);font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;">✓ Completed ${p.actual_end}</span>` : ''}
+      </div>
+      ${allMembers.length ? `<div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:6px;">${memberChips}</div>` : ''}
+    </div>
+
+    <div class="detail-content">
+      <div class="detail-section">
+        <div class="detail-section-label">Project Details</div>
+        <div class="detail-meta-grid">
+          <div class="detail-meta-item"><label>Primary Contact</label><p>${esc(p.contact||'—')}</p></div>
+          <div class="detail-meta-item"><label>Partner Department</label><p>${esc(p.partner_dept||'—')}</p></div>
+          <div class="detail-meta-item"><label>ITD Team</label><p>${esc(p.itd_team||'—')}</p></div>
+          <div class="detail-meta-item"><label>Category</label><p>${esc(p.category||'—')}</p></div>
+          <div class="detail-meta-item"><label>Start Date</label><p>${p.start||'—'}</p></div>
+          <div class="detail-meta-item"><label>Working Due Date</label><p>${p.working_due || p.end || '—'}</p></div>
+          ${p.actual_end ? `<div class="detail-meta-item"><label>Actual End</label><p>${p.actual_end}</p></div>` : ''}
+        </div>
+      </div>
+
+      ${buildProjectTimeline(p)}
 
       ${p.problem_statement ? `<div class="detail-section">
         <div class="detail-section-label">Problem Statement</div>
@@ -8728,6 +8738,73 @@ function startTimerTick() {
   }, 10000); // update every 10 seconds
 }
 
+function buildTimeEntryRowHTML(e, opts) {
+  const task = TASKS.find(function(t) { return t.idx === e.task_idx; });
+  const taskTitle = task ? task.title : 'Task #' + e.task_idx;
+  const hrs = e.hours ? (Math.round(e.hours * 100) / 100) + 'h' : '—';
+  let html = '<div class="te-entry-row" id="te-row-' + e.oid + '">';
+  html += '<div style="flex:1;min-width:0;">';
+  html += '<div style="font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(taskTitle) + '</div>';
+  html += '<div style="font-size:11px;color:var(--text-muted);">' + formatTimeShort(e.start_time) + ' → ' + formatTimeShort(e.end_time);
+  if (opts.showCumulative) {
+    const cumulHrs = getTaskHours(e.task_idx);
+    if (cumulHrs > 0) html += ' · Total: ' + cumulHrs + 'h';
+  }
+  html += '</div>';
+  if (e.notes) html += '<div style="font-size:10px;color:var(--text-muted);font-style:italic;">' + esc(e.notes) + '</div>';
+  html += '</div>';
+  html += '<div style="font-size:14px;font-weight:800;color:var(--navy);white-space:nowrap;">' + hrs + '</div>';
+  if (opts.canResume) {
+    html += '<button onclick="startTimer(' + e.task_idx + ')" style="background:#22C55E;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;" title="Resume this task">▶</button>';
+  }
+  html += '<button onclick="toggleEditTimeEntry(' + e.oid + ')" style="background:none;border:none;cursor:pointer;font-size:12px;padding:4px;">✏️</button>';
+  html += '<button onclick="deleteTimeEntry(' + e.oid + ')" style="background:none;border:none;cursor:pointer;font-size:12px;padding:4px;color:#EF4444;">🗑</button>';
+  html += '</div>';
+  // Inline edit form
+  html += '<div id="te-edit-' + e.oid + '" style="display:none;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:10px 12px;margin-bottom:8px;">';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end;">';
+  html += '<div><label style="font-size:10px;font-weight:700;color:var(--text-muted);">START</label><input type="datetime-local" id="te-start-' + e.oid + '" class="mf-input" style="font-size:12px;margin-bottom:0;" value="' + toDatetimeLocal(e.start_time) + '"></div>';
+  html += '<div><label style="font-size:10px;font-weight:700;color:var(--text-muted);">END</label><input type="datetime-local" id="te-end-' + e.oid + '" class="mf-input" style="font-size:12px;margin-bottom:0;" value="' + toDatetimeLocal(e.end_time) + '"></div>';
+  html += '<div><label style="font-size:10px;font-weight:700;color:var(--text-muted);">NOTES</label><input type="text" id="te-notes-' + e.oid + '" class="mf-input" style="font-size:12px;margin-bottom:0;" value="' + esc(e.notes || '') + '" placeholder="Work description"></div>';
+  html += '</div>';
+  html += '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">';
+  html += '<button onclick="toggleEditTimeEntry(' + e.oid + ')" style="background:#F3F4F6;border:1px solid #D1D5DB;border-radius:6px;padding:4px 12px;font-size:11px;cursor:pointer;">Cancel</button>';
+  html += '<button onclick="saveTimeEntryEdit(' + e.oid + ')" style="background:var(--navy);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;">Save</button>';
+  html += '</div></div>';
+  return html;
+}
+
+function buildActiveTimersHTML(activeTimers) {
+  if (activeTimers.length === 0) return '';
+  let html = '<div style="margin-bottom:14px;">';
+  activeTimers.forEach(function(e) {
+    const task = TASKS.find(function(t) { return t.idx === e.task_idx; });
+    const taskTitle = task ? task.title : 'Task #' + e.task_idx;
+    let projTitle = '';
+    if (task && task.project) {
+      projTitle = task.project;
+    } else if (task && task.project_id) {
+      const proj = PROJECTS.find(function(p) { return p.id == task.project_id; });
+      if (proj) projTitle = proj.title;
+    }
+    const elapsed = formatDuration(Date.now() - e.start_time);
+    html += '<div style="background:#EFF6FF;border:2px solid var(--navy);border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">';
+    html += '<div style="width:10px;height:10px;border-radius:50%;background:#22C55E;animation:pulse 1.5s infinite;flex-shrink:0;"></div>';
+    html += '<div style="flex:1;min-width:0;">';
+    html += '<div style="font-size:13px;font-weight:700;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(taskTitle) + '</div>';
+    if (projTitle) html += '<div style="font-size:11px;color:var(--text-muted);">' + esc(projTitle) + '</div>';
+    const cumulHrs = getTaskHours(e.task_idx);
+    html += '<div style="font-size:11px;color:var(--text-muted);">Started ' + formatTimeShort(e.start_time) + (cumulHrs > 0 ? ' · Total: ' + cumulHrs + 'h' : '') + '</div>';
+    html += '</div>';
+    html += '<div style="font-size:20px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;" id="timer-elapsed-' + e.oid + '">' + elapsed + '</div>';
+    html += '<button onclick="pauseTimer(' + e.oid + ',' + e.task_idx + ')" style="background:#F59E0B;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">⏸ Pause</button>';
+    html += '<button onclick="stopTimer(' + e.oid + ')" style="background:#EF4444;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">⏹ Stop</button>';
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
 function buildTimeTrackingPanel() {
   const myTasks = getMyTasks();
   const activeTimers = getActiveTimers();
@@ -8740,34 +8817,7 @@ function buildTimeTrackingPanel() {
   html += '<div class="mywork-section-header">⏱️ Time Tracking</div>';
 
   // Active timers
-  if (activeTimers.length > 0) {
-    html += '<div style="margin-bottom:14px;">';
-    activeTimers.forEach(function(e) {
-      const task = TASKS.find(function(t) { return t.idx === e.task_idx; });
-      const taskTitle = task ? task.title : 'Task #' + e.task_idx;
-      let projTitle = '';
-      if (task && task.project) {
-        projTitle = task.project;
-      } else if (task && task.project_id) {
-        const proj = PROJECTS.find(function(p) { return p.id == task.project_id; });
-        if (proj) projTitle = proj.title;
-      }
-      const elapsed = formatDuration(Date.now() - e.start_time);
-      html += '<div style="background:#EFF6FF;border:2px solid var(--navy);border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">';
-      html += '<div style="width:10px;height:10px;border-radius:50%;background:#22C55E;animation:pulse 1.5s infinite;flex-shrink:0;"></div>';
-      html += '<div style="flex:1;min-width:0;">';
-      html += '<div style="font-size:13px;font-weight:700;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(taskTitle) + '</div>';
-      if (projTitle) html += '<div style="font-size:11px;color:var(--text-muted);">' + esc(projTitle) + '</div>';
-      const cumulHrs = getTaskHours(e.task_idx);
-      html += '<div style="font-size:11px;color:var(--text-muted);">Started ' + formatTimeShort(e.start_time) + (cumulHrs > 0 ? ' · Total: ' + cumulHrs + 'h' : '') + '</div>';
-      html += '</div>';
-      html += '<div style="font-size:20px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;" id="timer-elapsed-' + e.oid + '">' + elapsed + '</div>';
-      html += '<button onclick="pauseTimer(' + e.oid + ',' + e.task_idx + ')" style="background:#F59E0B;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">⏸ Pause</button>';
-      html += '<button onclick="stopTimer(' + e.oid + ')" style="background:#EF4444;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">⏹ Stop</button>';
-      html += '</div>';
-    });
-    html += '</div>';
-  }
+  html += buildActiveTimersHTML(activeTimers);
 
   // Start new timer — task selector
   const availableTasks = myTasks.filter(function(t) {
@@ -8799,43 +8849,14 @@ function buildTimeTrackingPanel() {
   // Today's completed entries
   if (todayEntries.length > 0) {
     todayEntries.sort(function(a, b) { return b.start_time - a.start_time; });
-    // Track which tasks already have active timers (no resume needed)
     const activeTaskIds = {};
     activeTimers.forEach(function(e) { activeTaskIds[e.task_idx] = true; });
-    // Track which tasks already have a resume button shown (only show once per task)
     const resumeShown = {};
     html += '<div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">Today\'s Log</div>';
     todayEntries.forEach(function(e) {
-      const task = TASKS.find(function(t) { return t.idx === e.task_idx; });
-      const taskTitle = task ? task.title : 'Task #' + e.task_idx;
-      const hrs = e.hours ? (Math.round(e.hours * 100) / 100) + 'h' : '—';
-      const cumulHrs = getTaskHours(e.task_idx);
       const canResume = !activeTaskIds[e.task_idx] && !resumeShown[e.task_idx];
-      html += '<div class="te-entry-row" id="te-row-' + e.oid + '">';
-      html += '<div style="flex:1;min-width:0;">';
-      html += '<div style="font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(taskTitle) + '</div>';
-      html += '<div style="font-size:11px;color:var(--text-muted);">' + formatTimeShort(e.start_time) + ' → ' + formatTimeShort(e.end_time) + (cumulHrs > 0 ? ' · Total: ' + cumulHrs + 'h' : '') + '</div>';
-      if (e.notes) html += '<div style="font-size:10px;color:var(--text-muted);font-style:italic;">' + esc(e.notes) + '</div>';
-      html += '</div>';
-      html += '<div style="font-size:14px;font-weight:800;color:var(--navy);white-space:nowrap;">' + hrs + '</div>';
-      if (canResume) {
-        html += '<button onclick="startTimer(' + e.task_idx + ')" style="background:#22C55E;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;" title="Resume this task">▶</button>';
-        resumeShown[e.task_idx] = true;
-      }
-      html += '<button onclick="toggleEditTimeEntry(' + e.oid + ')" style="background:none;border:none;cursor:pointer;font-size:12px;padding:4px;">✏️</button>';
-      html += '<button onclick="deleteTimeEntry(' + e.oid + ')" style="background:none;border:none;cursor:pointer;font-size:12px;padding:4px;color:#EF4444;">🗑</button>';
-      html += '</div>';
-      // Inline edit form (hidden by default)
-      html += '<div id="te-edit-' + e.oid + '" style="display:none;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:10px 12px;margin-bottom:8px;">';
-      html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end;">';
-      html += '<div><label style="font-size:10px;font-weight:700;color:var(--text-muted);">START</label><input type="datetime-local" id="te-start-' + e.oid + '" class="mf-input" style="font-size:12px;margin-bottom:0;" value="' + toDatetimeLocal(e.start_time) + '"></div>';
-      html += '<div><label style="font-size:10px;font-weight:700;color:var(--text-muted);">END</label><input type="datetime-local" id="te-end-' + e.oid + '" class="mf-input" style="font-size:12px;margin-bottom:0;" value="' + toDatetimeLocal(e.end_time) + '"></div>';
-      html += '<div><label style="font-size:10px;font-weight:700;color:var(--text-muted);">NOTES</label><input type="text" id="te-notes-' + e.oid + '" class="mf-input" style="font-size:12px;margin-bottom:0;" value="' + esc(e.notes || '') + '" placeholder="Work description"></div>';
-      html += '</div>';
-      html += '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">';
-      html += '<button onclick="toggleEditTimeEntry(' + e.oid + ')" style="background:#F3F4F6;border:1px solid #D1D5DB;border-radius:6px;padding:4px 12px;font-size:11px;cursor:pointer;">Cancel</button>';
-      html += '<button onclick="saveTimeEntryEdit(' + e.oid + ')" style="background:var(--navy);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;">Save</button>';
-      html += '</div></div>';
+      html += buildTimeEntryRowHTML(e, { showCumulative: true, canResume: canResume });
+      if (canResume) resumeShown[e.task_idx] = true;
     });
   }
 
@@ -8861,37 +8882,13 @@ function buildTimeTrackingPanel() {
     html += '<div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;margin-top:14px;">Recent (Past 7 Days)</div>';
     let lastDate = '';
     recentEntries.forEach(function(e) {
-      const task = TASKS.find(function(t) { return t.idx === e.task_idx; });
-      const taskTitle = task ? task.title : 'Task #' + e.task_idx;
-      const hrs = e.hours ? (Math.round(e.hours * 100) / 100) + 'h' : '—';
-      // Date separator
       if (e.work_date !== lastDate) {
         const dateObj = new Date(e.work_date + 'T00:00:00');
         const dateLabel = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
         html += '<div style="font-size:10px;font-weight:700;color:var(--text-muted);margin-top:10px;margin-bottom:4px;">' + dateLabel + '</div>';
         lastDate = e.work_date;
       }
-      html += '<div class="te-entry-row" id="te-row-' + e.oid + '">';
-      html += '<div style="flex:1;min-width:0;">';
-      html += '<div style="font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(taskTitle) + '</div>';
-      html += '<div style="font-size:11px;color:var(--text-muted);">' + formatTimeShort(e.start_time) + ' → ' + formatTimeShort(e.end_time) + '</div>';
-      if (e.notes) html += '<div style="font-size:10px;color:var(--text-muted);font-style:italic;">' + esc(e.notes) + '</div>';
-      html += '</div>';
-      html += '<div style="font-size:14px;font-weight:800;color:var(--navy);white-space:nowrap;">' + hrs + '</div>';
-      html += '<button onclick="toggleEditTimeEntry(' + e.oid + ')" style="background:none;border:none;cursor:pointer;font-size:12px;padding:4px;">✏️</button>';
-      html += '<button onclick="deleteTimeEntry(' + e.oid + ')" style="background:none;border:none;cursor:pointer;font-size:12px;padding:4px;color:#EF4444;">🗑</button>';
-      html += '</div>';
-      // Inline edit form
-      html += '<div id="te-edit-' + e.oid + '" style="display:none;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;padding:10px 12px;margin-bottom:8px;">';
-      html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end;">';
-      html += '<div><label style="font-size:10px;font-weight:700;color:var(--text-muted);">START</label><input type="datetime-local" id="te-start-' + e.oid + '" class="mf-input" style="font-size:12px;margin-bottom:0;" value="' + toDatetimeLocal(e.start_time) + '"></div>';
-      html += '<div><label style="font-size:10px;font-weight:700;color:var(--text-muted);">END</label><input type="datetime-local" id="te-end-' + e.oid + '" class="mf-input" style="font-size:12px;margin-bottom:0;" value="' + toDatetimeLocal(e.end_time) + '"></div>';
-      html += '<div><label style="font-size:10px;font-weight:700;color:var(--text-muted);">NOTES</label><input type="text" id="te-notes-' + e.oid + '" class="mf-input" style="font-size:12px;margin-bottom:0;" value="' + esc(e.notes || '') + '" placeholder="Work description"></div>';
-      html += '</div>';
-      html += '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">';
-      html += '<button onclick="toggleEditTimeEntry(' + e.oid + ')" style="background:#F3F4F6;border:1px solid #D1D5DB;border-radius:6px;padding:4px 12px;font-size:11px;cursor:pointer;">Cancel</button>';
-      html += '<button onclick="saveTimeEntryEdit(' + e.oid + ')" style="background:var(--navy);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;">Save</button>';
-      html += '</div></div>';
+      html += buildTimeEntryRowHTML(e, { showCumulative: false, canResume: false });
     });
     html += '</div>';
     html += '<button class="mywork-expand-btn" onclick="toggleRecentEntries()">' +
@@ -9138,6 +9135,86 @@ function buildGanttBars() {
   }
 
   html += '</div></div>'; // min-width + overflow wrappers
+  return html;
+}
+
+function buildMyWorkTaskRow(t, statusColor, status, todayStr, hrsLabelFn) {
+  const eDue = effectiveDue(t);
+  const isOverdue = eDue && eDue < todayStr;
+  const tHrs = getTaskHours(t.idx);
+  const mHrs = hrsLabelFn ? hrsLabelFn(t.idx) : getMyTaskHours(t.idx);
+  const canComplete = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
+  let out = '<div class="mywork-compact-row" onclick="openTask(' + t.idx + ')">';
+  out += '<span class="mywork-compact-badge" style="background:' + statusColor + '22;color:' + statusColor + ';">' + esc(status) + '</span>';
+  out += '<span class="mywork-compact-title">' + esc(t.title) + '</span>';
+  if (tHrs > 0) {
+    out += '<span style="font-size:10px;font-weight:700;color:var(--navy);white-space:nowrap;background:#EEF2FF;padding:2px 7px;border-radius:8px;">⏱ ' + hoursLabel(tHrs, mHrs) + '</span>';
+  }
+  if (eDue) {
+    out += '<span style="font-size:11px;font-weight:600;white-space:nowrap;color:' + (isOverdue ? '#EF4444' : 'var(--text-muted)') + ';">' + (isOverdue ? '⚠ ' : '') + eDue + '</span>';
+  }
+  if (canComplete) {
+    out += '<button onclick="event.stopPropagation();markTaskComplete(' + t.idx + ')" style="background:#22C55E;color:#fff;border:none;border-radius:4px;width:24px;height:24px;font-size:13px;cursor:pointer;line-height:1;flex-shrink:0;" title="Mark as Complete">✓</button>';
+  }
+  out += '</div>';
+  return out;
+}
+
+function buildMyWorkTasksSection(myTasks, todayStr, viewUserTaskHrsFn) {
+  let html = '<div>';
+  html += '<div class="mywork-section" id="mw-tasks">';
+
+  const tasksByStatus = {};
+  myTasks.forEach(function(t) {
+    const s = t.status || 'Unknown';
+    if (!tasksByStatus[s]) tasksByStatus[s] = [];
+    tasksByStatus[s].push(t);
+  });
+  const pendingCount = (tasksByStatus['Pending'] || []).length;
+  const onHoldCount = (tasksByStatus['On Hold'] || []).length;
+  const completeCount = (tasksByStatus['Complete'] || []).length;
+  const canceledCount = (tasksByStatus['Canceled'] || []).length;
+  const hiddenCount = pendingCount + onHoldCount + completeCount + canceledCount;
+
+  html += '<div class="mywork-section-header">✅ My Tasks <span class="badge-count">' + myTasks.length + '</span></div>';
+
+  const defaultStatuses = ['In Progress', 'Waiting for Response'];
+  let hasTasks = false;
+  defaultStatuses.forEach(function(status) {
+    const list = tasksByStatus[status];
+    if (!list || !list.length) return;
+    hasTasks = true;
+    list.sort(function(a, b) { return (a.due || '9999').localeCompare(b.due || '9999'); });
+    const statusColor = STATUS_COLOR(status);
+    html += '<div style="margin-bottom:4px;margin-top:12px;font-size:11px;font-weight:700;color:' + statusColor + ';text-transform:uppercase;letter-spacing:0.06em;">' + esc(status) + ' (' + list.length + ')</div>';
+    list.forEach(function(t) { html += buildMyWorkTaskRow(t, statusColor, status, todayStr, viewUserTaskHrsFn); });
+  });
+
+  if (!hasTasks && hiddenCount === 0) {
+    html += '<div class="mywork-empty">No tasks assigned to you.</div>';
+  }
+
+  const expandStatuses = ['Pending', 'On Hold'];
+  const expandItems = expandStatuses.filter(function(s) { return tasksByStatus[s] && tasksByStatus[s].length > 0; });
+  if (expandItems.length > 0) {
+    const expandLabel = expandItems.map(function(s) { return s + ' (' + tasksByStatus[s].length + ')'; }).join(', ');
+    html += '<div id="mywork-tasks-expand" style="display:none;">';
+    expandItems.forEach(function(status) {
+      const list = tasksByStatus[status];
+      if (!list || !list.length) return;
+      list.sort(function(a, b) { return (a.due || '9999').localeCompare(b.due || '9999'); });
+      const statusColor = STATUS_COLOR(status);
+      html += '<div style="margin-bottom:4px;margin-top:12px;font-size:11px;font-weight:700;color:' + statusColor + ';text-transform:uppercase;letter-spacing:0.06em;">' + esc(status) + ' (' + list.length + ')</div>';
+      list.forEach(function(t) { html += buildMyWorkTaskRow(t, statusColor, status, todayStr, null); });
+    });
+    html += '</div>';
+    html += '<button class="mywork-expand-btn" id="mywork-tasks-toggle" onclick="toggleMyWorkTasks()">' +
+      'Show more (' + expandLabel + ')' +
+    '</button>';
+  }
+
+  html += '</div>';
+  html += '</div>';
   return html;
 }
 
@@ -9724,101 +9801,7 @@ function renderMyWork(area) {
   html += '</div>'; // close left column
 
   // ── RIGHT COLUMN: My Tasks ──────────────────────────────────
-  html += '<div>';
-  html += '<div class="mywork-section" id="mw-tasks">';
-
-  // Count tasks by visibility group
-  const tasksByStatus = {};
-  myTasks.forEach(function(t) {
-    const s = t.status || 'Unknown';
-    if (!tasksByStatus[s]) tasksByStatus[s] = [];
-    tasksByStatus[s].push(t);
-  });
-  const pendingCount = (tasksByStatus['Pending'] || []).length;
-  const onHoldCount = (tasksByStatus['On Hold'] || []).length;
-  const completeCount = (tasksByStatus['Complete'] || []).length;
-  const canceledCount = (tasksByStatus['Canceled'] || []).length;
-  const hiddenCount = pendingCount + onHoldCount + completeCount + canceledCount;
-
-  html += '<div class="mywork-section-header">✅ My Tasks <span class="badge-count">' + myTasks.length + '</span></div>';
-
-  // Default visible statuses: In Progress, Waiting for Response
-  const defaultStatuses = ['In Progress', 'Waiting for Response'];
-  let hasTasks = false;
-  defaultStatuses.forEach(function(status) {
-    const list = tasksByStatus[status];
-    if (!list || !list.length) return;
-    hasTasks = true;
-    list.sort(function(a, b) { return (a.due || '9999').localeCompare(b.due || '9999'); });
-    const statusColor = STATUS_COLOR(status);
-    html += '<div style="margin-bottom:4px;margin-top:12px;font-size:11px;font-weight:700;color:' + statusColor + ';text-transform:uppercase;letter-spacing:0.06em;">' + esc(status) + ' (' + list.length + ')</div>';
-    list.forEach(function(t) {
-      const eDue = effectiveDue(t);
-      const isOverdue = eDue && eDue < todayStr;
-      const tHrs = getTaskHours(t.idx);
-      const mHrs = viewUserTaskHrs(t.idx);
-      const canComplete = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
-      html += '<div class="mywork-compact-row" onclick="openTask(' + t.idx + ')">';
-      html += '<span class="mywork-compact-badge" style="background:' + statusColor + '22;color:' + statusColor + ';">' + esc(status) + '</span>';
-      html += '<span class="mywork-compact-title">' + esc(t.title) + '</span>';
-      if (tHrs > 0) {
-        html += '<span style="font-size:10px;font-weight:700;color:var(--navy);white-space:nowrap;background:#EEF2FF;padding:2px 7px;border-radius:8px;">⏱ ' + hoursLabel(tHrs, mHrs, hrsLabel) + '</span>';
-      }
-      if (eDue) {
-        html += '<span style="font-size:11px;font-weight:600;white-space:nowrap;color:' + (isOverdue ? '#EF4444' : 'var(--text-muted)') + ';">' + (isOverdue ? '⚠ ' : '') + eDue + '</span>';
-      }
-      if (canComplete) {
-        html += '<button onclick="event.stopPropagation();markTaskComplete(' + t.idx + ')" style="background:#22C55E;color:#fff;border:none;border-radius:4px;width:24px;height:24px;font-size:13px;cursor:pointer;line-height:1;flex-shrink:0;" title="Mark as Complete">✓</button>';
-      }
-      html += '</div>';
-    });
-  });
-
-  if (!hasTasks && hiddenCount === 0) {
-    html += '<div class="mywork-empty">No tasks assigned to you.</div>';
-  }
-
-  // Expandable sections: Pending, On Hold
-  const expandStatuses = ['Pending', 'On Hold'];
-  const expandItems = expandStatuses.filter(function(s) { return tasksByStatus[s] && tasksByStatus[s].length > 0; });
-  if (expandItems.length > 0) {
-    const expandLabel = expandItems.map(function(s) { return s + ' (' + tasksByStatus[s].length + ')'; }).join(', ');
-    html += '<div id="mywork-tasks-expand" style="display:none;">';
-    expandItems.forEach(function(status) {
-      const list = tasksByStatus[status];
-      if (!list || !list.length) return;
-      list.sort(function(a, b) { return (a.due || '9999').localeCompare(b.due || '9999'); });
-      const statusColor = STATUS_COLOR(status);
-      html += '<div style="margin-bottom:4px;margin-top:12px;font-size:11px;font-weight:700;color:' + statusColor + ';text-transform:uppercase;letter-spacing:0.06em;">' + esc(status) + ' (' + list.length + ')</div>';
-      list.forEach(function(t) {
-        const eDue = effectiveDue(t);
-        const isOverdue = eDue && eDue < todayStr;
-        const tHrs = getTaskHours(t.idx);
-        const mHrs = getMyTaskHours(t.idx);
-        const canComplete = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
-        html += '<div class="mywork-compact-row" onclick="openTask(' + t.idx + ')">';
-        html += '<span class="mywork-compact-badge" style="background:' + statusColor + '22;color:' + statusColor + ';">' + esc(status) + '</span>';
-        html += '<span class="mywork-compact-title">' + esc(t.title) + '</span>';
-        if (tHrs > 0) {
-          html += '<span style="font-size:10px;font-weight:700;color:var(--navy);white-space:nowrap;background:#EEF2FF;padding:2px 7px;border-radius:8px;">⏱ ' + hoursLabel(tHrs, mHrs) + '</span>';
-        }
-        if (eDue) {
-          html += '<span style="font-size:11px;font-weight:600;white-space:nowrap;color:' + (isOverdue ? '#EF4444' : 'var(--text-muted)') + ';">' + (isOverdue ? '⚠ ' : '') + eDue + '</span>';
-        }
-        if (canComplete) {
-          html += '<button onclick="event.stopPropagation();markTaskComplete(' + t.idx + ')" style="background:#22C55E;color:#fff;border:none;border-radius:4px;width:24px;height:24px;font-size:13px;cursor:pointer;line-height:1;flex-shrink:0;" title="Mark as Complete">✓</button>';
-        }
-        html += '</div>';
-      });
-    });
-    html += '</div>';
-    html += '<button class="mywork-expand-btn" id="mywork-tasks-toggle" onclick="toggleMyWorkTasks()">' +
-      'Show more (' + expandLabel + ')' +
-    '</button>';
-  }
-
-  html += '</div>';
-  html += '</div>'; // close right column
+  html += buildMyWorkTasksSection(myTasks, todayStr, viewUserTaskHrs);
   html += '</div>'; // close mywork-columns
 
   html += '</div>'; // close mywork-page
