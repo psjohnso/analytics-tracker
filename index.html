@@ -3005,7 +3005,7 @@ let fcWindow = 13;  // weeks to display in forecast
 let fcMode = 'util'; // 'util' | 'hours'
 let currentView = 'grid';
 let currentPage = 1;
-const PAGE_SIZE = 24;
+let PAGE_SIZE = 24;
 let taskSortKey = 'project';
 let taskSortDir = 'asc';
 let projListSortKey = 'title';
@@ -3851,17 +3851,17 @@ function renderResources(area) {
   const kpiColor = cwUtil > 90 ? '#EF4444' : cwUtil > 70 ? '#F59E0B' : '#002669';
 
   // ── Chart: 12-week stacked bar ────────────────────────────────
-  const windowSize = 20;
+  let windowSize = 20;
   const wStart = Math.min(chartWindowStart, Math.max(0, weeks.length - windowSize));
   const wEnd   = Math.min(wStart + windowSize, weeks.length);
   const wWeeks = weeks.slice(wStart, wEnd);
 
   const maxCap = Math.max(...p.proj_cap.slice(wStart, wEnd), 1);
-  const chartH = 180;
-  const barW   = 48;
-  const gap    = 8;
-  const padL   = 50;
-  const padB   = 40;
+  let chartH = 180;
+  let barW   = 48;
+  let gap    = 8;
+  let padL   = 50;
+  let padB   = 40;
   const chartW = padL + (barW + gap) * (wEnd - wStart) + 20;
 
   // Build color map for projects
@@ -4093,7 +4093,7 @@ function shiftChart(delta) {
 let editorPerson  = null;
 let editorDraft   = {};   // { name: [{project,status,fracs:[52]}] }
 let aeWindowStart = 0, aeProjectDates = {};    // first week index currently shown
-const AE_COLS     = 6;    // weeks visible at once
+let AE_COLS     = 6;    // weeks visible at once
 
 let _aeListenerAdded = false;
 function openAllocEditor(name) {
@@ -4508,7 +4508,7 @@ async function saveAllocationsToRest(edits) {
       console.error('[Allocations] Partial failures:', errors);
       alert('Some allocation changes failed to save:\n' + errors.join('\n'));
     } else {
-      const msg = 'Saved ' + adds.length + ' allocation(s)';
+      let msg = 'Saved ' + adds.length + ' allocation(s)';
       if (deletes.length > 0) msg += ', removed ' + deletes.length + ' old record(s)';
       console.log('[Allocations] ✓', msg);
       markSynced(msg);
@@ -4860,7 +4860,7 @@ async function agolQuery(serviceUrl, where) {
   if (!token) return []; // redirect in progress
   let allFeatures = [];
   let offset = 0;
-  const batchSize = 1000;
+  let batchSize = 1000;
   let hasMore = true;
 
   while (hasMore) {
@@ -5035,7 +5035,7 @@ function generateWeeks(year) {
  *   weekly_allocated: number[], utilization: number[] } } }
  */
 async function loadResourcesData() {
-  const N = 52; // weeks per year
+  let N = 52; // weeks per year
 
   // Query 3 services in parallel (weekly_capacity no longer needed —
   // proj_cap is always computed from absences × proj_pct)
@@ -5269,7 +5269,7 @@ async function loadResourcesData() {
   // hasn't been updated after allocation edits.
   Object.values(people).forEach(function(p) {
     for (let i = 0; i < N; i++) {
-      const totalHrs = 0;
+      let totalHrs = 0;
       p.allocations.forEach(function(a) { totalHrs += (a.hours[i] || 0); });
       p.weekly_allocated[i] = totalHrs;
       p.utilization[i] = p.proj_cap[i] > 0 ? totalHrs / p.proj_cap[i] : 0;
@@ -6789,7 +6789,7 @@ function renderProjectDetail(id) {
         // Build segments
         let segments = '';
         let labels = '';
-        const cumulativePct = 0;
+        let cumulativePct = 0;
         phases.forEach(function(ph, idx) {
           const startMs = new Date(ph.start + 'T00:00:00') - new Date(firstDate + 'T00:00:00');
           const endMs = new Date(ph.end + 'T00:00:00') - new Date(firstDate + 'T00:00:00');
@@ -7110,7 +7110,7 @@ function buildForecastPage() {
     const avHrs = Math.round(avgAvail * 10) / 10;
 
     // Sparkline: util per week as small bars
-    const sparkW = 120, sparkH = 24, bw = Math.max(3, Math.floor(sparkW / wLen) - 1);
+    let sparkW = 120, sparkH = 24, bw = Math.max(3, Math.floor(sparkW / wLen) - 1);
     let sparks = '';
     sliceCap.forEach((cap, i) => {
       const u = cap > 0 ? Math.min(1.25, (cap - sliceAvail[i]) / cap) : 0;
@@ -7149,7 +7149,7 @@ function buildForecastPage() {
     }
   }
 
-  const svgW = 900, svgH = 120, padL = 48, padB = 28, padT = 10;
+  let svgW = 900, svgH = 120, padL = 48, padB = 28, padT = 10;
   const innerW = svgW - padL - 16;
   const innerH = svgH - padB - padT;
   const maxTeam = Math.max(...teamCap, 1);
@@ -7682,7 +7682,7 @@ function showToast(msg) {
 // ══════════════════════════════════════════════════════════════════════
 let _settingsSelectedMember = null;
 let _absEditorWindowStart = 0;
-const ABS_COLS = 8;
+let ABS_COLS = 8;
 
 // ── Dropdown List Editor State ──────────────────────────────────
 // These arrays are the "base" lists that users can edit in Settings.
@@ -8420,7 +8420,7 @@ function getMyTaskHours(taskIdx, forUser) {
 function getMyProjectHours(projectTitle, forUser) {
   const who = forUser || _userFullName;
   if (!who) return 0;
-  const total = 0;
+  let total = 0;
   TASKS.forEach(function(t) {
     if (t.project === projectTitle) {
       const byPerson = TASK_HOURS_BY_PERSON[t.idx];
@@ -8612,7 +8612,7 @@ function calculateWorkHours(startMs, endMs) {
         const tStartDate = new Date(timerStartOnDay);
         const timerStartMin = tStartDate.getHours() * 60 + tStartDate.getMinutes();
         const tEndDate = new Date(timerEndOnDay);
-        const timerEndMin = tEndDate.getHours() * 60 + tEndDate.getMinutes();
+        let timerEndMin = tEndDate.getHours() * 60 + tEndDate.getMinutes();
         // If timer ends at midnight (next day), treat as end of day
         if (timerEndOnDay >= dayEnd.getTime()) timerEndMin = 24 * 60;
 
@@ -9698,7 +9698,7 @@ function renderMyWork(area) {
 
   // Default visible: Active, Scheduled, Idea
   const defaultProjStatuses = ['Active', 'Scheduled', 'Idea'];
-  const hasDefaultProj = false;
+  let hasDefaultProj = false;
   defaultProjStatuses.forEach(function(status) {
     const chunk = renderProjGroup(status);
     if (chunk) { hasDefaultProj = true; html += chunk; }
@@ -9857,7 +9857,7 @@ function renderSettingsPage(area) {
   // Team Members table
   let memberRows = names.map(function(name) {
     const p = people[name];
-    const schedLabel = p.schedule_type || '5/8';
+    let schedLabel = p.schedule_type || '5/8';
     if (p.rdo_day) schedLabel += ' · ' + p.rdo_day + ' off';
     const ttChecked = p.time_tracking ? ' checked' : '';
     const isInactive = p.active === false;
@@ -10496,7 +10496,7 @@ async function absValueChanged(input) {
   p.allocations.forEach(function(a) {
     a.hours[wi] = (a.fracs[wi] || 0) * p.proj_cap[wi];
   });
-  const totalHrs = 0;
+  let totalHrs = 0;
   p.allocations.forEach(function(a) { totalHrs += (a.hours[wi] || 0); });
   p.weekly_allocated[wi] = totalHrs;
   p.utilization[wi] = p.proj_cap[wi] > 0 ? totalHrs / p.proj_cap[wi] : 0;
