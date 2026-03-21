@@ -3017,7 +3017,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0091';
+const APP_VERSION = '0.9.3.0092';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -4250,7 +4250,7 @@ function openProjectFromAlloc(el) {
   const projTitle = el.getAttribute('data-project');
   if (!projTitle) return;
   const proj = PROJECTS.find(function(p) { return p.title === projTitle; });
-  if (!proj) { alert('Project not found: ' + projTitle); return; }
+  if (!proj) { showToast('Project not found: ' + projTitle, 'error'); return; }
   closeAllocEditor();
   openProject(proj.objectId);
 }
@@ -4587,7 +4587,7 @@ async function saveAllocationsToRest(edits) {
 
     if (errors.length > 0) {
       console.error('[Allocations] Partial failures:', errors);
-      alert('Some allocation changes failed to save:\n' + errors.join('\n'));
+      showToast('Some allocation changes failed to save. Check console for details.', 'error');
     } else {
       let msg = 'Saved ' + adds.length + ' allocation(s)';
       if (deletes.length > 0) msg += ', removed ' + deletes.length + ' old record(s)';
@@ -4596,7 +4596,7 @@ async function saveAllocationsToRest(edits) {
     }
   } catch (err) {
     console.error('[Allocations] Save failed:', err);
-    alert('Allocation save failed: ' + err.message + '\n\nCheck the browser console (F12) for details.');
+    showToast('Allocation save failed: ' + err.message, 'error');
   }
 }
 
@@ -4628,7 +4628,7 @@ async function saveAllData() {
   } catch (err) {
     hideLoadingOverlay();
     console.error('Refresh failed:', err);
-    alert('Refresh failed: ' + err.message);
+    showToast('Refresh failed: ' + err.message, 'error');
   }
 }
 
@@ -5467,7 +5467,7 @@ const DataStore = {
       return proj;
     } catch (err) {
       console.error('ArcGIS createProject failed:', err);
-      alert('Failed to create project in ArcGIS Online: ' + err.message);
+      showToast('Failed to create project: ' + err.message, 'error');
       if (!fields.id) fields.id = Math.max(0, ...PROJECTS.map(function(p) { return p.id; })) + 1;
       const pid = (fields.title || '').replace(/\s+/g, '').slice(0, 40) + Date.now();
       const tempOid = 'temp_' + Date.now();
@@ -5574,7 +5574,7 @@ const DataStore = {
       return task;
     } catch (err) {
       console.error('ArcGIS createTask failed:', err);
-      alert('Failed to create task in ArcGIS Online: ' + err.message);
+      showToast('Failed to create task: ' + err.message, 'error');
       if (!fields.id)  fields.id  = Math.max(0, ...TASKS.map(function(t) { return t.id; }))  + 1;
       if (!fields.idx) fields.idx = Math.max(0, ...TASKS.map(function(t) { return t.idx; })) + 1;
       if (fields.project && !fields.project_id) {
@@ -6463,7 +6463,7 @@ function buildTaskForm(t) {
 }
 
 function openFormModal(mode, id) {
-  if (!Auth.loggedIn) { alert('You must be signed in to make changes.'); return; }
+  if (!Auth.loggedIn) { showToast('You must be signed in to make changes.', 'warn'); return; }
   refreshEnums(); // Rebuild enum lists from live data so new values are always present
   Editor.mode   = mode;
   Editor.editId = (id !== undefined) ? id : null;
@@ -6566,7 +6566,7 @@ async function handleFormSubmit(andDownload) {
       return p.title.toLowerCase() === fields.title.toLowerCase();
     });
     if (duplicate) {
-      alert('A project named "' + fields.title + '" already exists. Project names must be unique.');
+      showToast('A project named "' + fields.title + '" already exists.', 'warn');
       return;
     }
   }
@@ -6576,7 +6576,7 @@ async function handleFormSubmit(andDownload) {
     const origProject = PROJECTS.find(p => p.objectId === Editor.editId);
     if (origProject && origProject.status === 'Idea' && fields.status !== 'Idea') {
       if (!Auth.canPromote) {
-        alert('Permission denied: Only authorized users can change a project\'s status from "Idea" to another status.\n\nYou must be a member of the designated ArcGIS Online group to perform this action. Contact your administrator for access.');
+        showToast('Permission denied: only authorized users can change Idea status. Contact your administrator.', 'error');
         return;
       }
     }
@@ -6617,7 +6617,7 @@ async function handleFormSubmit(andDownload) {
 }
 
 async function handleFormDelete() {
-  if (!Auth.loggedIn) { alert('You must be signed in to delete records.'); return; }
+  if (!Auth.loggedIn) { showToast('You must be signed in to delete records.', 'warn'); return; }
   const isProject = Editor.mode.indexOf('project') >= 0;
   const label     = isProject ? 'project' : 'task';
   if (!confirm('Delete this ' + label + '? This cannot be undone.')) return;
@@ -6642,7 +6642,7 @@ function confirmDeleteTask(taskIdx) {
 }
 
 async function markTaskComplete(taskIdx) {
-  if (!Auth.loggedIn) { alert('You must be signed in.'); return; }
+  if (!Auth.loggedIn) { showToast('You must be signed in.', 'warn'); return; }
   const task = TASKS.find(function(t) { return t.idx === taskIdx; });
   if (!task) return;
   if (!confirm('Mark "' + task.title + '" as Complete?')) return;
@@ -6654,7 +6654,7 @@ async function markTaskComplete(taskIdx) {
 }
 
 async function markProjectComplete(objectId) {
-  if (!Auth.loggedIn) { alert('You must be signed in.'); return; }
+  if (!Auth.loggedIn) { showToast('You must be signed in.', 'warn'); return; }
   const proj = PROJECTS.find(function(p) { return p.objectId == objectId; });
   if (!proj) return;
   if (!confirm('Mark "' + proj.title + '" as Complete?')) return;
@@ -7399,7 +7399,7 @@ function buildForecastPage() {
 // ─── IDEA SUBMISSION ──────────────────────────────────────────────────
 
 function openIdeaForm() {
-  if (!Auth.loggedIn) { alert('You must be signed in to submit ideas.'); return; }
+  if (!Auth.loggedIn) { showToast('You must be signed in to submit ideas.', 'warn'); return; }
   refreshEnums();
   const body = document.getElementById('idea-modal-body');
   body.innerHTML = `
@@ -7515,7 +7515,7 @@ async function submitIdeaForm() {
     return p.title.toLowerCase() === title.toLowerCase();
   });
   if (duplicate) {
-    alert('A project named "' + title + '" already exists. Project names must be unique.');
+    showToast('A project named "' + title + '" already exists.', 'warn');
     return;
   }
 
@@ -7715,7 +7715,7 @@ async function saveIdeaReviewNotes(id) {
   const notesEl = document.getElementById('idea-notes-' + id);
   if (!notesEl) return;
   const notes = notesEl.value.trim();
-  if (!notes) { alert('No notes to save.'); return; }
+  if (!notes) { showToast('No notes to save.', 'warn'); return; }
   const proj = PROJECTS.find(function(p) { return p.objectId == id; });
   if (!proj) return;
   const existing = proj.reviewer_notes || '';
@@ -7733,19 +7733,26 @@ function openProjectFromReview(id) {
 
 // ─── TOAST NOTIFICATION ───────────────────────────────────────────────
 
-function showToast(msg) {
+function showToast(msg, type) {
   let t = document.getElementById('app-toast');
   if (!t) {
     t = document.createElement('div');
     t.id = 'app-toast';
     t.style.cssText = `position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);
-      background:rgba(0,38,105,0.92);color:#fff;padding:10px 22px;border-radius:24px;
+      color:#fff;padding:10px 22px;border-radius:24px;max-width:500px;text-align:center;
       font-size:13px;font-weight:700;font-family:Lato,sans-serif;z-index:9999;
       opacity:0;transition:opacity 0.25s ease,transform 0.25s ease;pointer-events:none;
       backdrop-filter:blur(8px);box-shadow:0 4px 20px rgba(0,0,0,0.25);`;
     document.body.appendChild(t);
   }
+  const colors = {
+    error: 'rgba(194,66,0,0.95)',
+    warn:  'rgba(180,83,9,0.95)',
+    info:  'rgba(0,38,105,0.92)',
+  };
+  t.style.background = colors[type] || colors.info;
   t.textContent = msg;
+  const duration = type === 'error' ? 5000 : type === 'warn' ? 4000 : 3000;
   requestAnimationFrame(() => {
     t.style.opacity = '1';
     t.style.transform = 'translateX(-50%) translateY(0)';
@@ -7753,7 +7760,7 @@ function showToast(msg) {
     t._timer = setTimeout(() => {
       t.style.opacity = '0';
       t.style.transform = 'translateX(-50%) translateY(10px)';
-    }, 3000);
+    }, duration);
   });
 }
 // ══════════════════════════════════════════════════════════════════════
@@ -7968,7 +7975,7 @@ async function saveConfigKey(key, valueArray) {
     return true;
   } catch (e) {
     console.error('Failed to save config "' + key + '" to ArcGIS:', e);
-    alert('Failed to save "' + key + '": ' + e.message);
+    showToast('Failed to save "' + key + '": ' + e.message, 'error');
     return false;
   }
 }
@@ -8038,7 +8045,7 @@ async function addListItem(listKey) {
 
   const list = listKey === 'dept' ? _customPartnerDepts : _customItdTeams;
   if (list.includes(val)) {
-    alert('This item already exists in the list.');
+    showToast('This item already exists in the list.', 'warn');
     return;
   }
   list.push(val);
@@ -8166,11 +8173,11 @@ async function addDescListItem(listKey) {
   if (!nameInput) return;
   const name = nameInput.value.trim();
   const desc = descInput ? descInput.value.trim() : '';
-  if (!name) { alert('Please enter a name.'); return; }
+  if (!name) { showToast('Please enter a name.', 'warn'); return; }
 
   const list = getDescList(listKey);
   if (list.some(function(i) { return i.name.toLowerCase() === name.toLowerCase(); })) {
-    alert('An item with this name already exists.');
+    showToast('An item with this name already exists.', 'warn');
     return;
   }
   const newItem = { name: name, desc: desc };
@@ -8222,12 +8229,12 @@ async function saveDescListEdit(listKey, idx) {
   if (!nameEl) return;
   const newName = nameEl.value.trim();
   const newDesc = descEl ? descEl.value.trim() : '';
-  if (!newName) { alert('Name cannot be empty.'); return; }
+  if (!newName) { showToast('Name cannot be empty.', 'warn'); return; }
 
   const list = getDescList(listKey);
   // Check for duplicate (excluding self)
   if (list.some(function(i, ii) { return ii !== idx && i.name.toLowerCase() === newName.toLowerCase(); })) {
-    alert('An item with this name already exists.');
+    showToast('An item with this name already exists.', 'warn');
     return;
   }
   list[idx] = { name: newName, desc: newDesc, active: list[idx].active };
@@ -8406,7 +8413,7 @@ async function addStatusHistoryRecord() {
   if (!statusEl || !dateEl) return;
   const status = statusEl.value;
   const dateVal = dateEl.value;
-  if (!status || !dateVal) { alert('Please select a status and date.'); return; }
+  if (!status || !dateVal) { showToast('Please select a status and date.', 'warn'); return; }
 
   const proj = PROJECTS.find(function(p) { return p.id == Editor.shProjectId; });
   const projTitle = proj ? proj.title : '';
@@ -8432,7 +8439,7 @@ async function addStatusHistoryRecord() {
     console.log('[StatusHistory] Added:', projTitle, '→', status, 'on', dateVal);
   } catch (err) {
     console.error('[StatusHistory] Failed to add:', err);
-    alert('Failed to save: ' + err.message);
+    showToast('Failed to save: ' + err.message, 'error');
   }
 
   renderStatusHistoryEditor();
@@ -8583,7 +8590,7 @@ function getWeekEntries() {
 async function startTimer(taskIdx) {
   if (!Auth.fullName) return;
   const task = TASKS.find(function(t) { return t.idx === taskIdx; });
-  if (!task) { alert('Task not found.'); return; }
+  if (!task) { showToast('Task not found.', 'warn'); return; }
   const now = new Date();
   const workDateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
   try {
@@ -8604,7 +8611,7 @@ async function startTimer(taskIdx) {
     renderMyWork(document.getElementById('content-area'));
   } catch (err) {
     console.error('[TimeTracking] Start timer failed:', err);
-    alert('Failed to start timer: ' + err.message);
+    showToast('Failed to start timer: ' + err.message, 'error');
   }
 }
 
@@ -8630,7 +8637,7 @@ async function stopTimer(oid) {
     renderMyWork(document.getElementById('content-area'));
   } catch (err) {
     console.error('[TimeTracking] Stop timer failed:', err);
-    alert('Failed to stop timer: ' + err.message);
+    showToast('Failed to stop timer: ' + err.message, 'error');
   }
 }
 
@@ -8734,7 +8741,7 @@ async function deleteTimeEntry(oid) {
     renderMyWork(document.getElementById('content-area'));
   } catch (err) {
     console.error('[TimeTracking] Delete failed:', err);
-    alert('Failed to delete entry: ' + err.message);
+    showToast('Failed to delete entry: ' + err.message, 'error');
   }
 }
 
@@ -8744,11 +8751,11 @@ async function saveTimeEntryEdit(oid) {
   const notesEl = document.getElementById('te-notes-' + oid);
   if (!startEl) return;
   const startVal = startEl.value; // datetime-local string
-  if (!startVal) { alert('Start time is required.'); return; }
+  if (!startVal) { showToast('Start time is required.', 'warn'); return; }
   const startMs = new Date(startVal).getTime();
   const endMs = endEl && endEl.value ? new Date(endEl.value).getTime() : null;
   const hours = endMs ? calculateWorkHours(startMs, endMs) : null;
-  if (hours !== null && hours < 0) { alert('End time must be after start time.'); return; }
+  if (hours !== null && hours < 0) { showToast('End time must be after start time.', 'warn'); return; }
   const startD = new Date(startVal);
   const workDateStr = startD.getFullYear() + '-' + String(startD.getMonth()+1).padStart(2,'0') + '-' + String(startD.getDate()).padStart(2,'0');
   const attrs = {
@@ -8766,7 +8773,7 @@ async function saveTimeEntryEdit(oid) {
     renderMyWork(document.getElementById('content-area'));
   } catch (err) {
     console.error('[TimeTracking] Edit failed:', err);
-    alert('Failed to save: ' + err.message);
+    showToast('Failed to save: ' + err.message, 'error');
   }
 }
 
@@ -8904,7 +8911,7 @@ function buildTimeTrackingPanel() {
     html += '<option value="' + t.idx + '">' + esc(t.title + projLabel) + '</option>';
   });
   html += '</select>';
-  html += '<button onclick="var s=document.getElementById(\'te-task-select\');if(s.value)startTimer(parseInt(s.value));else alert(\'Select a task first.\');" style="background:var(--navy);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">▶ Start</button>';
+  html += '<button onclick="var s=document.getElementById(\'te-task-select\');if(s.value)startTimer(parseInt(s.value));else showToast(\'Select a task first.\',\'warn\');" class="btn-navy-lg">▶ Start</button>';
   html += '</div>';
 
   // Today's summary
@@ -10131,7 +10138,7 @@ function updateWeekTotals() {
 async function toggleTimeTracking(name, enabled) {
   try {
     const existing = await agolQuery(ARCGIS_CONFIG.teamMembersUrl, "name='" + name.replace(/'/g, "''") + "'");
-    if (existing.length === 0) { alert('Could not find record for ' + name); return; }
+    if (existing.length === 0) { showToast('Could not find record for ' + name, 'error'); return; }
     const oid = existing[0].attributes.OBJECTID || existing[0].attributes.ObjectId || existing[0].attributes.objectid;
     const attrs = { OBJECTID: oid };
     // Use case-insensitive field name detection
@@ -10141,7 +10148,7 @@ async function toggleTimeTracking(name, enabled) {
       if (fn) {
         attrs[fn] = enabled ? 'true' : 'false';
       } else {
-        alert('The time_tracking field has not been added to the team_members service yet. Please add it as a String field (length 10) in ArcGIS Online.');
+        showToast('time_tracking field not found on team_members service. Add it as String(10) in ArcGIS Online.', 'error');
         return;
       }
     } else {
@@ -10155,7 +10162,7 @@ async function toggleTimeTracking(name, enabled) {
     }
   } catch (err) {
     console.error('[Settings] Toggle time tracking failed:', err);
-    alert('Failed to update time tracking: ' + err.message);
+    showToast('Failed to update time tracking: ' + err.message, 'error');
     return;
   }
   // Reload time entries if toggling self (separate try/catch)
@@ -10267,7 +10274,7 @@ async function toggleMemberActive(name) {
   const newActive = p.active === false ? true : false;
   try {
     const existing = await agolQuery(ARCGIS_CONFIG.teamMembersUrl, "name='" + name.replace(/'/g, "''") + "'");
-    if (existing.length === 0) { alert('Could not find record for ' + name); return; }
+    if (existing.length === 0) { showToast('Could not find record for ' + name, 'error'); return; }
     const oid = existing[0].attributes.OBJECTID || existing[0].attributes.ObjectId || existing[0].attributes.objectid;
     const attrs = { OBJECTID: oid, active: newActive ? 'true' : 'false' };
     await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, { updates: [{ attributes: attrs }] });
@@ -10277,7 +10284,7 @@ async function toggleMemberActive(name) {
     renderSettingsPage(document.getElementById('content-area'));
   } catch (err) {
     console.error('[Settings] Toggle member active failed:', err);
-    alert('Failed to update: ' + err.message);
+    showToast('Failed to update: ' + err.message, 'error');
   }
 }
 
@@ -10313,8 +10320,8 @@ async function saveMemberForm() {
     });
   });
 
-  if (!name) { alert('Name is required.'); return; }
-  if (projPct < 0 || projPct > 100) { alert('Project % must be 0–100.'); return; }
+  if (!name) { showToast('Name is required.', 'warn'); return; }
+  if (projPct < 0 || projPct > 100) { showToast('Project % must be 0–100.', 'warn'); return; }
 
   const memberAttrs = {
     name: name,
@@ -10352,7 +10359,7 @@ async function saveMemberForm() {
 
   // Check for duplicate if name is changing or adding new
   if ((!isEdit || isRename) && RESOURCES_DATA && RESOURCES_DATA.people[name]) {
-    alert('A team member named "' + name + '" already exists.');
+    showToast('A team member named "' + name + '" already exists.', 'warn');
     return;
   }
 
@@ -10360,7 +10367,7 @@ async function saveMemberForm() {
     if (isEdit) {
       // Find existing OID using original name
       const existing = await agolQuery(ARCGIS_CONFIG.teamMembersUrl, "name='" + origName.replace(/'/g, "''") + "'");
-      if (existing.length === 0) { alert('Could not find existing record for ' + origName); return; }
+      if (existing.length === 0) { showToast('Could not find existing record for ' + origName, 'error'); return; }
       const oid = existing[0].attributes.OBJECTID || existing[0].attributes.ObjectId || existing[0].attributes.objectid || existing[0].attributes.FID;
       memberAttrs.OBJECTID = oid;
       console.log('[Settings] Saving member update:', JSON.stringify(memberAttrs));
@@ -10387,7 +10394,7 @@ async function saveMemberForm() {
     if (result.addResults) result.addResults.forEach(function(r) { if (!r.success) errors.push(r.error ? r.error.description : 'unknown'); });
     if (result.updateResults) result.updateResults.forEach(function(r) { if (!r.success) errors.push(r.error ? r.error.description : 'unknown'); });
     if (errors.length > 0) {
-      alert('Save failed: ' + errors.join(', '));
+      showToast('Save failed: ' + errors.join(', '), 'error');
       return;
     }
 
@@ -10403,7 +10410,7 @@ async function saveMemberForm() {
   } catch (err) {
     hideLoadingOverlay();
     console.error('[Settings] Save member failed:', err);
-    alert('Save failed: ' + err.message);
+    showToast('Save failed: ' + err.message, 'error');
   }
 }
 
@@ -10411,13 +10418,13 @@ async function deleteMember(name) {
   if (!confirm('Remove "' + name + '" from the team?\n\nThis will delete their team member record. Their allocation and absence history will remain in the database.')) return;
   try {
     const existing = await agolQuery(ARCGIS_CONFIG.teamMembersUrl, "name='" + name.replace(/'/g, "''") + "'");
-    if (existing.length === 0) { alert('Could not find record for ' + name); return; }
+    if (existing.length === 0) { showToast('Could not find record for ' + name, 'error'); return; }
     const oid = existing[0].attributes.ObjectId || existing[0].attributes.OBJECTID || existing[0].attributes.objectid || existing[0].attributes.FID;
     const result = await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, { deletes: [oid] });
     console.log('[Settings] Deleted member:', name, result);
 
     if (result.deleteResults && result.deleteResults[0] && !result.deleteResults[0].success) {
-      alert('Delete failed: ' + (result.deleteResults[0].error ? result.deleteResults[0].error.description : 'unknown'));
+      showToast('Delete failed: ' + (result.deleteResults[0].error ? result.deleteResults[0].error.description : 'unknown'), 'error');
       return;
     }
 
@@ -10432,7 +10439,7 @@ async function deleteMember(name) {
     render();
   } catch (err) {
     console.error('[Settings] Delete member failed:', err);
-    alert('Delete failed: ' + err.message);
+    showToast('Delete failed: ' + err.message, 'error');
   }
 }
 
@@ -10586,7 +10593,7 @@ async function absValueChanged(input) {
     console.log('[Settings] Saved absence for', name, 'week', weekDate, ':', hrs, 'hours');
   } catch (err) {
     console.error('[Settings] Absence save failed:', err);
-    alert('Absence save failed: ' + err.message);
+    showToast('Absence save failed: ' + err.message, 'error');
   }
 }
 
