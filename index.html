@@ -3017,7 +3017,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0092';
+const APP_VERSION = '0.9.3.0093';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -3578,7 +3578,7 @@ function renderTaskGrid(data) {
     const statusColor = STATUS_COLOR(t.status) || '#9CA3AF';
     const initials = (t.assignee || '?').split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
     return `
-    <div class="project-card" onclick="openTask(${t.idx})">
+    <div class="project-card" onclick="openTask(${t.objectId})">
       <div class="project-card-accent" style="background:var(--orange)"></div>
       <div class="project-card-body">
         <div class="project-card-header">
@@ -3622,7 +3622,7 @@ function renderTaskList(data) {
     const statusColor = STATUS_COLOR(t.status) || '#9CA3AF';
     const tHrs = getTaskHours(t.idx);
     const mHrs = getMyTaskHours(t.idx);
-    return `<div class="task-row" onclick="openTask(${t.idx})">
+    return `<div class="task-row" onclick="openTask(${t.objectId})">
       <div class="task-cell" title="${esc(resolveProjectTitle(t))}"><strong style="color:var(--text-dark);">${esc(resolveProjectTitle(t)||'—')}</strong></div>
       <div class="task-title-cell">${esc(t.title)}</div>
       <div class="task-cell"><span class="status-pill" style="background:${statusColor}22;color:${statusColor};"><span style="width:5px;height:5px;border-radius:50%;background:${statusColor};display:inline-block;"></span>${t.status||'—'}</span></div>
@@ -5548,7 +5548,7 @@ const DataStore = {
 
   // ── Tasks ──────────────────────────────────────────────────────────
   getAllTasks()       { return TASKS; },
-  getTask(taskIdx)   { return TASKS.find(function(t) { return t.idx == taskIdx; }) || null; },
+  getTask(taskId)    { return TASKS.find(function(t) { return t.objectId == taskId; }) || null; },
 
   async createTask(fields) {
     try {
@@ -5588,8 +5588,8 @@ const DataStore = {
     }
   },
 
-  async updateTask(taskIdx, fields) {
-    const i = TASKS.findIndex(function(t) { return t.idx == taskIdx; });
+  async updateTask(taskId, fields) {
+    const i = TASKS.findIndex(function(t) { return t.objectId == taskId; });
     if (i < 0) return null;
     // Auto-set actual_end when status changes to Complete
     if (fields.status === 'Complete' && !fields.actual_end && !TASKS[i].actual_end) {
@@ -5620,8 +5620,8 @@ const DataStore = {
     return TASKS[i];
   },
 
-  async deleteTask(taskIdx) {
-    const i = TASKS.findIndex(function(t) { return t.idx == taskIdx; });
+  async deleteTask(taskId) {
+    const i = TASKS.findIndex(function(t) { return t.objectId == taskId; });
     if (i < 0) return false;
     const objectId = TASKS[i].objectId;
     TASKS.splice(i, 1);
@@ -6588,7 +6588,7 @@ async function handleFormSubmit(andDownload) {
   } else {
     const created = isProject ? await DataStore.createProject(fields) : await DataStore.createTask(fields);
     // After create: open the new record's detail view
-    Editor.editId = isProject ? created.objectId : created.idx;
+    Editor.editId = isProject ? created.objectId : created.objectId;
   }
 
   closeFormModal();
@@ -6635,20 +6635,20 @@ function confirmDeleteProject(id) {
   handleFormDelete();
 }
 
-function confirmDeleteTask(taskIdx) {
+function confirmDeleteTask(taskId) {
   Editor.mode   = 'edit-task';
-  Editor.editId = taskIdx;
+  Editor.editId = taskId;
   handleFormDelete();
 }
 
-async function markTaskComplete(taskIdx) {
+async function markTaskComplete(taskId) {
   if (!Auth.loggedIn) { showToast('You must be signed in.', 'warn'); return; }
-  const task = TASKS.find(function(t) { return t.idx === taskIdx; });
+  const task = TASKS.find(function(t) { return t.objectId == taskId; });
   if (!task) return;
   if (!confirm('Mark "' + task.title + '" as Complete?')) return;
   const today = new Date();
   const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
-  await DataStore.updateTask(taskIdx, { status: 'Complete', actual_end: todayStr });
+  await DataStore.updateTask(taskId, { status: 'Complete', actual_end: todayStr });
   markDataDirty();
   render();
 }
@@ -6855,14 +6855,14 @@ function renderProjectDetail(id) {
     const myHrs = getMyTaskHours(t.idx);
     const hrsDisplay = taskHrs > 0 ? hoursLabel(taskHrs, myHrs) : '—';
     const canComplete = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
-    return `<div class="detail-task-row" onclick="openTaskFromProject(${t.idx})">
+    return `<div class="detail-task-row" onclick="openTaskFromProject(${t.objectId})">
       <div class="detail-task-title">${esc(t.title)}</div>
       <div class="detail-task-cell"><span class="status-pill" style="background:${sc}22;color:${sc};"><span style="width:5px;height:5px;border-radius:50%;background:${sc};display:inline-block;"></span>${t.status||'—'}</span></div>
       <div class="detail-task-cell"><span class="priority-badge priority-${t.priority||'null'}">${t.priority||'—'}</span></div>
       <div class="detail-task-cell" style="color:var(--text-muted);">${esc(t.assignee||'—')}</div>
       <div class="detail-task-cell" style="color:var(--text-muted);">${t.working_due||t.due||'—'}</div>
       <div class="detail-task-cell" style="font-weight:700;color:var(--navy);">${hrsDisplay}</div>
-      <div class="detail-task-cell" style="text-align:center;">${canComplete ? `<button onclick="event.stopPropagation();markTaskComplete(${t.idx})" class="btn-complete-lg" title="Mark as Complete">✓</button>` : ''}</div>
+      <div class="detail-task-cell" style="text-align:center;">${canComplete ? `<button onclick="event.stopPropagation();markTaskComplete(${t.objectId})" class="btn-complete-lg" title="Mark as Complete">✓</button>` : ''}</div>
     </div>`;
   }).join('') : `<div style="padding:32px;text-align:center;color:var(--text-muted);font-style:italic;">No tasks linked to this project.</div>`;
 
@@ -6953,7 +6953,7 @@ function renderProjectDetail(id) {
 
 // ─── TASK DETAIL PAGE ─────────────────────────────────────────────────
 function renderTaskDetail(idx) {
-  const t = TASKS.find(x => x.idx === idx);
+  const t = TASKS.find(x => x.objectId == idx);
   if (!t) return '<div class="empty-state">Task not found.</div>';
   const statusColor = STATUS_COLOR(t.status) || '#9CA3AF';
   const proj = t.project ? PROJECTS.find(function(x) { return x.title === t.project; }) : PROJECTS.find(function(x) { return x.id == t.project_id; });
@@ -6968,9 +6968,9 @@ function renderTaskDetail(idx) {
   return `<div class="detail-page">
     <div class="detail-hero task-hero" style="background:#B45309;">
       <div class="detail-hero-actions">
-        ${isCompletable ? `<button class="modal-edit-btn" style="background:rgba(34,197,94,0.25);border-color:rgba(34,197,94,0.5);" onclick="event.stopPropagation();markTaskComplete(${t.idx})">✓ Complete</button>` : ''}
-        <button class="modal-edit-btn" onclick="openFormModal('edit-task',${t.idx})">✏ Edit</button>
-        <button class="modal-del-btn" onclick="confirmDeleteTask(${t.idx})">🗑 Delete</button>
+        ${isCompletable ? `<button class="modal-edit-btn" style="background:rgba(34,197,94,0.25);border-color:rgba(34,197,94,0.5);" onclick="event.stopPropagation();markTaskComplete(${t.objectId})">✓ Complete</button>` : ''}
+        <button class="modal-edit-btn" onclick="openFormModal('edit-task',${t.objectId})">✏ Edit</button>
+        <button class="modal-del-btn" onclick="confirmDeleteTask(${t.objectId})">🗑 Delete</button>
       </div>
       <button class="detail-back-btn" onclick="goBackFromDetail()">${taskBackLabel}</button>
       <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;opacity:0.7;margin-bottom:6px;">Task</div>
@@ -9192,7 +9192,7 @@ function buildGanttBars() {
       const tsc = STATUS_COLOR(t.status) || '#93C5FD';
 
       html += '<div style="display:flex;align-items:center;margin-bottom:1px;height:20px;">';
-      html += '<div style="width:200px;flex-shrink:0;font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:16px;padding-right:8px;cursor:pointer;" onclick="openTask(' + t.idx + ')" title="' + esc(t.title) + '">› ' + esc(t.title) + '</div>';
+      html += '<div style="width:200px;flex-shrink:0;font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:16px;padding-right:8px;cursor:pointer;" onclick="openTask(' + t.objectId + ')" title="' + esc(t.title) + '">› ' + esc(t.title) + '</div>';
       html += '<div style="flex:1;position:relative;height:14px;">';
       html += '<div style="position:absolute;left:' + tLeftPct + '%;width:' + tWidth + '%;height:100%;background:' + tsc + ';border-radius:3px;opacity:0.7;' + (tOverdue ? 'outline:2px solid #EF4444;outline-offset:1px;' : '') + '" title="' + tStart + ' → ' + tEnd + '"></div>';
       html += '</div></div>';
@@ -9221,7 +9221,7 @@ function buildMyWorkTaskRow(t, statusColor, status, todayStr, hrsLabelFn) {
   const tHrs = getTaskHours(t.idx);
   const mHrs = hrsLabelFn ? hrsLabelFn(t.idx) : getMyTaskHours(t.idx);
   const canComplete = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
-  let out = '<div class="mywork-compact-row" onclick="openTask(' + t.idx + ')">';
+  let out = '<div class="mywork-compact-row" onclick="openTask(' + t.objectId + ')">';
   out += '<span class="mywork-compact-badge" style="background:' + statusColor + '22;color:' + statusColor + ';">' + esc(status) + '</span>';
   out += '<span class="mywork-compact-title">' + esc(t.title) + '</span>';
   if (tHrs > 0) {
@@ -9231,7 +9231,7 @@ function buildMyWorkTaskRow(t, statusColor, status, todayStr, hrsLabelFn) {
     out += '<span style="font-size:11px;font-weight:600;white-space:nowrap;color:' + (isOverdue ? '#EF4444' : 'var(--text-muted)') + ';">' + (isOverdue ? '⚠ ' : '') + eDue + '</span>';
   }
   if (canComplete) {
-    out += '<button onclick="event.stopPropagation();markTaskComplete(' + t.idx + ')" class="btn-complete-sm" title="Mark as Complete">✓</button>';
+    out += '<button onclick="event.stopPropagation();markTaskComplete(' + t.objectId + ')" class="btn-complete-sm" title="Mark as Complete">✓</button>';
   }
   out += '</div>';
   return out;
@@ -9391,7 +9391,7 @@ function renderMyWork(area) {
     const d = effectiveDue(t);
     const daysOver = Math.ceil((today - new Date(d + 'T00:00:00')) / (1000 * 60 * 60 * 24));
     alerts.push({
-      icon: '🔴', type: 'task', id: t.idx,
+      icon: '🔴', type: 'task', id: t.objectId,
       title: t.title,
       meta: 'Due ' + d + (t.working_due && t.working_due !== t.due ? ' (orig: ' + t.due + ')' : ''),
       reason: daysOver + ' day' + (daysOver !== 1 ? 's' : '') + ' overdue',
@@ -9405,7 +9405,7 @@ function renderMyWork(area) {
     const dueDate = new Date(d + 'T00:00:00');
     const daysLeft = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
     alerts.push({
-      icon: '🟡', type: 'task', id: t.idx,
+      icon: '🟡', type: 'task', id: t.objectId,
       title: t.title,
       meta: 'Due ' + d,
       reason: daysLeft === 0 ? 'Due today' : 'Due in ' + daysLeft + ' day' + (daysLeft !== 1 ? 's' : ''),
@@ -9440,7 +9440,7 @@ function renderMyWork(area) {
     if (!t.category) missing.push('category');
     if (missing.length > 0) {
       alerts.push({
-        icon: '📝', type: 'task', id: t.idx,
+        icon: '📝', type: 'task', id: t.objectId,
         title: t.title,
         meta: 'Task · ' + (t.status || 'No status'),
         reason: 'Missing: ' + missing.join(', '),
