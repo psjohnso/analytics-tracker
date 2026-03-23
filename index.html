@@ -3017,7 +3017,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0094';
+const APP_VERSION = '0.9.3.0096';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -9321,13 +9321,14 @@ function renderMyWork(area) {
 
   const activeProjects = myProjects.filter(function(p) { return p.status === 'Active' || p.status === 'Scheduled'; });
   const openTasks = myTasks.filter(function(t) { return ['In Progress', 'On Hold', 'Waiting for Response'].includes(t.status); });
-  const overdueTasks = openTasks.filter(function(t) { var d = effectiveDue(t); return d && d < todayStr; });
+  const attentionTasks = myTasks.filter(function(t) { return ['In Progress', 'Scheduled'].includes(t.status); });
+  const overdueTasks = attentionTasks.filter(function(t) { var d = effectiveDue(t); return d && d < todayStr; });
   const overdueProjects = myProjects.filter(function(p) {
-    if (['Active', 'On Hold', 'Waiting for Response'].indexOf(p.status) < 0) return false;
+    if (['Active', 'In Progress', 'Scheduled'].indexOf(p.status) < 0) return false;
     const d = effectiveEnd(p);
     return d && d < todayStr;
   });
-  const dueThisWeek = openTasks.filter(function(t) {
+  const dueThisWeek = attentionTasks.filter(function(t) {
     const d = effectiveDue(t);
     if (!d || d < todayStr) return false;
     const dueDate = new Date(d + 'T00:00:00');
@@ -9414,8 +9415,9 @@ function renderMyWork(area) {
     });
   });
 
-  // Incomplete project data — all projects (except Complete/Canceled) where user is contact or member
-  myProjects.filter(function(p) { return p.status !== 'Complete' && p.status !== 'Canceled'; }).forEach(function(p) {
+  // Incomplete project data — Active/In Progress/Scheduled projects where user is contact or member
+  const attentionStatuses = ['Active', 'In Progress', 'Scheduled', 'On Hold', 'Waiting for Response'];
+  myProjects.filter(function(p) { return attentionStatuses.indexOf(p.status) >= 0; }).forEach(function(p) {
     const missing = [];
     if (!p.description) missing.push('description');
     if (!p.end) missing.push('end date');
@@ -9433,8 +9435,8 @@ function renderMyWork(area) {
     }
   });
 
-  // Incomplete task data — all tasks (except Complete/Canceled)
-  myTasks.filter(function(t) { return t.status !== 'Complete' && t.status !== 'Canceled'; }).forEach(function(t) {
+  // Incomplete task data — Active/In Progress/Scheduled tasks only
+  myTasks.filter(function(t) { return attentionStatuses.indexOf(t.status) >= 0; }).forEach(function(t) {
     const missing = [];
     if (!t.description) missing.push('description');
     if (!t.due) missing.push('due date');
@@ -9450,8 +9452,8 @@ function renderMyWork(area) {
     }
   });
 
-  // Overdue projects — Active or On Hold projects past their working due / end date
-  const overdueProjectStatuses = ['Active', 'On Hold', 'Waiting for Response'];
+  // Overdue projects — Active/In Progress/Scheduled projects past their working due / end date
+  const overdueProjectStatuses = ['Active', 'In Progress', 'Scheduled'];
   myProjects.filter(function(p) { return overdueProjectStatuses.indexOf(p.status) >= 0; }).forEach(function(p) {
     const d = effectiveEnd(p);
     if (!d || d >= todayStr) return;
@@ -9482,8 +9484,8 @@ function renderMyWork(area) {
     }
   });
 
-  // Stale projects — Active, On Hold, or Waiting for Response projects not updated in over 14 days
-  const staleStatuses = ['Active', 'On Hold', 'Waiting for Response'];
+  // Stale projects — Active/In Progress/Scheduled projects not updated in over 14 days
+  const staleStatuses = ['Active', 'In Progress', 'Scheduled'];
   myProjects.filter(function(p) { return staleStatuses.indexOf(p.status) >= 0; }).forEach(function(p) {
     const editDate = p.EditDate || p.editDate || p.edit_date || null;
     if (!editDate) return; // no edit tracking — skip

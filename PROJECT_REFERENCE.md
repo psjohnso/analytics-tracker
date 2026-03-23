@@ -275,6 +275,8 @@ utilization = total_allocated_hours / proj_cap
 | 0.9.3.0092 | Phase 6: replace all 46 blocking alert() calls with non-blocking showToast(); add error/warn/info toast variants with color-coded display and scaled duration |
 | 0.9.3.0093 | Fix: switch all task navigation/CRUD from idx to objectId; fixes tasks with null idx always opening wrong project; DataStore getTask/updateTask/deleteTask now find by objectId |
 | 0.9.3.0094 | Fix: restore Editor.draft initialization to {} (was null from Phase 5); restore missing aeProjectDates declaration (lost in Phase 5 consolidation); fixes Edit Allocations button |
+| 0.9.3.0095 | Attention Needed: restrict alerts to Active/In Progress/Scheduled statuses only; Pending/On Hold/Waiting for Response/Future/Idea items no longer flagged |
+| 0.9.3.0096 | Attention Needed: add On Hold and Waiting for Response back to missing-data checks (projects and tasks) |
 
 ---
 
