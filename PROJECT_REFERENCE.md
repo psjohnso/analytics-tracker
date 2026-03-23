@@ -277,6 +277,7 @@ utilization = total_allocated_hours / proj_cap
 | 0.9.3.0094 | Fix: restore Editor.draft initialization to {} (was null from Phase 5); restore missing aeProjectDates declaration (lost in Phase 5 consolidation); fixes Edit Allocations button |
 | 0.9.3.0095 | Attention Needed: restrict alerts to Active/In Progress/Scheduled statuses only; Pending/On Hold/Waiting for Response/Future/Idea items no longer flagged |
 | 0.9.3.0096 | Attention Needed: add On Hold and Waiting for Response back to missing-data checks (projects and tasks) |
+| 0.9.3.0097 | Phase A: unify task status 'In Progress' → 'Active' across all code (15 logic edits, 2 label fixes); STATUS_COLOR_MAP fallback kept until data migration |
 
 ---
 

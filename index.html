@@ -2508,7 +2508,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
         </div>
         <div class="project-meta">
           <span class="meta-tag" style="background:#22C55E18;border-color:#22C55E44;color:#22C55E;">
-            <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#22C55E;margin-right:4px;vertical-align:middle;"></span>In Progress
+            <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#22C55E;margin-right:4px;vertical-align:middle;"></span>Active
           </span>
           <span class="meta-tag">Research</span>
           
@@ -3017,7 +3017,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0096';
+const APP_VERSION = '0.9.3.0097';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -3214,7 +3214,7 @@ function renderFilterGroup(id, items, filterType) {
   el.innerHTML = allBtn + btns;
 }
 
-const WEEKLY_STATUSES = ['On Hold', 'In Progress', 'Waiting for Response'];
+const WEEKLY_STATUSES = ['On Hold', 'Active', 'Waiting for Response'];
 
 function toggleWeeklyFilter() {
   // Auto-switch to tasks tab if not already there
@@ -3387,7 +3387,7 @@ function sortData(data, key, dir) {
 function updateHeaderStats() {
   const active = PROJECTS.filter(p => p.status === 'Active').length;
   const complete = PROJECTS.filter(p => p.status === 'Complete').length;
-  const openTasks = TASKS.filter(t => ['In Progress','Pending','Waiting for Response'].includes(t.status)).length;
+  const openTasks = TASKS.filter(t => ['Active','Pending','Waiting for Response'].includes(t.status)).length;
   document.getElementById('stat-active').textContent = active;
   document.getElementById('stat-tasks-open').textContent = openTasks;
   document.getElementById('stat-complete').textContent = complete;
@@ -3664,7 +3664,7 @@ function renderOverview(area) {
   const memberRows = Object.entries(byMember).sort((a,b)=>b[1]-a[1]).map(([name, hrs]) => {
     const pct = totalHours > 0 ? Math.round(hrs/totalHours*100) : 0;
     const taskCount = TASKS.filter(t=>t.assignee===name).length;
-    const inProgress = TASKS.filter(t=>t.assignee===name && ['In Progress','Pending'].includes(t.status)).length;
+    const inProgress = TASKS.filter(t=>t.assignee===name && ['Active','Pending'].includes(t.status)).length;
     const initials = name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
     return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
       <div class="assignee-avatar" style="width:36px;height:36px;font-size:12px;">${initials}</div>
@@ -4144,7 +4144,7 @@ function renderResources(area) {
 
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
           <span style="font-size:13px;font-weight:700;color:var(--navy);">Active Project Allocations</span>
-          <span class="text-muted-sm">Showing In Progress &amp; On Hold only</span>
+          <span class="text-muted-sm">Showing Active &amp; On Hold only</span>
         </div>
         <div class="proj-alloc-table">
         <table>
@@ -5667,7 +5667,7 @@ function getEnums() {
     PROJECTS.map(p => p.category)
   );
   const taskStatuses   = mergeEnums(
-    ['In Progress','On Hold','Pending','Waiting for Response','Complete','Canceled'],
+    ['Active','On Hold','Pending','Waiting for Response','Complete','Canceled'],
     TASKS.map(t => t.status)
   );
   const taskPriorities = mergeEnums(
@@ -8896,7 +8896,7 @@ function buildTimeTrackingPanel() {
 
   // Start new timer — task selector
   const availableTasks = myTasks.filter(function(t) {
-    return t.status === 'In Progress' || t.status === 'Waiting for Response' || t.status === 'On Hold';
+    return t.status === 'Active' || t.status === 'Waiting for Response' || t.status === 'On Hold';
   });
   html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;">';
   html += '<select id="te-task-select" class="mf-input" style="flex:1;margin-bottom:0;">';
@@ -9256,7 +9256,7 @@ function buildMyWorkTasksSection(myTasks, todayStr, viewUserTaskHrsFn) {
 
   html += '<div class="mywork-section-header">✅ My Tasks <span class="badge-count">' + myTasks.length + '</span></div>';
 
-  const defaultStatuses = ['In Progress', 'Waiting for Response'];
+  const defaultStatuses = ['Active', 'Waiting for Response'];
   let hasTasks = false;
   defaultStatuses.forEach(function(status) {
     const list = tasksByStatus[status];
@@ -9320,11 +9320,11 @@ function renderMyWork(area) {
   function viewUserProjHrs(title) { return getMyProjectHours(title, name); }
 
   const activeProjects = myProjects.filter(function(p) { return p.status === 'Active' || p.status === 'Scheduled'; });
-  const openTasks = myTasks.filter(function(t) { return ['In Progress', 'On Hold', 'Waiting for Response'].includes(t.status); });
-  const attentionTasks = myTasks.filter(function(t) { return ['In Progress', 'Scheduled'].includes(t.status); });
+  const openTasks = myTasks.filter(function(t) { return ['Active', 'On Hold', 'Waiting for Response'].includes(t.status); });
+  const attentionTasks = myTasks.filter(function(t) { return ['Active', 'Scheduled'].includes(t.status); });
   const overdueTasks = attentionTasks.filter(function(t) { var d = effectiveDue(t); return d && d < todayStr; });
   const overdueProjects = myProjects.filter(function(p) {
-    if (['Active', 'In Progress', 'Scheduled'].indexOf(p.status) < 0) return false;
+    if (['Active', 'Scheduled'].indexOf(p.status) < 0) return false;
     const d = effectiveEnd(p);
     return d && d < todayStr;
   });
@@ -9388,7 +9388,7 @@ function renderMyWork(area) {
   // ── Attention Needed alerts ──────────────────────────────────
   const alerts = [];
 
-  // Overdue open tasks (In Progress, On Hold, Waiting for Response)
+  // Overdue open tasks (Active, On Hold, Waiting for Response)
   overdueTasks.forEach(function(t) {
     const d = effectiveDue(t);
     const daysOver = Math.ceil((today - new Date(d + 'T00:00:00')) / (1000 * 60 * 60 * 24));
@@ -9415,8 +9415,8 @@ function renderMyWork(area) {
     });
   });
 
-  // Incomplete project data — Active/In Progress/Scheduled projects where user is contact or member
-  const attentionStatuses = ['Active', 'In Progress', 'Scheduled', 'On Hold', 'Waiting for Response'];
+  // Incomplete project data — Active/Scheduled/On Hold/Waiting for Response projects
+  const attentionStatuses = ['Active', 'Scheduled', 'On Hold', 'Waiting for Response'];
   myProjects.filter(function(p) { return attentionStatuses.indexOf(p.status) >= 0; }).forEach(function(p) {
     const missing = [];
     if (!p.description) missing.push('description');
@@ -9435,7 +9435,7 @@ function renderMyWork(area) {
     }
   });
 
-  // Incomplete task data — Active/In Progress/Scheduled tasks only
+  // Incomplete task data — Active/Scheduled/On Hold/Waiting for Response tasks only
   myTasks.filter(function(t) { return attentionStatuses.indexOf(t.status) >= 0; }).forEach(function(t) {
     const missing = [];
     if (!t.description) missing.push('description');
@@ -9452,8 +9452,8 @@ function renderMyWork(area) {
     }
   });
 
-  // Overdue projects — Active/In Progress/Scheduled projects past their working due / end date
-  const overdueProjectStatuses = ['Active', 'In Progress', 'Scheduled'];
+  // Overdue projects — Active/Scheduled projects past their working due / end date
+  const overdueProjectStatuses = ['Active', 'Scheduled'];
   myProjects.filter(function(p) { return overdueProjectStatuses.indexOf(p.status) >= 0; }).forEach(function(p) {
     const d = effectiveEnd(p);
     if (!d || d >= todayStr) return;
@@ -9484,8 +9484,8 @@ function renderMyWork(area) {
     }
   });
 
-  // Stale projects — Active/In Progress/Scheduled projects not updated in over 14 days
-  const staleStatuses = ['Active', 'In Progress', 'Scheduled'];
+  // Stale projects — Active/Scheduled projects not updated in over 14 days
+  const staleStatuses = ['Active', 'Scheduled'];
   myProjects.filter(function(p) { return staleStatuses.indexOf(p.status) >= 0; }).forEach(function(p) {
     const editDate = p.EditDate || p.editDate || p.edit_date || null;
     if (!editDate) return; // no edit tracking — skip
@@ -9798,7 +9798,7 @@ function renderMyWork(area) {
 
     // Legend
     html += '<span style="width:1px;height:16px;background:var(--border);"></span>';
-    const legendStatuses = ['Active', 'On Hold', 'Scheduled', 'In Progress', 'Waiting for Response'];
+    const legendStatuses = ['Active', 'On Hold', 'Scheduled', 'Waiting for Response'];
     legendStatuses.forEach(function(s) {
       const c = STATUS_COLOR(s);
       if (!c) return;
