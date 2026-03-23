@@ -279,6 +279,7 @@ utilization = total_allocated_hours / proj_cap
 | 0.9.3.0096 | Attention Needed: add On Hold and Waiting for Response back to missing-data checks (projects and tasks) |
 | 0.9.3.0097 | Phase A: unify task status 'In Progress' → 'Active' across all code (15 logic edits, 2 label fixes); STATUS_COLOR_MAP fallback kept until data migration |
 | 0.9.3.0098 | Phase C: remove 'In Progress' fallback from STATUS_COLOR_MAP; migration complete |
+| 0.9.3.0099 | Collapsible filter sidebar: toggle button on Projects/Tasks tabs; hidden on Overview/My Work/Resources/Forecast/Settings; collapse state persisted in sessionStorage |
 
 ---
 

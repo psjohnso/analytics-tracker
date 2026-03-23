@@ -286,6 +286,17 @@ body {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  transition: width 0.2s ease, opacity 0.2s ease;
+}
+.sidebar.collapsed {
+  width: 0;
+  overflow: hidden;
+  opacity: 0;
+  border-right: none;
+  pointer-events: none;
+}
+.sidebar.tab-hidden {
+  display: none;
 }
 
 .sidebar-section {
@@ -2254,6 +2265,9 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   <!-- TOOLBAR — full width below tab bar -->
   <div class="toolbar">
     <span class="result-count" id="result-count">1936 tasks</span>
+    <button id="btn-toggle-filters" onclick="toggleSidebar()" style="display:none;align-items:center;gap:5px;padding:7px 14px;border-radius:6px;border:1.5px solid var(--navy);background:transparent;cursor:pointer;font-family:Lato,sans-serif;font-size:12px;font-weight:700;color:var(--navy);letter-spacing:0.04em;transition:background 0.15s,color 0.15s;" onmouseover="this.style.background='#EEF2FF'" onmouseout="this.style.background='transparent'">
+      <span id="filter-toggle-icon">◀</span> Filters
+    </button>
     <button id="btn-add-new" onclick="openFormModal('new-'+currentTab.slice(0,-1))" style="display: none;">＋ New Task</button>
     <button id="btn-review-ideas" onclick="openIdeaReview()" style="display:none; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; border: 1.5px solid #FFDB22; background: transparent; cursor: pointer; font-family: Lato, sans-serif; font-size: 12px; font-weight: 700; color: #92400E; letter-spacing: 0.04em; transition: background 0.15s, color 0.15s;" onmouseover="this.style.background='#FFFBEB'" onmouseout="this.style.background='transparent'">
       💡 Review Ideas <span id="idea-count-badge" style="background:#FFDB22;color:#92400E;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:2px;"></span>
@@ -2277,7 +2291,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 
   <div class="app-body-inner">
   <!-- SIDEBAR -->
-  <aside class="sidebar">
+  <aside class="sidebar tab-hidden">
     <div class="sidebar-section">
       <div class="sidebar-label">Search</div>
       <div class="search-box">
@@ -3017,7 +3031,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0098';
+const APP_VERSION = '0.9.3.0099';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -3296,7 +3310,7 @@ function switchTab(tab) {
   const addBtn = document.getElementById('btn-add-new');
   if (tab === 'tasks') { addBtn.style.display='flex'; addBtn.textContent='＋ New Task'; }
   else { addBtn.style.display='none'; }
-  document.getElementById('weekly-filter-btn').style.display = (tab === 'settings' || tab === 'mywork') ? 'none' : 'flex';
+  document.getElementById('weekly-filter-btn').style.display = (tab === 'projects' || tab === 'tasks') ? 'flex' : 'none';
   const ideaCount = PROJECTS.filter(p => p.status === 'Idea').length;
   const reviewBtn = document.getElementById('btn-review-ideas');
   if (reviewBtn) {
@@ -3308,9 +3322,23 @@ function switchTab(tab) {
     document.getElementById('view-toggle').style.display = 'none';
     document.getElementById('btn-add-new').style.display = 'none';
   }
-  // Hide sidebar for settings and mywork tabs
+  // Hide sidebar on tabs that don't use filters; show toggle button on Projects/Tasks
   const sidebar = document.querySelector('.sidebar');
-  if (sidebar) sidebar.style.display = (tab === 'settings' || tab === 'mywork') ? 'none' : '';
+  const filterBtn = document.getElementById('btn-toggle-filters');
+  const filterTabs = ['projects', 'tasks'];
+  if (filterTabs.includes(tab)) {
+    if (sidebar) {
+      sidebar.classList.remove('tab-hidden');
+      // Restore user's collapsed preference
+      const wasCollapsed = sessionStorage.getItem('sidebar_collapsed') === '1';
+      sidebar.classList.toggle('collapsed', wasCollapsed);
+      updateFilterToggleIcon(!wasCollapsed);
+    }
+    if (filterBtn) filterBtn.style.display = 'flex';
+  } else {
+    if (sidebar) sidebar.classList.add('tab-hidden');
+    if (filterBtn) filterBtn.style.display = 'none';
+  }
   const isTask = tab === 'tasks';
   reorderSidebarFilters(tab);
   if (isTask) { activeFilters.status = []; buildSidebarFilters(); }
@@ -3325,6 +3353,19 @@ function switchTab(tab) {
     buildSidebarFilters();
   }
   render();
+}
+
+function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  if (!sidebar) return;
+  const isCollapsed = sidebar.classList.toggle('collapsed');
+  sessionStorage.setItem('sidebar_collapsed', isCollapsed ? '1' : '0');
+  updateFilterToggleIcon(!isCollapsed);
+}
+
+function updateFilterToggleIcon(isOpen) {
+  const icon = document.getElementById('filter-toggle-icon');
+  if (icon) icon.textContent = isOpen ? '◀' : '▶';
 }
 
 function setView(v) {
