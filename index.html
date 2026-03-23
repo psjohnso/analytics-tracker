@@ -2272,8 +2272,14 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
     <button id="btn-review-ideas" onclick="openIdeaReview()" style="display:none; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; border: 1.5px solid #FFDB22; background: transparent; cursor: pointer; font-family: Lato, sans-serif; font-size: 12px; font-weight: 700; color: #92400E; letter-spacing: 0.04em; transition: background 0.15s, color 0.15s;" onmouseover="this.style.background='#FFFBEB'" onmouseout="this.style.background='transparent'">
       💡 Review Ideas <span id="idea-count-badge" style="background:#FFDB22;color:#92400E;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:2px;"></span>
     </button>
-    <button id="weekly-filter-btn" onclick="toggleWeeklyFilter()" style="display: flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; border: 1.5px solid var(--navy); background: transparent; cursor: pointer; font-family: Lato, sans-serif; font-size: 12px; font-weight: 700; color: var(--navy); letter-spacing: 0.04em; transition: background 0.15s, color 0.15s;">
+    <button id="weekly-filter-btn" onclick="toggleWeeklyFilter()" style="display: none; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; border: 1.5px solid var(--navy); background: transparent; cursor: pointer; font-family: Lato, sans-serif; font-size: 12px; font-weight: 700; color: var(--navy); letter-spacing: 0.04em; transition: background 0.15s, color 0.15s;">
       📋 Weekly Review
+    </button>
+    <button id="open-projects-btn" onclick="toggleOpenProjectsFilter()" style="display: none; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; border: 1.5px solid #83AC16; background: transparent; cursor: pointer; font-family: Lato, sans-serif; font-size: 12px; font-weight: 700; color: #83AC16; letter-spacing: 0.04em; transition: background 0.15s, color 0.15s;">
+      📂 Open Projects
+    </button>
+    <button id="open-tasks-btn" onclick="toggleOpenTasksFilter()" style="display: none; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; border: 1.5px solid #C24200; background: transparent; cursor: pointer; font-family: Lato, sans-serif; font-size: 12px; font-weight: 700; color: #C24200; letter-spacing: 0.04em; transition: background 0.15s, color 0.15s;">
+      ✅ Open Tasks
     </button>
     <div style="flex:1"></div>
     <select class="sort-select" id="sort-select" onchange="render()">
@@ -3031,7 +3037,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0099';
+const APP_VERSION = '0.9.3.0100';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -3228,6 +3234,8 @@ function renderFilterGroup(id, items, filterType) {
 }
 
 const WEEKLY_STATUSES = ['On Hold', 'Active', 'Waiting for Response'];
+const OPEN_PROJECT_STATUSES = ['Active', 'Scheduled', 'On Hold', 'Future', 'Idea', 'Waiting for Response'];
+const OPEN_TASK_STATUSES = ['Active', 'On Hold', 'Pending', 'Waiting for Response'];
 
 function toggleWeeklyFilter() {
   // Auto-switch to tasks tab if not already there
@@ -3246,10 +3254,67 @@ function toggleWeeklyFilter() {
     btn.classList.add('weekly-active');
     btn.style.background = 'var(--navy)';
     btn.style.color = 'white';
+    // Deactivate Open Tasks if it's on
+    resetQuickFilterBtn('open-tasks-btn', '#C24200');
   }
   currentPage = 1;
   buildSidebarFilters();
   render();
+}
+
+function toggleOpenProjectsFilter() {
+  if (currentTab !== 'projects') {
+    switchTab('projects');
+  }
+  const btn = document.getElementById('open-projects-btn');
+  const isActive = btn.classList.contains('weekly-active');
+  if (isActive) {
+    activeFilters.status = [];
+    btn.classList.remove('weekly-active');
+    btn.style.background = 'transparent';
+    btn.style.color = '#83AC16';
+  } else {
+    activeFilters.status = [...OPEN_PROJECT_STATUSES];
+    btn.classList.add('weekly-active');
+    btn.style.background = '#83AC16';
+    btn.style.color = 'white';
+  }
+  currentPage = 1;
+  buildSidebarFilters();
+  render();
+}
+
+function toggleOpenTasksFilter() {
+  if (currentTab !== 'tasks') {
+    switchTab('tasks');
+  }
+  const btn = document.getElementById('open-tasks-btn');
+  const isActive = btn.classList.contains('weekly-active');
+  if (isActive) {
+    activeFilters.taskStatus = [];
+    btn.classList.remove('weekly-active');
+    btn.style.background = 'transparent';
+    btn.style.color = '#C24200';
+  } else {
+    activeFilters.taskStatus = [...OPEN_TASK_STATUSES];
+    btn.classList.add('weekly-active');
+    btn.style.background = '#C24200';
+    btn.style.color = 'white';
+    // Deactivate Weekly Review if it's on
+    resetQuickFilterBtn('weekly-filter-btn', 'var(--navy)');
+  }
+  currentPage = 1;
+  buildSidebarFilters();
+  render();
+}
+
+function resetQuickFilterBtn(id, defaultColor) {
+  const btn = document.getElementById(id);
+  if (btn && btn.classList.contains('weekly-active')) {
+    btn.classList.remove('weekly-active');
+    btn.style.background = 'transparent';
+    btn.style.color = defaultColor;
+  }
 }
 
 function openTaskFromProject(taskIdx) {
@@ -3311,6 +3376,8 @@ function switchTab(tab) {
   if (tab === 'tasks') { addBtn.style.display='flex'; addBtn.textContent='＋ New Task'; }
   else { addBtn.style.display='none'; }
   document.getElementById('weekly-filter-btn').style.display = (tab === 'projects' || tab === 'tasks') ? 'flex' : 'none';
+  document.getElementById('open-projects-btn').style.display = (tab === 'projects' || tab === 'tasks') ? 'flex' : 'none';
+  document.getElementById('open-tasks-btn').style.display = (tab === 'projects' || tab === 'tasks') ? 'flex' : 'none';
   const ideaCount = PROJECTS.filter(p => p.status === 'Idea').length;
   const reviewBtn = document.getElementById('btn-review-ideas');
   if (reviewBtn) {
@@ -3341,17 +3408,15 @@ function switchTab(tab) {
   }
   const isTask = tab === 'tasks';
   reorderSidebarFilters(tab);
-  if (isTask) { activeFilters.status = []; buildSidebarFilters(); }
-  else {
-    activeFilters.taskStatus = [];
-    activeFilters.taskCategory = [];
-    activeFilters.taskTool = [];
-    const btn = document.getElementById('weekly-filter-btn');
-    btn.classList.remove('weekly-active');
-    btn.style.background = 'transparent';
-    btn.style.color = 'var(--navy)';
-    buildSidebarFilters();
-  }
+  // Reset all quick filter buttons and clear filters on tab switch
+  resetQuickFilterBtn('weekly-filter-btn', 'var(--navy)');
+  resetQuickFilterBtn('open-projects-btn', '#83AC16');
+  resetQuickFilterBtn('open-tasks-btn', '#C24200');
+  activeFilters.status = [];
+  activeFilters.taskStatus = [];
+  activeFilters.taskCategory = [];
+  activeFilters.taskTool = [];
+  buildSidebarFilters();
   render();
 }
 
@@ -3464,6 +3529,8 @@ function render() {
     document.getElementById('view-toggle').style.display = 'none';
     document.getElementById('btn-add-new').style.display = 'none';
     document.getElementById('weekly-filter-btn').style.display = 'none';
+    document.getElementById('open-projects-btn').style.display = 'none';
+    document.getElementById('open-tasks-btn').style.display = 'none';
     const pg = document.getElementById('pagination');
     if (pg) pg.remove();
     document.getElementById('result-count').textContent = '';
