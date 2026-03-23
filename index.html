@@ -3017,7 +3017,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0093';
+const APP_VERSION = '0.9.3.0094';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -3036,7 +3036,7 @@ const Editor = {
   mode: null,
   editId: null,
   person: null,
-  draft: null,
+  draft: {},
   aeWindowStart: 0,
   hasUnsaved: false,
   selectedMember: null,
@@ -4175,6 +4175,7 @@ function shiftChart(delta) {
 //  ALLOCATION EDITOR
 // ══════════════════════════════════════════════════════════════════════
 let AE_COLS     = 6;    // weeks visible at once
+let aeProjectDates = {}; // { projTitle: { start, end } } — date ranges for highlighting
 
 function openAllocEditor(name) {
   Editor.person = name;

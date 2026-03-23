@@ -274,6 +274,7 @@ utilization = total_allocated_hours / proj_cap
 | 0.9.3.0091 | Phase 5: consolidate 25 globals into 3 namespace objects (Auth, Editor, Internal); 77→55 total globals; 165 reference replacements |
 | 0.9.3.0092 | Phase 6: replace all 46 blocking alert() calls with non-blocking showToast(); add error/warn/info toast variants with color-coded display and scaled duration |
 | 0.9.3.0093 | Fix: switch all task navigation/CRUD from idx to objectId; fixes tasks with null idx always opening wrong project; DataStore getTask/updateTask/deleteTask now find by objectId |
+| 0.9.3.0094 | Fix: restore Editor.draft initialization to {} (was null from Phase 5); restore missing aeProjectDates declaration (lost in Phase 5 consolidation); fixes Edit Allocations button |
 
 ---
 
