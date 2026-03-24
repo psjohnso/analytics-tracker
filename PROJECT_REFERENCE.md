@@ -281,6 +281,7 @@ utilization = total_allocated_hours / proj_cap
 | 0.9.3.0098 | Phase C: remove 'In Progress' fallback from STATUS_COLOR_MAP; migration complete |
 | 0.9.3.0099 | Collapsible filter sidebar: toggle button on Projects/Tasks tabs; hidden on Overview/My Work/Resources/Forecast/Settings; collapse state persisted in sessionStorage |
 | 0.9.3.0100 | Add Open Projects and Open Tasks quick filter buttons on Projects/Tasks tabs; excludes Complete/Canceled; mutual deactivation with Weekly Review; all reset on tab switch |
+| 0.9.3.0101 | Hide inactive/former members from: Resources person cards, Overview team stats, default selectedPerson, task assignee dropdown; 4 display points fixed |
 
 ---
 
