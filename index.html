@@ -3037,7 +3037,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0101';
+const APP_VERSION = '0.9.3.0102';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -7214,6 +7214,7 @@ function fcAvailData() {
 
   const result = {};
   for (const [name, p] of Object.entries(RESOURCES_DATA.people)) {
+    if (p.active === false) continue; // skip inactive/former members
     const alloc = new Array(52).fill(0);
 
     // Step 1: fill past/present weeks with actual entered hours

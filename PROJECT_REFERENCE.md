@@ -282,6 +282,7 @@ utilization = total_allocated_hours / proj_cap
 | 0.9.3.0099 | Collapsible filter sidebar: toggle button on Projects/Tasks tabs; hidden on Overview/My Work/Resources/Forecast/Settings; collapse state persisted in sessionStorage |
 | 0.9.3.0100 | Add Open Projects and Open Tasks quick filter buttons on Projects/Tasks tabs; excludes Complete/Canceled; mutual deactivation with Weekly Review; all reset on tab switch |
 | 0.9.3.0101 | Hide inactive/former members from: Resources person cards, Overview team stats, default selectedPerson, task assignee dropdown; 4 display points fixed |
+| 0.9.3.0102 | Hide inactive/former members from Forecast page (capacity cards, team load chart, heatmap) |
 
 ---
 
