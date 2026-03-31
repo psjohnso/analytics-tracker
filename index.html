@@ -3181,7 +3181,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0023';
+const APP_VERSION = '0.10.0.0024';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -6423,17 +6423,68 @@ const DataStore = {
   async deleteProject(id) {
     const i = PROJECTS.findIndex(function(p) { return p.objectId == id; });
     if (i < 0) return false;
-    const objectId = PROJECTS[i].objectId;
+    const project = PROJECTS[i];
+    const objectId = project.objectId;
+    const projectTitle = project.title;
+
+    // ── Cascade: delete associated tasks ──────────────────
+    var taskDeletes = [];
+    TASKS.forEach(function(t) {
+      if ((t.project === projectTitle || (!t.project && t.project_id == project.id)) && t.objectId) {
+        taskDeletes.push(t.objectId);
+      }
+    });
+    // Remove from local array
+    TASKS = TASKS.filter(function(t) {
+      return !(t.project === projectTitle || (!t.project && t.project_id == project.id));
+    });
+    // Delete from ArcGIS in batches of 100
+    if (taskDeletes.length > 0) {
+      try {
+        for (var ti = 0; ti < taskDeletes.length; ti += 100) {
+          var batch = taskDeletes.slice(ti, ti + 100);
+          await agolApplyEdits(ARCGIS_CONFIG.tasksUrl, { deletes: batch });
+        }
+        console.log('[Cascade] Deleted', taskDeletes.length, 'tasks for project:', projectTitle);
+      } catch (err) {
+        console.error('[Cascade] Failed to delete tasks:', err);
+      }
+    }
+
+    // ── Cascade: delete associated allocations ────────────
+    try {
+      var allocFeatures = await agolQuery(ARCGIS_CONFIG.allocationsUrl,
+        "project='" + projectTitle.replace(/'/g, "''") + "'");
+      var allocDeletes = allocFeatures.map(function(f) {
+        return f.attributes.OBJECTID || f.attributes.ObjectId || f.attributes.objectid;
+      }).filter(Boolean);
+      if (allocDeletes.length > 0) {
+        for (var ai = 0; ai < allocDeletes.length; ai += 100) {
+          var aBatch = allocDeletes.slice(ai, ai + 100);
+          await agolApplyEdits(ARCGIS_CONFIG.allocationsUrl, { deletes: aBatch });
+        }
+        console.log('[Cascade] Deleted', allocDeletes.length, 'allocation records for project:', projectTitle);
+      }
+    } catch (err) {
+      console.error('[Cascade] Failed to delete allocations:', err);
+    }
+
+    // ── Delete the project itself ─────────────────────────
     PROJECTS.splice(i, 1);
     if (objectId) {
       try {
         await agolApplyEdits(ARCGIS_CONFIG.projectsUrl, { deletes: [objectId] });
-        markSynced('Project deleted');
+        markSynced('Project and ' + taskDeletes.length + ' task(s) deleted');
+        showToast('Deleted project "' + projectTitle + '" and ' + taskDeletes.length + ' associated task(s).', 'success');
       } catch (err) {
         console.error('ArcGIS deleteProject failed:', err);
         markDirty();
       }
     }
+
+    // Reload resources to reflect removed allocations
+    try { await loadResourcesData(); initResourcesWeekIndices(); } catch(e) {}
+
     return true;
   },
 
@@ -7823,10 +7874,18 @@ async function handleFormSubmit(andDownload) {
 async function handleFormDelete() {
   if (!Auth.loggedIn) { showToast('You must be signed in to delete records.', 'warn'); return; }
   const isProject = Editor.mode.indexOf('project') >= 0;
-  const label     = isProject ? 'project' : 'task';
-  if (!confirm('Delete this ' + label + '? This cannot be undone.')) return;
-  if (isProject) await DataStore.deleteProject(Editor.editId);
-  else           await DataStore.deleteTask(Editor.editId);
+  if (isProject) {
+    var proj = PROJECTS.find(function(p) { return p.objectId == Editor.editId; });
+    var taskCount = proj ? TASKS.filter(function(t) { return t.project === proj.title; }).length : 0;
+    var msg = 'Delete this project?';
+    if (taskCount > 0) msg += '\n\nThis will also delete ' + taskCount + ' associated task(s) and all allocation records.';
+    msg += '\n\nThis cannot be undone.';
+    if (!confirm(msg)) return;
+    await DataStore.deleteProject(Editor.editId);
+  } else {
+    if (!confirm('Delete this task? This cannot be undone.')) return;
+    await DataStore.deleteTask(Editor.editId);
+  }
   closeFormModal();
   closeModalDirect();
   markDataDirty();
