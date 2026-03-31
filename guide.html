@@ -261,6 +261,9 @@ li strong { color: var(--navy); }
 <div class="tip-box">
   <strong>Choosing a category:</strong> The category field features a searchable dropdown — start typing to filter. If you're unsure which category fits, click <strong>"🧭 Help me choose a category"</strong> below the field. A short 2-question wizard will guide you to the right one.
 </div>
+<div class="tip-box">
+  <strong>Choosing a project size:</strong> The project size field (S, M, L, XL) helps determine default resource allocation percentages. If you're unsure, click <strong>"🧭 Not sure? Help me choose a size"</strong> — a 4-question wizard scores your project across duration, team size, deliverables, and stakeholder complexity to recommend a size. The size drives default weekly allocation percentages when using the auto-fill feature in the allocation editor.
+</div>
 
 <h3>Project Statuses</h3>
 <p>Projects follow this lifecycle:</p>
@@ -329,6 +332,13 @@ li strong { color: var(--navy); }
   <strong>Tip:</strong> Projects are sorted alphabetically. Pressing <strong>Tab</strong> moves down the column (same week, next project) rather than across a row, making it easy to fill in one week at a time.
 </div>
 <p>The total row at the bottom shows combined allocation — totals over 100% are highlighted in red. Click <strong>"✓ Apply Changes"</strong> to save. Changes are written to the ArcGIS Online allocations service and the view updates immediately.</p>
+
+<h3>Roles and Auto-Fill</h3>
+<p>Each project row in the allocation editor includes a <strong>role dropdown</strong> (Lead, Contributor, or Reviewer). The role is automatically inferred — the project's primary contact is set as Lead, everyone else as Contributor — but you can change it at any time.</p>
+<p>Click the <strong>⚡ Auto-fill</strong> link next to any project to automatically populate empty weeks within the project's date range with default allocation percentages based on the project's size and the person's role. Existing values are never overwritten — only blank weeks are filled. This is a starting point; you can adjust individual cells after auto-filling.</p>
+<div class="tip-box">
+  <strong>Tip:</strong> For auto-fill to work, the project must have a <strong>size</strong> set (S, M, L, or XL) in the project editor. If no size is set, you'll be prompted to add one. Admins can adjust the default percentages per size and role in the Settings tab under "Allocation Defaults by Project Size."
+</div>
 
 <!-- ═══════════════════════════════════════════════════ -->
 <h2 id="forecast-tab">Forecast Tab</h2>
@@ -432,6 +442,18 @@ li strong { color: var(--navy); }
   <strong>Note:</strong> Changes are saved to ArcGIS Online and shared across all users and browsers. Values that have already been used in existing projects will always appear in the dropdown even if removed from this list, because the system automatically includes values found in project data. Items marked "from project data" are read-only and cannot be removed here.
 </div>
 
+<h3>Allocation Defaults by Project Size</h3>
+<p>The <strong>Allocation Defaults</strong> section lets admins configure the default weekly allocation percentages used by the auto-fill feature in the allocation editor. Defaults are organized by project size (S, M, L, XL) and role (Lead, Contributor, Reviewer).</p>
+<p>When a team member uses the ⚡ Auto-fill button in the allocation editor, the application looks up the project's size and the person's role on that project, then fills empty weeks with the corresponding percentage from this table.</p>
+<table class="guide-table">
+  <tr><th>Size</th><th>Lead</th><th>Contributor</th><th>Reviewer</th></tr>
+  <tr><td>S — Small</td><td>15%</td><td>10%</td><td>5%</td></tr>
+  <tr><td>M — Medium</td><td>25%</td><td>15%</td><td>5%</td></tr>
+  <tr><td>L — Large</td><td>40%</td><td>20%</td><td>10%</td></tr>
+  <tr><td>XL — Extra large</td><td>50%</td><td>30%</td><td>10%</td></tr>
+</table>
+<p>These are the default values. Admins can adjust them at any time and the changes are saved to ArcGIS Online for all users.</p>
+
 <!-- ═══════════════════════════════════════════════════ -->
 <h2 id="capacity-math">Capacity & Utilization: Assumptions and Math</h2>
 <p>This section explains how the application calculates project capacity, allocated hours, and utilization. Understanding these calculations is important for interpreting the data on the Resources and Forecast tabs.</p>
@@ -510,7 +532,7 @@ li strong { color: var(--navy); }
   <tr><td><strong>tasks</strong></td><td>Individual work items linked to projects</td><td>title, status, assignee, due_date, project_id</td></tr>
   <tr><td><strong>team_members</strong></td><td>Team roster with roles, capacity, schedule, and time tracking opt-in</td><td>name, role, team, proj_pct, schedule_type, week1_hours, week2_hours, rdo_day, wk1_mon–wk2_fri, time_tracking</td></tr>
   <tr><td><strong>absences</strong></td><td>Per-person, per-week time off records</td><td>name, week_date, absence_hours</td></tr>
-  <tr><td><strong>allocations</strong></td><td>Per-person, per-project, per-week allocation records</td><td>name, project, week_date, fraction, hours</td></tr>
+  <tr><td><strong>allocations</strong></td><td>Per-person, per-project, per-week allocation records</td><td>name, project, week_date, fraction, hours, project_role</td></tr>
   <tr><td><strong>app_config</strong></td><td>Shared key-value config store for dropdown lists</td><td>config_key, config_value</td></tr>
   <tr><td><strong>time_entries</strong></td><td>Employee time tracking records (start/stop per task per day)</td><td>name, task_idx, project_id, start_time, end_time, hours, work_date, notes</td></tr>
 </table>

@@ -1354,6 +1354,46 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   border:none; background:none; font-family:'Lato',sans-serif;
 }
 .cat-wizard-back:hover { color:var(--navy); }
+
+/* ── Size Wizard ─────────────────────────────────── */
+.size-wizard-link { display:inline-block; font-size:11px; color:var(--text-muted); cursor:pointer; opacity:.8; margin-top:4px; }
+.size-wizard-link:hover { opacity:1; text-decoration:underline; }
+.size-wizard-panel { display:none; margin-top:8px; background:#FAFBFC; border:1px solid #E5E7EB; border-radius:8px; padding:14px; }
+.size-wizard-panel.open { display:block; }
+.size-wz-progress { display:flex; gap:4px; margin-bottom:12px; }
+.size-wz-pip { height:3px; flex:1; border-radius:2px; background:#E5E7EB; }
+.size-wz-pip.done { background:var(--navy); }
+.size-wz-pip.current { background:#0088FF; }
+.size-wz-step-label { font-size:10px; color:var(--text-muted); margin-bottom:4px; }
+.size-wz-q { font-size:13px; font-weight:700; color:var(--navy); margin-bottom:10px; }
+.size-wz-opts { display:flex; flex-direction:column; gap:5px; }
+.size-wz-opt { display:flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid #E5E7EB; border-radius:6px;
+  cursor:pointer; font-size:12px; color:#374151; transition:all 0.12s; background:#fff; }
+.size-wz-opt:hover { border-color:var(--navy); background:#EEF2FF; color:var(--navy); }
+.size-wz-opt-desc { font-size:10px; color:var(--text-muted); margin-top:1px; }
+.size-wz-dot { width:14px; height:14px; border-radius:50%; border:1.5px solid #D1D5DB; flex-shrink:0; }
+.size-wz-nav { display:flex; gap:6px; margin-top:10px; align-items:center; }
+.size-wz-result { text-align:center; padding:10px 0; }
+.size-wz-result-size { font-size:36px; font-weight:900; color:var(--navy); }
+.size-wz-result-label { font-size:14px; font-weight:700; color:var(--navy); margin-top:2px; }
+.size-wz-result-desc { font-size:12px; color:var(--text-muted); margin-top:6px; line-height:1.5; }
+.size-wz-factors { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin:12px 0; }
+.size-wz-factor { background:#fff; border:1px solid #E5E7EB; border-radius:6px; padding:8px 10px; }
+.size-wz-factor-label { font-size:10px; color:var(--text-muted); }
+.size-wz-factor-val { font-size:12px; font-weight:700; color:var(--navy); margin-top:1px; }
+.size-wz-alloc-row { display:flex; justify-content:space-between; padding:4px 0; font-size:12px; border-bottom:1px solid #F3F4F6; }
+.size-wz-alloc-row:last-child { border-bottom:none; }
+.size-wz-use-btn { background:var(--navy); color:#fff; border:none; border-radius:6px; padding:7px 16px;
+  font-size:12px; font-weight:700; cursor:pointer; font-family:Lato,sans-serif; }
+.size-wz-use-btn:hover { background:#1a3a7c; }
+
+/* ── Allocation Editor Role Dropdown ──────────────── */
+.ae-role-select { padding:2px 6px; border:1px solid #E5E7EB; border-radius:4px; font-size:10px;
+  font-family:Lato,sans-serif; color:var(--navy); background:#F8F9FA; cursor:pointer; margin-left:6px; }
+.ae-role-select:focus { outline:none; border-color:var(--navy); }
+.ae-autofill-btn { display:inline-block; font-size:10px; color:#0088FF; cursor:pointer; margin-left:4px;
+  font-weight:700; text-decoration:none; }
+.ae-autofill-btn:hover { text-decoration:underline; }
 .fm-hint { font-size:11px; color:var(--text-muted); margin-top:2px; }
 .fm-footer { padding:16px 24px; border-top:1px solid #E5E7EB;
   display:flex; align-items:center; gap:10px; background:#FAFAFA;
@@ -3037,7 +3077,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.9.3.0102';
+const APP_VERSION = '0.10.0.0000';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -3627,6 +3667,7 @@ function projectCard(p) {
           <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${statusColor};margin-right:4px;vertical-align:middle;"></span>${p.status || '—'}
         </span>
         ${p.category ? `<span class="meta-tag">${esc(p.category)}</span>` : ''}
+        ${p.project_size ? `<span class="meta-tag" style="background:#F3E8FF;border-color:#D8B4FE;color:#6B21A8;">${esc(p.project_size)}</span>` : ''}
         ${p.partner_dept ? `<span class="meta-tag">${esc(p.partner_dept.length > 22 ? p.partner_dept.slice(0,22)+'…' : p.partner_dept)}</span>` : ''}
       </div>
       ${p.description ? `<div class="project-desc">${esc(p.description)}</div>` : '<div class="project-desc" style="color:#D1D5DB;font-style:italic;">No description available</div>'}
@@ -4318,7 +4359,12 @@ function openAllocEditor(name) {
     const currentStatus = proj ? proj.status : a.status;
     if (currentStatus !== 'Active') return;
     if (!draftByName[key]) {
-      draftByName[key] = { project: key, status: currentStatus, fracs: [...a.fracs] };
+      // If no role stored, infer from project contact
+      var existingRole = a.role || '';
+      if (!existingRole && proj) {
+        existingRole = proj.contact === name ? 'Lead' : 'Contributor';
+      }
+      draftByName[key] = { project: key, status: currentStatus, fracs: [...a.fracs], role: existingRole };
     } else {
       // Merge duplicate / person-split rows
       a.fracs.forEach((f, i) => { draftByName[key].fracs[i] = (draftByName[key].fracs[i] || 0) + f; });
@@ -4331,7 +4377,8 @@ function openAllocEditor(name) {
     if (draftByName[proj.title]) return;
     const members = (proj.other_members || '').split(',').map(s => s.trim()).filter(Boolean);
     if (proj.contact !== name && !members.includes(name)) return;
-    draftByName[proj.title] = { project: proj.title, status: proj.status, fracs: new Array(N2).fill(0) };
+    var inferredRole = proj.contact === name ? 'Lead' : 'Contributor';
+    draftByName[proj.title] = { project: proj.title, status: proj.status, fracs: new Array(N2).fill(0), role: inferredRole };
   });
   Editor.draft[name] = Object.values(draftByName);
   const aeStatusOrder = { 'Active': 0, 'On Hold': 1, 'Scheduled': 2, 'Future': 3, 'Idea': 4 };
@@ -4432,7 +4479,14 @@ function aeRenderGrid() {
 
     let row = '<tr><td class="ae-proj-td">' +
       '<span class="ae-proj-name ae-proj-link" onclick="openProjectFromAlloc(this)" data-project="' + esc(a.project) + '" title="View project details">' + esc(a.project) + '</span>' +
-      '<span class="ae-proj-status" style="color:' + statusCol + ';background:' + chipBg + ';">' + esc(a.status) + '</span>';
+      '<span class="ae-proj-status" style="color:' + statusCol + ';background:' + chipBg + ';">' + esc(a.status) + '</span>' +
+      '<select class="ae-role-select" data-ai="' + ai + '" onchange="aeRoleChange(' + ai + ',this.value)" title="Role on this project">' +
+        '<option value=""' + (!a.role ? ' selected' : '') + '>Role…</option>' +
+        '<option value="Lead"' + (a.role === 'Lead' ? ' selected' : '') + '>Lead</option>' +
+        '<option value="Contributor"' + (a.role === 'Contributor' ? ' selected' : '') + '>Contributor</option>' +
+        '<option value="Reviewer"' + (a.role === 'Reviewer' ? ' selected' : '') + '>Reviewer</option>' +
+      '</select>' +
+      '<span class="ae-autofill-btn" onclick="aeAutofillProject(' + ai + ')" title="Fill empty weeks with default % based on project size and role">⚡ Auto-fill</span>';
     if (pStart || pEnd) {
       row += '<span class="ae-date-range">';
       if (pStart) row += '&#9654; ' + pStart;
@@ -4490,6 +4544,57 @@ function aeCellChange(ai, wi, input) {
   aeTotRefresh(wi);
 }
 
+function aeRoleChange(ai, role) {
+  Editor.draft[Editor.person][ai].role = role;
+}
+
+function aeAutofillProject(ai) {
+  var alloc = Editor.draft[Editor.person][ai];
+  var projTitle = alloc.project;
+  var role = alloc.role;
+  if (!role) {
+    showToast('Select a role first (Lead, Contributor, or Reviewer).', 'warn');
+    return;
+  }
+  // Look up project size
+  var proj = PROJECTS.find(function(p) { return p.title === projTitle; });
+  var size = proj ? (proj.project_size || '') : '';
+  if (!size) {
+    showToast('This project has no size set. Set the project size in the project editor first.', 'warn');
+    return;
+  }
+  var defaults = _allocationDefaults[size];
+  if (!defaults || !defaults[role]) {
+    showToast('No default found for size "' + size + '" / role "' + role + '".', 'warn');
+    return;
+  }
+  var defaultPct = defaults[role] / 100; // Convert to 0-1 fraction
+  var weeks = RESOURCES_DATA.weeks;
+  var N = weeks.length;
+  // Determine project date range
+  var dates = aeProjectDates[projTitle] || {};
+  var pStart = dates.start || null;
+  var pEnd = dates.end || null;
+  var filled = 0;
+  for (var i = 0; i < N; i++) {
+    // Only fill empty weeks within project date range
+    if (alloc.fracs[i] > 0) continue; // Don't overwrite existing values
+    var wDate = weeks[i];
+    var afterStart = !pStart || wDate >= pStart;
+    var beforeEnd = !pEnd || wDate <= pEnd;
+    if (afterStart && beforeEnd) {
+      alloc.fracs[i] = defaultPct;
+      filled++;
+    }
+  }
+  if (filled === 0) {
+    showToast('No empty weeks found within the project date range to fill.', 'info');
+    return;
+  }
+  showToast('Filled ' + filled + ' week(s) with ' + defaults[role] + '% for ' + role + '.', 'success');
+  aeRenderGrid(); // Re-render to show updated values
+}
+
 function aeTotRefresh(wi) {
   const allocs = Editor.draft[Editor.person];
   const total  = allocs.reduce(function(s, a) { return s + Math.round((a.fracs[wi] || 0) * 100); }, 0);
@@ -4545,6 +4650,7 @@ function applyEditorChanges() {
           project_status: da.status || '',
           project_type:   origArr.length > 0 ? (origArr[0].type || '') : '',
           analytics_id:   origArr.length > 0 ? origArr[0].analytics_id : null,
+          project_role:   da.role || null,
           week_date:      weeks[i],
           fraction:       newFrac,
           hours:          Math.round(newHrs * 100) / 100,
@@ -4558,6 +4664,7 @@ function applyEditorChanges() {
       // Update the first allocation, zero out any others (de-duplicate)
       origArr[0].fracs = da.fracs.slice();
       origArr[0].hours = da.fracs.map(function(f, i) { return f * (p.proj_cap[i] || 0); });
+      origArr[0].role = da.role || origArr[0].role || '';
       for (let j = 1; j < origArr.length; j++) {
         origArr[j].fracs = new Array(N).fill(0);
         origArr[j].hours = new Array(N).fill(0);
@@ -4569,6 +4676,7 @@ function applyEditorChanges() {
         project:      da.project,
         status:       proj ? proj.status : da.status,
         type:         '',
+        role:         da.role || '',
         fracs:        da.fracs.slice(),
         hours:        da.fracs.map(function(f, i) { return f * (p.proj_cap[i] || 0); }),
         analytics_id: proj ? proj.id : null,
@@ -4663,6 +4771,7 @@ async function saveAllocationsToRest(edits) {
             project_status: e.project_status,
             project_type:   e.project_type,
             analytics_id:   e.analytics_id,
+            project_role:   e.project_role || null,
             week_date:      e.week_date,
             fraction:       e.fraction,
             hours:          e.hours,
@@ -5433,11 +5542,14 @@ function computeCapacityAndAllocations(people, weeks, weekIdx, allocFeatures, N,
         status:       a.project_status || '',
         type:         a.project_type || '',
         analytics_id: a.analytics_id || null,
+        role:         a.project_role || '',
         fracs:        new Array(N).fill(0),
         hours:        new Array(N).fill(0),
         _name:        a.name,
       };
     }
+    // If role wasn't set on earlier record but is on this one, capture it
+    if (!allocMap[key].role && a.project_role) allocMap[key].role = a.project_role;
     allocMap[key].fracs[wi] = a.fraction || 0;
     allocMap[key].hours[wi] = a.hours || 0;
   });
@@ -6518,6 +6630,131 @@ function catWizardApply(categoryName) {
   if (hidden) hidden.value = categoryName;
 }
 
+// ══════════════════════════════════════════════════════════════════════
+//  SIZE WIZARD — scoring-based 4-question wizard for project sizing
+// ══════════════════════════════════════════════════════════════════════
+function sizeWizardOpen() {
+  _sizeWizardAnswers = [-1, -1, -1, -1];
+  _sizeWizardStep = 0;
+  sizeWizardRender();
+}
+
+function sizeWizardClose() {
+  var panel = document.getElementById('size-wizard-panel');
+  if (panel) panel.innerHTML = '';
+  if (panel) panel.classList.remove('open');
+}
+
+function sizeWizardPick(optIdx) {
+  _sizeWizardAnswers[_sizeWizardStep] = optIdx;
+  setTimeout(function() {
+    _sizeWizardStep++;
+    sizeWizardRender();
+  }, 180);
+}
+
+function sizeWizardBack() {
+  if (_sizeWizardStep > 0) { _sizeWizardStep--; sizeWizardRender(); }
+}
+
+function sizeWizardReset() {
+  _sizeWizardAnswers = [-1, -1, -1, -1];
+  _sizeWizardStep = 0;
+  sizeWizardRender();
+}
+
+function sizeWizardScoreToSize(totalScore) {
+  for (var i = 0; i < SIZE_WIZARD_MAP.length; i++) {
+    if (totalScore >= SIZE_WIZARD_MAP[i].range[0] && totalScore <= SIZE_WIZARD_MAP[i].range[1]) return SIZE_WIZARD_MAP[i];
+  }
+  return SIZE_WIZARD_MAP[SIZE_WIZARD_MAP.length - 1];
+}
+
+function sizeWizardRender() {
+  var panel = document.getElementById('size-wizard-panel');
+  if (!panel) return;
+  panel.classList.add('open');
+
+  if (_sizeWizardStep < 4) {
+    var q = SIZE_WIZARD_QUESTIONS[_sizeWizardStep];
+    var html = '<div class="size-wz-progress">';
+    for (var i = 0; i < 4; i++) {
+      html += '<div class="size-wz-pip ' + (i < _sizeWizardStep ? 'done' : (i === _sizeWizardStep ? 'current' : '')) + '"></div>';
+    }
+    html += '</div>';
+    html += '<div class="size-wz-step-label">' + q.label + '</div>';
+    html += '<div class="size-wz-q">' + esc(q.question) + '</div>';
+    html += '<div class="size-wz-opts">';
+    q.options.forEach(function(o, oi) {
+      html += '<div class="size-wz-opt" onclick="sizeWizardPick(' + oi + ')">';
+      html += '<div class="size-wz-dot"></div>';
+      html += '<div><div style="font-weight:700;">' + esc(o.label) + '</div>';
+      html += '<div class="size-wz-opt-desc">' + esc(o.desc) + '</div></div></div>';
+    });
+    html += '</div>';
+    html += '<div class="size-wz-nav">';
+    if (_sizeWizardStep > 0) html += '<button type="button" class="cat-wizard-back" onclick="sizeWizardBack()">← Back</button>';
+    html += ' <button type="button" class="cat-wizard-back" onclick="sizeWizardClose()">Cancel</button>';
+    html += '</div>';
+    panel.innerHTML = html;
+  } else {
+    // Result
+    var total = 0;
+    for (var j = 0; j < 4; j++) total += SIZE_WIZARD_QUESTIONS[j].options[_sizeWizardAnswers[j]].score;
+    var size = sizeWizardScoreToSize(total);
+    var factorLabels = ['Duration', 'Team size', 'Deliverables', 'Stakeholders'];
+    var html = '<div class="size-wz-progress">';
+    for (var p = 0; p < 4; p++) html += '<div class="size-wz-pip done"></div>';
+    html += '</div>';
+    html += '<div class="size-wz-result">';
+    html += '<div class="size-wz-result-size">' + size.key + '</div>';
+    html += '<div class="size-wz-result-label">' + esc(size.label) + ' project</div>';
+    html += '<div class="size-wz-result-desc">' + esc(size.desc) + '</div>';
+    html += '</div>';
+    html += '<div class="size-wz-factors">';
+    for (var f = 0; f < 4; f++) {
+      html += '<div class="size-wz-factor"><div class="size-wz-factor-label">' + factorLabels[f] + '</div>';
+      html += '<div class="size-wz-factor-val">' + esc(SIZE_WIZARD_QUESTIONS[f].options[_sizeWizardAnswers[f]].label) + '</div></div>';
+    }
+    html += '</div>';
+    var defaults = _allocationDefaults[size.key] || {};
+    html += '<div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:4px;">Default weekly allocation for this size:</div>';
+    var roles = ['Lead', 'Contributor', 'Reviewer'];
+    roles.forEach(function(r) {
+      html += '<div class="size-wz-alloc-row"><span style="color:var(--text-muted);">' + r + '</span><span style="font-weight:700;color:var(--navy);">' + (defaults[r] || 0) + '% of project time</span></div>';
+    });
+    html += '<div class="size-wz-nav" style="margin-top:12px;">';
+    html += '<button type="button" class="cat-wizard-back" onclick="sizeWizardBack()">← Back</button>';
+    html += ' <button type="button" class="cat-wizard-back" onclick="sizeWizardReset()">Start over</button>';
+    html += ' <button type="button" class="size-wz-use-btn" onclick="sizeWizardApply(\'' + size.key + '\')">Use ' + size.key + ' (' + size.label + ')</button>';
+    html += '</div>';
+    panel.innerHTML = html;
+  }
+}
+
+function sizeWizardApply(sizeKey) {
+  var sel = document.getElementById('fm-project-size');
+  if (sel) sel.value = sizeKey;
+  sizeWizardClose();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  Helper: build project size field with wizard link
+// ══════════════════════════════════════════════════════════════════════
+function fmProjectSizeField(currentValue) {
+  var options = ['S', 'M', 'L', 'XL'];
+  var labels = { S: 'S — Small', M: 'M — Medium', L: 'L — Large', XL: 'XL — Extra large' };
+  var selectHtml = '<select class="fm-input" id="fm-project-size">';
+  selectHtml += '<option value="">Select size…</option>';
+  options.forEach(function(opt) {
+    selectHtml += '<option value="' + opt + '"' + (opt === currentValue ? ' selected' : '') + '>' + esc(labels[opt]) + '</option>';
+  });
+  selectHtml += '</select>';
+  selectHtml += '<button type="button" class="size-wizard-link" onclick="sizeWizardOpen()">🧭 Not sure? Help me choose a size</button>';
+  selectHtml += '<div id="size-wizard-panel" class="size-wizard-panel"></div>';
+  return fmField('Project Size', selectHtml);
+}
+
 function buildProjectForm(p) {
   const v = function(k) { return p ? (p[k] || '') : ''; };
   return '<div class="fm-section-label">Basic Info</div>' +
@@ -6525,6 +6762,7 @@ function buildProjectForm(p) {
       fmField('Title', fmInput('fm-title-val', v('title'), 'Project title…'), true, true) +
       fmField('Status', fmSelect('fm-status', FM_PROJ_STATUSES, v('status'), 'Select status…', false)) +
       fmField('Priority', fmSelect('fm-priority', FM_PROJ_PRIORITIES, v('priority'), 'Select priority…', false)) +
+      fmProjectSizeField(v('project_size')) +
       fmField('Primary Contact', fmSelect('fm-contact', FM_ACTIVE_MEMBERS || FM_TASK_ASSIGNEES, v('contact'), 'Select lead…', false)) +
       fmField('Team Members', fmMemberMultiSelect('fm-other-members', FM_ACTIVE_MEMBERS || FM_TASK_ASSIGNEES, v('other_members')), false, true,
         'Select all employees working on this project (in addition to the primary contact)') +
@@ -6639,6 +6877,7 @@ function collectProjectFields() {
     partner_dept:      getVal('fm-partner-dept') || null,
     itd_team:          getVal('fm-itd-team')     || null,
     category:          getVal('fm-category')     || null,
+    project_size:      getVal('fm-project-size') || null,
     start:             getVal('fm-start')        || null,
     end:               getVal('fm-end')          || null,
     working_due:       getVal('fm-working-due')  || null,
@@ -7007,6 +7246,7 @@ function renderProjectDetail(id) {
         </span>
         <span class="priority-badge priority-${p.priority||'null'}">${p.priority||'—'}</span>
         ${p.category ? `<span class="detail-hero-chip">${esc(p.category)}</span>` : ''}
+        ${p.project_size ? `<span class="detail-hero-chip">Size: ${esc(p.project_size)}</span>` : ''}
         ${p.itd_team ? `<span class="detail-hero-chip">${esc(p.itd_team)}</span>` : ''}
         ${projTotalHrs > 0 ? `<span class="detail-hero-chip">⏱ ${hoursLabel(projTotalHrs, projMyHrs)}</span>` : ''}
         ${p.actual_end ? `<span class="detail-hero-chip">✓ Completed ${p.actual_end}</span>` : ''}
@@ -7022,6 +7262,7 @@ function renderProjectDetail(id) {
           <div class="detail-meta-item"><label>Partner Department</label><p>${esc(p.partner_dept||'—')}</p></div>
           <div class="detail-meta-item"><label>ITD Team</label><p>${esc(p.itd_team||'—')}</p></div>
           <div class="detail-meta-item"><label>Category</label><p>${esc(p.category||'—')}</p></div>
+          <div class="detail-meta-item"><label>Project Size</label><p>${esc(p.project_size||'—')}</p></div>
           <div class="detail-meta-item"><label>Start Date</label><p>${p.start||'—'}</p></div>
           <div class="detail-meta-item"><label>Working Due Date</label><p>${p.working_due || p.end || '—'}</p></div>
           ${p.actual_end ? `<div class="detail-meta-item"><label>Actual End</label><p>${p.actual_end}</p></div>` : ''}
@@ -7907,11 +8148,59 @@ const _defaultItdTeams = [
 ];
 
 // ObjectIds for the two config records (populated on load from ArcGIS)
-const _configOids = { partner_depts: null, itd_teams: null, proj_categories: null, task_categories: null, task_tools: null };
+const _configOids = { partner_depts: null, itd_teams: null, proj_categories: null, task_categories: null, task_tools: null, allocation_defaults: null };
 
 // Start with defaults; overwritten by applyAppConfig() after ArcGIS load
 let _customPartnerDepts = [..._defaultPartnerDepts];
 let _customItdTeams = [..._defaultItdTeams];
+
+// ── Allocation Defaults by Project Size × Role ──────────────────
+let _allocationDefaults = {
+  S:  { Lead: 15, Contributor: 10, Reviewer: 5 },
+  M:  { Lead: 25, Contributor: 15, Reviewer: 5 },
+  L:  { Lead: 40, Contributor: 20, Reviewer: 10 },
+  XL: { Lead: 50, Contributor: 30, Reviewer: 10 }
+};
+
+// ── Size Wizard Data ────────────────────────────────────────────
+const SIZE_WIZARD_QUESTIONS = [
+  { label: 'Step 1 of 4', question: 'How long do you expect this project to take?',
+    options: [
+      { label: 'Less than 2 weeks', desc: 'Quick task or simple deliverable', score: 1 },
+      { label: '2 to 8 weeks', desc: 'A few sprints or a focused effort', score: 2 },
+      { label: '2 to 4 months', desc: 'Multi-phase project with milestones', score: 3 },
+      { label: 'More than 4 months', desc: 'Major initiative, possibly ongoing', score: 4 }
+    ] },
+  { label: 'Step 2 of 4', question: 'How many people will be working on this?',
+    options: [
+      { label: 'Just me', desc: 'Solo effort', score: 1 },
+      { label: '2 to 3 people', desc: 'Small team', score: 2 },
+      { label: '4 to 6 people', desc: 'Cross-functional team', score: 3 },
+      { label: '7 or more', desc: 'Large team or multiple teams', score: 4 }
+    ] },
+  { label: 'Step 3 of 4', question: 'How many distinct deliverables are expected?',
+    options: [
+      { label: '1 deliverable', desc: 'A single report, dashboard, or tool', score: 1 },
+      { label: '2 to 3 deliverables', desc: 'A few related outputs', score: 2 },
+      { label: '4 to 6 deliverables', desc: 'Multiple components or phases', score: 3 },
+      { label: '7 or more', desc: 'Large suite of outputs or ongoing deliverables', score: 4 }
+    ] },
+  { label: 'Step 4 of 4', question: 'How complex is the stakeholder involvement?',
+    options: [
+      { label: 'Internal team only', desc: 'Just our analytics team', score: 1 },
+      { label: 'One other department', desc: 'Single partner department', score: 2 },
+      { label: 'Multiple departments', desc: 'Cross-departmental coordination', score: 3 },
+      { label: 'External partners or vendors', desc: 'Outside organizations involved', score: 4 }
+    ] }
+];
+const SIZE_WIZARD_MAP = [
+  { key: 'S',  label: 'Small',       range: [4, 6],   desc: 'A focused effort completed quickly with minimal coordination. Typically a single deliverable handled by one or two people.' },
+  { key: 'M',  label: 'Medium',      range: [7, 9],   desc: 'A moderate project requiring a few weeks of focused work and some cross-team coordination.' },
+  { key: 'L',  label: 'Large',       range: [10, 12], desc: 'A significant effort spanning months with multiple deliverables, several team members, and stakeholder management.' },
+  { key: 'XL', label: 'Extra large', range: [13, 16], desc: 'A major initiative requiring sustained effort from a large team over several months, often with external dependencies.' }
+];
+let _sizeWizardAnswers = [-1, -1, -1, -1];
+let _sizeWizardStep = 0;
 
 // Category and tool lists: arrays of {name, desc} objects
 let _customProjCategories = [
@@ -8027,6 +8316,14 @@ function applyAppConfig(features) {
     if (!key || !val) return;
     try {
       const parsed = JSON.parse(val);
+      if (key === 'allocation_defaults') {
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          _allocationDefaults = parsed;
+          _configOids.allocation_defaults = oid;
+          console.log('[Config] Loaded allocation_defaults:', JSON.stringify(parsed));
+        }
+        return;
+      }
       if (!Array.isArray(parsed)) return;
       if (key === 'partner_depts') {
         _customPartnerDepts = parsed;
@@ -8108,6 +8405,58 @@ async function saveCustomLists(listKey) {
     await saveConfigKey('task_categories', compressDescList(_customTaskCategories));
   } else if (listKey === 'task_tool') {
     await saveConfigKey('task_tools', compressDescList(_customTaskTools));
+  }
+}
+
+// ── Allocation Defaults Editor ──────────────────────────────────
+function renderAllocDefaultsEditor() {
+  var container = document.getElementById('alloc-defaults-editor');
+  if (!container) return;
+  var sizes = ['S', 'M', 'L', 'XL'];
+  var sizeLabels = { S: 'Small', M: 'Medium', L: 'Large', XL: 'Extra large' };
+  var roles = ['Lead', 'Contributor', 'Reviewer'];
+  var html = '<table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;font-size:13px;">';
+  html += '<thead><tr><th style="background:#F8F9FA;padding:10px 14px;text-align:left;font-weight:700;color:var(--navy);border-bottom:2px solid #E5E7EB;font-size:12px;text-transform:uppercase;letter-spacing:0.04em;">Size</th>';
+  roles.forEach(function(r) {
+    html += '<th style="background:#F8F9FA;padding:10px 14px;text-align:center;font-weight:700;color:var(--navy);border-bottom:2px solid #E5E7EB;font-size:12px;text-transform:uppercase;letter-spacing:0.04em;">' + r + '</th>';
+  });
+  html += '</tr></thead><tbody>';
+  sizes.forEach(function(s) {
+    var d = _allocationDefaults[s] || {};
+    html += '<tr>';
+    html += '<td style="padding:10px 14px;border-bottom:1px solid #F3F4F6;font-weight:700;color:var(--navy);">' + s + ' — ' + sizeLabels[s] + '</td>';
+    roles.forEach(function(r) {
+      html += '<td style="padding:6px 10px;border-bottom:1px solid #F3F4F6;text-align:center;">';
+      html += '<input type="number" min="0" max="100" step="5" value="' + (d[r] || 0) + '" ';
+      html += 'id="ad-' + s + '-' + r + '" ';
+      html += 'style="width:60px;padding:4px 6px;text-align:center;border:1px solid #E5E7EB;border-radius:4px;font-size:13px;font-family:Lato,sans-serif;">';
+      html += '<span style="font-size:11px;color:var(--text-muted);margin-left:2px;">%</span>';
+      html += '</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  html += '<div style="margin-top:10px;display:flex;justify-content:flex-end;">';
+  html += '<button class="settings-btn settings-btn-primary" onclick="saveAllocDefaults()">Save Defaults</button>';
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+async function saveAllocDefaults() {
+  var sizes = ['S', 'M', 'L', 'XL'];
+  var roles = ['Lead', 'Contributor', 'Reviewer'];
+  var newDefaults = {};
+  sizes.forEach(function(s) {
+    newDefaults[s] = {};
+    roles.forEach(function(r) {
+      var el = document.getElementById('ad-' + s + '-' + r);
+      newDefaults[s][r] = el ? parseInt(el.value) || 0 : 0;
+    });
+  });
+  _allocationDefaults = newDefaults;
+  var success = await saveConfigKey('allocation_defaults', newDefaults);
+  if (success) {
+    showToast('Allocation defaults saved.', 'success');
   }
 }
 
@@ -10100,6 +10449,13 @@ function renderSettingsPage(area) {
     '<div class="list-editor-note">Changes are saved to ArcGIS Online and shared across all users. Values used in existing projects or tasks will always appear in the dropdown even if removed here. The "Help me choose" wizard uses a fixed decision tree — adding items here will make them available in the dropdown but not automatically in the wizard.</div>' +
   '</div>';
 
+  // ── Allocation Defaults Editor ──────────────────────────────
+  html += '<div class="settings-section">' +
+    '<div class="settings-section-header"><span>Allocation Defaults by Project Size</span></div>' +
+    '<p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Default weekly allocation percentages applied when auto-filling allocations. Values represent the percentage of a person\'s project-available time dedicated to a single project per week.</p>' +
+    '<div id="alloc-defaults-editor"></div>' +
+  '</div>';
+
   // ── Developer Mode ──────────────────────────────────────
   const devChecked = Auth.devMode ? ' checked' : '';
   html += '<div class="settings-section">' +
@@ -10125,6 +10481,9 @@ function renderSettingsPage(area) {
   renderDescListEditor('proj_cat');
   renderDescListEditor('task_cat');
   renderDescListEditor('task_tool');
+
+  // Render allocation defaults editor
+  renderAllocDefaultsEditor();
 
   // If a member was selected for absence editing, re-render that section
   if (Editor.selectedMember && people[Editor.selectedMember]) {
