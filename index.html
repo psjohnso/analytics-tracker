@@ -3077,7 +3077,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0000';
+const APP_VERSION = '0.10.0.0001';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -4593,6 +4593,107 @@ function aeAutofillProject(ai) {
   }
   showToast('Filled ' + filled + ' week(s) with ' + defaults[role] + '% for ' + role + '.', 'success');
   aeRenderGrid(); // Re-render to show updated values
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  AUTO-FILL ALLOCATIONS FOR NEW PROJECTS
+//  Called automatically after creating a new Active project with a size.
+//  Creates allocation records in ArcGIS Online for all team members.
+// ══════════════════════════════════════════════════════════════════════
+async function autoFillAllocationsForNewProject(fields) {
+  var size = fields.project_size;
+  var defaults = _allocationDefaults[size];
+  if (!defaults) { console.warn('[AutoAlloc] No defaults for size:', size); return; }
+
+  var startDate = fields.start || null;
+  var endDate = fields.working_due || fields.end || null;
+  if (!startDate || !endDate) {
+    console.log('[AutoAlloc] Skipping — no start or end date set');
+    return;
+  }
+
+  // Gather team members and their roles
+  var members = [];
+  if (fields.contact) {
+    members.push({ name: fields.contact, role: 'Lead' });
+  }
+  if (fields.other_members) {
+    fields.other_members.split(',').map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(name) {
+      members.push({ name: name, role: 'Contributor' });
+    });
+  }
+  if (members.length === 0) {
+    console.log('[AutoAlloc] Skipping — no team members assigned');
+    return;
+  }
+
+  // Find the project we just created to get analytics_id
+  var proj = PROJECTS.find(function(p) { return p.title === fields.title; });
+  var analyticsId = proj ? proj.id : null;
+
+  // Generate weeks within date range
+  var weeks = RESOURCES_DATA.weeks || [];
+  var adds = [];
+
+  members.forEach(function(member) {
+    var defaultPct = defaults[member.role];
+    if (!defaultPct) return;
+    var fraction = defaultPct / 100;
+
+    // Compute this person's proj_cap per week (if they're in RESOURCES_DATA)
+    var person = RESOURCES_DATA.people ? RESOURCES_DATA.people[member.name] : null;
+
+    for (var i = 0; i < weeks.length; i++) {
+      var wDate = weeks[i];
+      // Check if week is within project date range
+      if (wDate < startDate || wDate > endDate) continue;
+
+      var projCap = person ? (person.proj_cap[i] || 0) : 0;
+      var hours = Math.round(fraction * projCap * 100) / 100;
+
+      adds.push({
+        attributes: {
+          name:           member.name,
+          project:        fields.title,
+          project_status: fields.status || 'Active',
+          project_type:   fields.category || '',
+          analytics_id:   analyticsId,
+          project_role:   member.role,
+          week_date:      wDate,
+          fraction:       fraction,
+          hours:          hours,
+        }
+      });
+    }
+  });
+
+  if (adds.length === 0) {
+    console.log('[AutoAlloc] No allocation records generated');
+    return;
+  }
+
+  console.log('[AutoAlloc] Creating', adds.length, 'allocation records for', members.length, 'members');
+  try {
+    var result = await agolApplyEdits(ARCGIS_CONFIG.allocationsUrl, { adds: adds });
+    console.log('[AutoAlloc] Result:', JSON.stringify(result));
+
+    var errorCount = 0;
+    if (result && result.addResults) {
+      result.addResults.forEach(function(r) { if (!r.success) errorCount++; });
+    }
+    if (errorCount > 0) {
+      showToast('Some allocation records failed to save (' + errorCount + ' errors). Check the allocation editor.', 'warn');
+    } else {
+      showToast('Auto-filled allocations for ' + members.length + ' team member(s).', 'success');
+    }
+
+    // Reload resources to reflect the new allocations
+    await loadResourcesData();
+    initResourcesWeekIndices();
+  } catch (err) {
+    console.error('[AutoAlloc] Failed:', err);
+    showToast('Failed to auto-fill allocations: ' + err.message, 'error');
+  }
 }
 
 function aeTotRefresh(wi) {
@@ -6757,6 +6858,12 @@ function fmProjectSizeField(currentValue) {
 
 function buildProjectForm(p) {
   const v = function(k) { return p ? (p[k] || '') : ''; };
+  // Original End Date is locked once project reaches Active status
+  const isActive = p && (p.status === 'Active' || p.status === 'Complete' || p.status === 'On Hold' || p.status === 'Canceled');
+  const endDateField = isActive
+    ? '<input id="fm-end" type="date" class="fm-input" value="' + esc(v('end')) + '" readonly style="background:#F3F4F6;color:var(--text-muted);cursor:not-allowed;">' +
+      '<div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Locked — set when project was created</div>'
+    : '<input id="fm-end" type="date" class="fm-input" value="' + esc(v('end')) + '">';
   return '<div class="fm-section-label">Basic Info</div>' +
     '<div class="fm-grid">' +
       fmField('Title', fmInput('fm-title-val', v('title'), 'Project title…'), true, true) +
@@ -6776,7 +6883,7 @@ function buildProjectForm(p) {
     '<div class="fm-section-label">Timeline</div>' +
     '<div class="fm-grid">' +
       fmField('Start Date', fmInput('fm-start', v('start'), '', 'date')) +
-      fmField('Original End Date', fmInput('fm-end', v('end'), '', 'date')) +
+      fmField('Original End Date', endDateField) +
       fmField('Working Due Date', fmInput('fm-working-due', v('working_due'), '', 'date')) +
     '</div>' +
     '<div class="fm-section-label">Details</div>' +
@@ -6831,9 +6938,9 @@ function openFormModal(mode, id) {
   document.getElementById('fm-delete-btn').style.display = isEdit ? 'inline-block' : 'none';
   document.getElementById('fm-save-btn').textContent     = isEdit ? 'Save Changes' : 'Create';
   document.getElementById('fm-body').innerHTML           = isProject ? buildProjectForm(record) : buildTaskForm(record);
-  // Lock original due date fields on edit — baseline should not change after creation
-  if (isEdit) {
-    const origDateField = document.getElementById(isProject ? 'fm-end' : 'fm-due');
+  // Lock original due date for tasks on edit (project lock is handled in buildProjectForm based on status)
+  if (isEdit && !isProject) {
+    const origDateField = document.getElementById('fm-due');
     if (origDateField) {
       origDateField.disabled = true;
       origDateField.style.background = '#F3F4F6';
@@ -6926,6 +7033,19 @@ async function handleFormSubmit(andDownload) {
     }
   }
 
+  // ── Business rule: Active projects require a size ───────────
+  if (isProject && !isEdit && fields.status === 'Active' && !fields.project_size) {
+    showToast('Active projects require a Project Size (S/M/L/XL). Use the wizard if you\'re not sure.', 'warn');
+    var sizeEl = document.getElementById('fm-project-size');
+    if (sizeEl) { sizeEl.style.borderColor = '#EF4444'; sizeEl.focus(); }
+    return;
+  }
+
+  // ── Auto-copy: Working Due Date defaults to Original End Date ──
+  if (isProject && fields.end && !fields.working_due) {
+    fields.working_due = fields.end;
+  }
+
   // ── Access control: only group members can promote Ideas ──
   if (isProject && isEdit) {
     const origProject = PROJECTS.find(p => p.objectId === Editor.editId);
@@ -6944,6 +7064,11 @@ async function handleFormSubmit(andDownload) {
     const created = isProject ? await DataStore.createProject(fields) : await DataStore.createTask(fields);
     // After create: open the new record's detail view
     Editor.editId = isProject ? created.objectId : created.objectId;
+
+    // ── Auto-fill allocations for new Active projects ─────────
+    if (isProject && fields.status === 'Active' && fields.project_size) {
+      autoFillAllocationsForNewProject(fields);
+    }
   }
 
   closeFormModal();

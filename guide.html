@@ -264,6 +264,9 @@ li strong { color: var(--navy); }
 <div class="tip-box">
   <strong>Choosing a project size:</strong> The project size field (S, M, L, XL) helps determine default resource allocation percentages. If you're unsure, click <strong>"🧭 Not sure? Help me choose a size"</strong> — a 4-question wizard scores your project across duration, team size, deliverables, and stakeholder complexity to recommend a size. The size drives default weekly allocation percentages when using the auto-fill feature in the allocation editor.
 </div>
+<div class="tip-box">
+  <strong>Automatic allocations:</strong> When you create a new project with status "Active," a project size, assigned team members, and a date range, the application <strong>automatically creates allocation records</strong> for all team members across all weeks within the project's date range. The Primary Contact is assigned as Lead and all Team Members as Contributors, using the default allocation percentages for that project size. You can adjust these in the allocation editor afterward. Active projects <strong>require</strong> a project size to be set.
+</div>
 
 <h3>Project Statuses</h3>
 <p>Projects follow this lifecycle:</p>
@@ -273,8 +276,8 @@ li strong { color: var(--navy); }
 <h3>Project &amp; Task Dates</h3>
 <p>Both projects and tasks use a three-date model to track schedule changes over time:</p>
 <ul>
-  <li><strong>Original End / Due Date</strong> — Set when the project or task is first created. This is the baseline and should not change once established — it represents the initial commitment.</li>
-  <li><strong>Working Due Date</strong> — The current target completion date. Updated as scope or timelines shift. All overdue calculations, alerts, and deadline displays throughout the app use this date. On creation, it is automatically set to match the original due date.</li>
+  <li><strong>Original End / Due Date</strong> — Set when the project or task is first created. This is the baseline commitment. For projects, this field <strong>locks permanently</strong> once the project status changes to Active — it cannot be edited after that point. This preserves the original timeline for comparison.</li>
+  <li><strong>Working Due Date</strong> — The current target completion date. Updated as scope or timelines shift. All overdue calculations, alerts, and deadline displays throughout the app use this date. On creation, it is <strong>automatically set to match the Original End Date</strong> if left blank.</li>
   <li><strong>Actual End Date</strong> — Automatically set to today's date when the status changes to "Complete." Represents when the work was actually finished.</li>
 </ul>
 <p>Detail pages show all three dates side by side, with a red <strong>(moved)</strong> indicator when the working due date differs from the original. List views and cards show the working due date since that's the current target.</p>
