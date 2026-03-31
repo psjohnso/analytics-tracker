@@ -3181,7 +3181,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0022';
+const APP_VERSION = '0.10.0.0023';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -3574,6 +3574,7 @@ async function suggestTasksForProject(projectObjectId) {
   // Build the prompt
   var prompt = 'You are a project management assistant for a City of Tucson government GIS/Data Analytics team. ' +
     'Based on the following project details, suggest 6-10 specific, actionable tasks that would be needed to complete this project. ' +
+    'List them in the order they should be completed — from initial setup and data gathering through development, testing, and deployment. ' +
     'Each task should be concrete and scoped to roughly 2-20 hours of work.\n\n' +
     'For each task, provide:\n' +
     '- title: a clear, specific task name (not generic like "Research" but specific like "Extract crime incident data from Hansen API")\n' +
@@ -3659,11 +3660,12 @@ function renderSuggestions(project) {
 
   var html = '<div class="suggest-header"><span class="suggest-title">✨ AI Task Suggestions</span>' +
     '<button class="suggest-close" onclick="closeSuggestPanel()">✕</button></div>';
-  html += '<div style="font-size:11px;color:#92400E;margin-bottom:12px;">Review the suggested tasks below. Click "Add" to create each task, or "Add All" to create them all at once.</div>';
+  html += '<div style="font-size:11px;color:#92400E;margin-bottom:12px;">Tasks are listed in suggested completion order. Review and adjust assignees, then click "Add" or "Add All."</div>';
 
   _suggestedTasks.forEach(function(task, i) {
     var accepted = task._accepted ? ' accepted' : '';
     html += '<div class="suggest-task' + accepted + '" id="suggest-task-' + i + '">';
+    html += '<div style="width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:2px;">' + (i + 1) + '</div>';
     html += '<div class="suggest-task-body">';
     html += '<div class="suggest-task-title">' + esc(task.title) + '</div>';
     html += '<div class="suggest-task-desc">' + esc(task.description || '') + '</div>';
