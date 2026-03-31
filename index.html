@@ -3077,7 +3077,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0001';
+const APP_VERSION = '0.10.0.0002';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -7033,9 +7033,9 @@ async function handleFormSubmit(andDownload) {
     }
   }
 
-  // ── Business rule: Active projects require a size ───────────
-  if (isProject && !isEdit && fields.status === 'Active' && !fields.project_size) {
-    showToast('Active projects require a Project Size (S/M/L/XL). Use the wizard if you\'re not sure.', 'warn');
+  // ── Business rule: Active/Scheduled projects require a size ───────────
+  if (isProject && !isEdit && (fields.status === 'Active' || fields.status === 'Scheduled') && !fields.project_size) {
+    showToast('Active and Scheduled projects require a Project Size (S/M/L/XL). Use the wizard if you\'re not sure.', 'warn');
     var sizeEl = document.getElementById('fm-project-size');
     if (sizeEl) { sizeEl.style.borderColor = '#EF4444'; sizeEl.focus(); }
     return;
@@ -7065,8 +7065,8 @@ async function handleFormSubmit(andDownload) {
     // After create: open the new record's detail view
     Editor.editId = isProject ? created.objectId : created.objectId;
 
-    // ── Auto-fill allocations for new Active projects ─────────
-    if (isProject && fields.status === 'Active' && fields.project_size) {
+    // ── Auto-fill allocations for new Active/Scheduled projects ─────────
+    if (isProject && (fields.status === 'Active' || fields.status === 'Scheduled') && fields.project_size) {
       autoFillAllocationsForNewProject(fields);
     }
   }
