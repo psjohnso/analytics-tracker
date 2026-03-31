@@ -356,22 +356,21 @@ li strong { color: var(--navy); }
 </ul>
 
 <h3>How Future Availability is Calculated</h3>
-<p>The forecast uses a <strong>"snapshot" approach</strong> to project current workloads into the future. Here's how it works step by step:</p>
+<p>The forecast uses <strong>real allocation records first</strong>, with a <strong>"snapshot" fallback</strong> for weeks beyond where real data exists. Here's how it works step by step:</p>
 
-<h4>Step 1 — Past/Present Weeks: Actual Data</h4>
-<p>For all weeks up to and including the current week, the forecast uses <strong>actual entered allocation hours</strong> — no estimation. These are the real values from the allocations service, so past data is always accurate.</p>
+<h4>Step 1 — All Weeks: Real Data First</h4>
+<p>For all 52 weeks, the forecast uses <strong>actual allocation hours</strong> from the allocations service wherever they exist. When you create an Active or Scheduled project with auto-filled allocations, those real records are used directly — no estimation needed for those weeks.</p>
 
 <h4>Step 2 — Find the Snapshot Week</h4>
 <p>For each person, the system walks backward from the current week to find the <strong>most recent week where any allocations were entered</strong> (i.e., total allocation fractions across all projects are greater than zero). This becomes the person's "snapshot week."</p>
 <p>For example, if James has allocation data entered through March 8, then March 8 is his snapshot week — even if the current calendar week is March 15.</p>
 <div class="note-box">
-  <strong>Why a snapshot?</strong> This approach preserves the real allocation split (all project fractions summing to roughly 100%) from a single point in time, rather than mixing stale data from different weeks where projects may have changed.
+  <strong>Why a snapshot?</strong> The snapshot serves as a fallback for future weeks that have no real allocation records — for example, weeks beyond a project's end date range where auto-fill didn't create records, or for projects created before the auto-fill feature existed.
 </div>
 
-<h4>Step 3 — Project Forward</h4>
-<p>For each project that had a <strong>non-zero allocation fraction</strong> in the snapshot week, the system carries that same fraction forward into every future week. So if James was 33% allocated to a project in the snapshot week, the forecast assumes 33% continues indefinitely.</p>
-<p>The allocated hours for each future week are calculated as:</p>
-<div class="formula">Future Allocated Hours = Snapshot Fraction × Project Capacity for that week</div>
+<h4>Step 3 — Fill Gaps with Snapshot</h4>
+<p>For future weeks only, if a project has <strong>no real allocation record</strong> for a given week but had a non-zero fraction in the snapshot week, the system fills that gap by projecting the snapshot fraction forward. Real records always take precedence — the snapshot never overwrites existing data.</p>
+<div class="formula">Gap-filled Hours = Snapshot Fraction × Project Capacity for that week</div>
 <p>Note that project capacity can vary week to week due to absences — a future vacation week will show reduced capacity (and therefore reduced allocated hours) if the absence has been entered in the Settings tab.</p>
 
 <h4>Step 4 — Respect Project End Dates</h4>
@@ -380,7 +379,7 @@ li strong { color: var(--navy); }
 <h4>Step 5 — Calculate Availability</h4>
 <p>For each person, for each week:</p>
 <div class="formula">Availability = Project Capacity − Total Allocated Hours</div>
-<p>Where Project Capacity uses the standard formula: <code>(40 − Absence Hours) × 0.75 × Project Time %</code>.</p>
+<p>Where Project Capacity uses the standard formula: <code>(Scheduled Hours − Absence Hours) × 0.75 × Project Time %</code>.</p>
 <p>Utilization is then: <code>Total Allocated Hours ÷ Project Capacity</code>, capped at 125% for display purposes.</p>
 
 <h4>Worked Example</h4>

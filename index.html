@@ -3077,7 +3077,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0002';
+const APP_VERSION = '0.10.0.0004';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -7547,15 +7547,10 @@ function fcSetMode(m) {
 function fcAvailData() {
   // Returns map: name → { avail[52], cap[52], alloc[52], util[52], role }
   //
-  // Past weeks: use actual entered hours.
-  // Future weeks: find the person's most recent "snapshot week" — the last week
-  //   where allocations were actually entered (total fracs > 0). Then for each
-  //   project that had a non-zero frac in that snapshot week, project that same
-  //   frac forward into every future week where the project is still active
-  //   (within the project's start/end date range).
-  //
-  // This preserves the real allocation split (fracs sum to ~1.0) from the
-  // snapshot week rather than summing stale fracs across different historical weeks.
+  // All weeks: use real allocation hours where they exist.
+  // Future weeks with no real data: fall back to snapshot projection —
+  //   find the most recent week with allocations entered, then project
+  //   those fractions forward, respecting project end dates.
 
   const curIdx = window.currentWeekIdx || 9;
   const weeks  = RESOURCES_DATA.weeks;
@@ -7583,9 +7578,9 @@ function fcAvailData() {
     if (p.active === false) continue; // skip inactive/former members
     const alloc = new Array(52).fill(0);
 
-    // Step 1: fill past/present weeks with actual entered hours
+    // Step 1: fill ALL weeks with real allocation hours (not just past/present)
     for (const a of p.allocations) {
-      for (let i = 0; i <= curIdx; i++) {
+      for (let i = 0; i < 52; i++) {
         alloc[i] += (a.hours[i] || 0);
       }
     }
@@ -7598,25 +7593,20 @@ function fcAvailData() {
       if (totalFrac > 0.01) { snapshotWk = i; break; }
     }
 
-    if (snapshotWk < 0) {
-      // No historical data at all — can't project; leave future as 0
-      const avail = p.proj_cap.map((c, i) => Math.max(0, c - alloc[i]));
-      const util  = p.proj_cap.map((c, i) => c > 0 ? Math.min(1.25, alloc[i] / c) : 0);
-      result[name] = { avail, cap: p.proj_cap, alloc, util, role: p.role, team: p.team };
-      continue;
-    }
+    // Step 3: for future weeks with NO real allocation data, fall back to snapshot
+    if (snapshotWk >= 0) {
+      for (const a of p.allocations) {
+        const snapFrac = a.fracs[snapshotWk] || 0;
+        if (snapFrac <= 0) continue;
 
-    // Step 3: for each allocation that had a non-zero frac in the snapshot week,
-    // project that frac forward into every future week within the project's date range
-    for (const a of p.allocations) {
-      const snapFrac = a.fracs[snapshotWk] || 0;
-      if (snapFrac <= 0) continue; // project wasn't active in snapshot week
+        const projEndWk = (a.analytics_id != null) ? projEndMap[a.analytics_id] : null;
 
-      const projEndWk = (a.analytics_id != null) ? projEndMap[a.analytics_id] : null;
-
-      for (let i = curIdx + 1; i < 52; i++) {
-        if (projEndWk !== null && i > projEndWk) break; // project ended
-        alloc[i] += snapFrac * p.proj_cap[i];
+        for (let i = curIdx + 1; i < 52; i++) {
+          if (projEndWk !== null && i > projEndWk) break; // project ended
+          // Only fill if this week has no real data for this project
+          if ((a.hours[i] || 0) > 0) continue; // real record exists — skip
+          alloc[i] += snapFrac * p.proj_cap[i];
+        }
       }
     }
 
@@ -8062,11 +8052,11 @@ function renderIdeaReview() {
 
   // Promote action buttons config
   const actions = [
-    { label: 'Activate',  status: 'Active',     color: '#83AC16', bg: '#F0FDF4', border: '#86EFAC' },
-    { label: 'Schedule',  status: 'Scheduled',  color: '#9E0059', bg: '#FDF2F8', border: '#F9A8D4' },
-    { label: 'Queue',     status: 'Future',     color: '#C24200', bg: '#FFF7ED', border: '#FED7AA' },
-    { label: 'Hold',      status: 'On Hold',    color: '#FFDB22', bg: '#FEFCE8', border: '#FDE047' },
-    { label: 'Decline',   status: 'Canceled',   color: '#B0B3AE', bg: '#F9FAFB', border: '#D1D5DB' },
+    { label: 'Activate',  status: 'Active',     color: '#83AC16', bg: '#F0FDF4', border: '#86EFAC', tip: 'Start this project immediately. Allocations will be created for assigned team members.' },
+    { label: 'Schedule',  status: 'Scheduled',  color: '#9E0059', bg: '#FDF2F8', border: '#F9A8D4', tip: 'Approve and commit this project with planned dates and resources. Allocations will be created for assigned team members.' },
+    { label: 'Queue',     status: 'Future',     color: '#C24200', bg: '#FFF7ED', border: '#FED7AA', tip: 'Acknowledge this project but place it in the backlog. No dates or allocations are committed yet.' },
+    { label: 'Hold',      status: 'On Hold',    color: '#FFDB22', bg: '#FEFCE8', border: '#FDE047', tip: 'Pause this project. It has been reviewed but is not ready to proceed at this time.' },
+    { label: 'Decline',   status: 'Canceled',   color: '#B0B3AE', bg: '#F9FAFB', border: '#D1D5DB', tip: 'Decline this project idea. It will be marked as Canceled.' },
   ];
 
   // Days ago helper
@@ -8092,6 +8082,7 @@ function renderIdeaReview() {
           const btns = actions.map(a =>
             `<button class="idea-promote-btn"
                style="background:${a.bg};color:${a.color};border-color:${a.border};"
+               title="${a.tip}"
                onmouseover="this.style.background='${a.color}';this.style.color='#fff';"
                onmouseout="this.style.background='${a.bg}';this.style.color='${a.color}';"
                onclick="promoteIdea(${p.objectId}, '${a.status}')">
