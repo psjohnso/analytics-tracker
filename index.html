@@ -3110,7 +3110,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0005';
+const APP_VERSION = '0.10.0.0006';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -8428,6 +8428,11 @@ function renderIdeaAvail(projectId) {
 
   var proj = PROJECTS.find(function(p) { return p.objectId === projectId; });
   var size = (proj && proj.project_size) ? proj.project_size : 'M';
+
+  // Read current dropdown value BEFORE rebuilding (preserves user's selection)
+  var existingSelect = document.getElementById('idea-size-' + projectId);
+  if (existingSelect) size = existingSelect.value;
+
   var avData = fcAvailData();
   var people = Object.keys(avData);
 
@@ -8442,9 +8447,6 @@ function renderIdeaAvail(projectId) {
   html += '<span style="font-size:10px;color:var(--text-muted);">' + SIZE_DURATIONS[size] + ' week duration</span>';
   html += '</div>';
 
-  // Read the selected size from the dropdown (may have been changed)
-  var sizeEl = document.getElementById('idea-size-' + projectId);
-  if (sizeEl) size = sizeEl.value;
   var dur = SIZE_DURATIONS[size] || 6;
 
   // Results for each team member as Lead and Contributor
