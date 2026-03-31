@@ -3181,7 +3181,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0019';
+const APP_VERSION = '0.10.0.0020';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -3610,15 +3610,36 @@ async function suggestTasksForProject(projectObjectId) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
+        max_tokens: 4000,
         messages: [{ role: 'user', content: prompt }]
       })
     });
 
     var data = await response.json();
+    console.log('[TaskSuggest] Raw API response:', JSON.stringify(data).slice(0, 500));
+
+    // Handle API errors
+    if (data.error) {
+      throw new Error(data.error.message || JSON.stringify(data.error));
+    }
+
     var text = (data.content || []).map(function(c) { return c.text || ''; }).join('');
-    var clean = text.replace(/```json|```/g, '').trim();
-    _suggestedTasks = JSON.parse(clean);
+    console.log('[TaskSuggest] Response text:', text.slice(0, 300));
+
+    // Robust JSON extraction — find the JSON array in the response
+    var clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    // Find the first [ and last ] to extract the JSON array
+    var arrayStart = clean.indexOf('[');
+    var arrayEnd = clean.lastIndexOf(']');
+    if (arrayStart === -1 || arrayEnd === -1 || arrayEnd <= arrayStart) {
+      throw new Error('Could not find task list in AI response. Raw: ' + text.slice(0, 200));
+    }
+    var jsonStr = clean.substring(arrayStart, arrayEnd + 1);
+    _suggestedTasks = JSON.parse(jsonStr);
+
+    if (!Array.isArray(_suggestedTasks) || _suggestedTasks.length === 0) {
+      throw new Error('AI returned an empty or invalid task list.');
+    }
     renderSuggestions(p);
   } catch (err) {
     console.error('[TaskSuggest] Failed:', err);
@@ -5522,7 +5543,7 @@ const ARCGIS_CONFIG = {
 // ── AI TASK SUGGESTION PROXY ─────────────────────────────────────────
 // Replace this URL with your Cloudflare Worker URL after deploying.
 // See WORKER_SETUP_GUIDE.md for instructions.
-const AI_PROXY_URL = 'https://analytics-tracker-proxy.psjohnso.workers.dev';
+const AI_PROXY_URL = 'https://analytics-tracker-proxy.YOUR_SUBDOMAIN.workers.dev';
 
 // ── ACCESS CONTROL ────────────────────────────────────────────────────
 // ArcGIS Online group whose members are authorized to change a project's
