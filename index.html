@@ -3181,7 +3181,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0018';
+const APP_VERSION = '0.10.0.0019';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -3601,7 +3601,11 @@ async function suggestTasksForProject(projectObjectId) {
   prompt += '\nRespond ONLY with a JSON array (no markdown, no backticks, no preamble). Each element should have: title, description, category, tool, priority, suggested_assignee.';
 
   try {
-    var response = await fetch('https://api.anthropic.com/v1/messages', {
+    if (AI_PROXY_URL.includes('YOUR_SUBDOMAIN')) {
+      throw new Error('AI proxy not configured. See WORKER_SETUP_GUIDE.md to set up the Cloudflare Worker, then update AI_PROXY_URL in index.html.');
+    }
+
+    var response = await fetch(AI_PROXY_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -5514,6 +5518,11 @@ const ARCGIS_CONFIG = {
   timeEntriesUrl:   'https://services3.arcgis.com/9coHY2fvuFjG9HQX/ArcGIS/rest/services/time_series/FeatureServer/0',
   statusHistoryUrl: 'https://services3.arcgis.com/9coHY2fvuFjG9HQX/ArcGIS/rest/services/status_history/FeatureServer/0',
 };
+
+// ── AI TASK SUGGESTION PROXY ─────────────────────────────────────────
+// Replace this URL with your Cloudflare Worker URL after deploying.
+// See WORKER_SETUP_GUIDE.md for instructions.
+const AI_PROXY_URL = 'https://analytics-tracker-proxy.psjohnso.workers.dev';
 
 // ── ACCESS CONTROL ────────────────────────────────────────────────────
 // ArcGIS Online group whose members are authorized to change a project's
