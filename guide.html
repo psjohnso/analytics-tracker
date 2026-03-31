@@ -181,7 +181,7 @@ li strong { color: var(--navy); }
 
 <!-- ═══════════════════════════════════════════════════ -->
 <h2 id="mywork-tab">My Work Tab (Logged-In Users)</h2>
-<p>The My Work tab provides a personalized dashboard that shows only <em>your</em> projects, tasks, and allocations. It appears in the tab bar after you sign in, and matches your ArcGIS Online display name to project contacts, team members, and task assignees.</p>
+<p>The My Work tab provides a personalized dashboard that shows only <em>your</em> projects, tasks, and allocations. It appears in the tab bar after you sign in, and matches your ArcGIS Online display name to project leads, team members, and task assignees.</p>
 
 <h3>At-a-Glance KPIs</h3>
 <p>Five cards at the top show your active project count, open task count, overdue tasks, tasks due this week, and your current week utilization percentage. Overdue and due-this-week counts highlight in red and yellow respectively when they need attention.</p>
@@ -208,7 +208,7 @@ li strong { color: var(--navy); }
 <p>A visual timeline showing your active, on-hold, and scheduled projects as horizontal bars spanning from start date to working due date. Tasks are nested under their parent project with thinner bars. The chart includes month headers for orientation, a red "TODAY" marker showing the current date, and red outlines on any bars that are past their due date. Click a project or task label to open its detail page. The chart scrolls horizontally if the timeline spans a wide range.</p>
 
 <h3>My Projects</h3>
-<p>All projects where you're the primary contact or a listed team member. By default, only Active, Scheduled, and Idea projects are shown. Click "Show more" to reveal On Hold, Future, Complete, and Canceled projects. Each row shows task completion progress, and projects where you are the lead are marked with a "Lead" badge.</p>
+<p>All projects where you're the project lead or a listed team member. By default, only Active, Scheduled, and Idea projects are shown. Click "Show more" to reveal On Hold, Future, Complete, and Canceled projects. Each row shows task completion progress, and projects where you are the lead are marked with a "Lead" badge.</p>
 
 <h3>My Tasks</h3>
 <p>All tasks assigned to you. By default, only "In Progress" and "Waiting for Response" tasks are shown — these are the ones that need active attention. Click the "Show more" button at the bottom to reveal Pending, On Hold, Complete, and Canceled tasks. Complete and Canceled tasks are further collapsed to the first 3 entries each.</p>
@@ -268,10 +268,10 @@ li strong { color: var(--navy); }
   <strong>Choosing a project size:</strong> The project size field (S, M, L, XL) helps determine default resource allocation percentages. If you're unsure, click <strong>"🧭 Not sure? Help me choose a size"</strong> — a 4-question wizard scores your project across duration, team size, deliverables, and stakeholder complexity to recommend a size. The size drives default weekly allocation percentages when using the auto-fill feature in the allocation editor.
 </div>
 <div class="tip-box">
-  <strong>Automatic allocations:</strong> When you create a new project with status "Active," a project size, assigned team members, and a date range, the application <strong>automatically creates allocation records</strong> for all team members across all weeks within the project's date range. The Primary Contact is assigned as Lead and all Team Members as Contributors, using the default allocation percentages for that project size. You can adjust these in the allocation editor afterward. Active projects <strong>require</strong> a project size to be set.
+  <strong>Automatic allocations:</strong> When you create a new project with status "Active," a project size, assigned team members, and a date range, the application <strong>automatically creates allocation records</strong> for all team members across all weeks within the project's date range. The Project Lead is assigned as Lead and all Team Members as Contributors, using the default allocation percentages for that project size. You can adjust these in the allocation editor afterward. Active projects <strong>require</strong> a project size to be set.
 </div>
 <div class="tip-box">
-  <strong>Check team availability:</strong> When creating or editing a project, click <strong>"Check team availability"</strong> below the Team Members field to see when each person can take on this project. The panel shows the earliest start date for each team member as both Lead and Contributor, based on their current allocations and the project size selected. Use this to make informed staffing decisions — click "Refresh" after changing the project size to update the results.
+  <strong>Check team availability:</strong> The Team Members selector shows each person's availability badge inline — you can see at a glance who is available now, who becomes available soon, and who is at capacity. The badge automatically reflects the project size selected above and shows Lead availability for the person selected as Project Lead, and Contributor availability for everyone else. Badges update when you change the project size or lead.
 </div>
 
 <h3>Project Statuses</h3>
@@ -343,7 +343,7 @@ li strong { color: var(--navy); }
 <p>The total row at the bottom shows combined allocation — totals over 100% are highlighted in red. Click <strong>"✓ Apply Changes"</strong> to save. Changes are written to the ArcGIS Online allocations service and the view updates immediately.</p>
 
 <h3>Roles and Auto-Fill</h3>
-<p>Each project row in the allocation editor includes a <strong>role dropdown</strong> (Lead, Contributor, or Reviewer). The role is automatically inferred — the project's primary contact is set as Lead, everyone else as Contributor — but you can change it at any time.</p>
+<p>Each project row in the allocation editor includes a <strong>role dropdown</strong> (Lead, Contributor, or Reviewer). The role is automatically inferred — the project's project lead is set as Lead, everyone else as Contributor — but you can change it at any time.</p>
 <p>Click the <strong>⚡ Auto-fill</strong> link next to any project to automatically populate empty weeks within the project's date range with default allocation percentages based on the project's size and the person's role. Existing values are never overwritten — only blank weeks are filled. This is a starting point; you can adjust individual cells after auto-filling.</p>
 <div class="tip-box">
   <strong>Tip:</strong> For auto-fill to work, the project must have a <strong>size</strong> set (S, M, L, or XL) in the project editor. If no size is set, you'll be prompted to add one. Admins can adjust the default percentages per size and role in the Settings tab under "Allocation Defaults by Project Size."

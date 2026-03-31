@@ -1753,15 +1753,22 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .idea-avail-badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:8px; margin-left:auto; }
 
 /* ── Form Availability Panel ─────────────────────── */
-.fm-avail-toggle { font-size:11px; font-weight:700; color:var(--navy); cursor:pointer; display:flex; align-items:center; gap:4px; padding:4px 0; }
-.fm-avail-toggle:hover { text-decoration:underline; }
-.fm-avail-panel-inner { background:#FAFBFC; border:1px solid #E5E7EB; border-radius:8px; padding:12px; margin-top:6px; }
-.fm-avail-row { display:flex; align-items:center; gap:8px; padding:5px 0; font-size:12px; border-bottom:1px solid #F3F4F6; }
-.fm-avail-row:last-child { border-bottom:none; }
-.fm-avail-name { font-weight:700; color:var(--navy); min-width:130px; }
-.fm-avail-role { font-size:10px; color:var(--text-muted); flex:1; }
-.fm-avail-badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:8px; white-space:nowrap; }
-.fm-avail-note { font-size:10px; color:var(--text-muted); margin-top:6px; }
+.fm-ta-row { display:flex; align-items:center; gap:10px; padding:8px 12px; border-bottom:0.5px solid #F3F4F6;
+  cursor:pointer; transition:background 0.1s; }
+.fm-ta-row:last-child { border-bottom:none; }
+.fm-ta-row:hover { background:#F8FAFC; }
+.fm-ta-row.fm-ta-checked { background:#EFF6FF; }
+.fm-ta-row.fm-ta-contact { opacity:0.55; }
+.fm-ta-cb { width:16px; height:16px; accent-color:#002669; flex-shrink:0; cursor:pointer; }
+.fm-ta-avatar { width:28px; height:28px; border-radius:50%; background:var(--navy); color:#fff;
+  display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; flex-shrink:0; }
+.fm-ta-name { font-size:13px; font-weight:700; color:var(--navy); }
+.fm-ta-role { font-size:11px; color:var(--text-muted); }
+.fm-ta-badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:8px; white-space:nowrap; flex-shrink:0; margin-left:auto; }
+.fm-ta-now { background:#D1FAE5; color:#065F46; }
+.fm-ta-soon { background:#DBEAFE; color:#1E40AF; }
+.fm-ta-full { background:#FEE2E2; color:#991B1B; }
+#fm-team-avail-list { background:#fff; border:1px solid #E5E7EB; border-radius:8px; overflow:hidden; max-height:320px; overflow-y:auto; }
 
 
 /* ── IDEA SUBMISSION MODAL ─────────────────────────────────────────── */
@@ -3121,7 +3128,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0007';
+const APP_VERSION = '0.10.0.0008';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -3804,7 +3811,7 @@ function renderProjectList(data) {
   }).join('');
   return `<div class="task-table task-table--projects">
     <div class="task-table-header">
-      ${th('Title','title')}${th('Status','status')}${th('Priority','priority')}${th('Contact','contact')}${th('Start','start')}${th('Due','end')}
+      ${th('Title','title')}${th('Status','status')}${th('Priority','priority')}${th('Lead','contact')}${th('Start','start')}${th('Due','end')}
     </div>
     ${rows}
   </div>`;
@@ -6948,82 +6955,74 @@ function fmProjectSizeField(currentValue) {
 }
 
 // ══════════════════════════════════════════════════════════════════════
-//  FORM — TEAM AVAILABILITY PANEL
-//  Shows when each team member can start this project based on
-//  the size and dates currently entered in the form.
+//  FORM — UNIFIED TEAM MEMBER SELECTOR WITH AVAILABILITY
+//  Shows each team member as a row with checkbox, avatar, name, role,
+//  and availability badge. Replaces both the old checkbox grid and
+//  the separate availability panel.
 // ══════════════════════════════════════════════════════════════════════
-function toggleFormAvail() {
-  var panel = document.getElementById('fm-avail-panel');
-  var arrow = document.getElementById('fm-avail-arrow');
-  if (!panel) return;
-  if (panel.style.display === 'none') {
-    panel.style.display = 'block';
-    if (arrow) arrow.textContent = '▼';
-    renderFormAvail();
-  } else {
-    panel.style.display = 'none';
-    if (arrow) arrow.textContent = '▶';
-  }
-}
+function renderTeamAvailList(currentOtherMembers, currentContact) {
+  var container = document.getElementById('fm-team-avail-list');
+  if (!container) return;
 
-function renderFormAvail() {
-  var panel = document.getElementById('fm-avail-panel');
-  if (!panel || !RESOURCES_DATA || !RESOURCES_DATA.people) return;
+  var members = FM_ACTIVE_MEMBERS || FM_TASK_ASSIGNEES || [];
+  if (!members.length) { container.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">No team members found.</div>'; return; }
 
+  var selected = (currentOtherMembers || '').split(',').map(function(s) { return s.trim(); }).filter(Boolean);
   var size = getVal('fm-project-size') || 'M';
-  var avData = fcAvailData();
-  var people = Object.keys(avData);
+  var contact = currentContact || getVal('fm-contact') || '';
+
+  // Compute availability if resources data is loaded
+  var avData = null;
+  try { if (RESOURCES_DATA && RESOURCES_DATA.people) avData = fcAvailData(); } catch(e) {}
   var curIdx = window.currentWeekIdx || 9;
-  var dur = SIZE_DURATIONS[size] || 6;
-  var leadPct = (_allocationDefaults[size] || {}).Lead || 0;
-  var contribPct = (_allocationDefaults[size] || {}).Contributor || 0;
-  var sizeLabels = { S: 'Small', M: 'Medium', L: 'Large', XL: 'Extra large' };
 
-  var results = people.map(function(name) {
-    var leadResult = findEarliestStart(avData, name, size, 'Lead');
-    var contribResult = findEarliestStart(avData, name, size, 'Contributor');
-    return { name: name, role: avData[name].role || '', lead: leadResult, contrib: contribResult };
-  });
+  var html = '';
+  members.forEach(function(name) {
+    var initials = name.split(' ').map(function(w) { return w[0]; }).join('').slice(0, 2).toUpperCase();
+    var checked = selected.includes(name);
+    var isContact = name === contact;
+    var role = '';
+    if (RESOURCES_DATA && RESOURCES_DATA.people && RESOURCES_DATA.people[name]) {
+      role = RESOURCES_DATA.people[name].role || '';
+    }
 
-  // Sort by earliest start as contributor
-  results.sort(function(a, b) {
-    var aW = a.contrib.startWeek === -1 ? 999 : a.contrib.startWeek;
-    var bW = b.contrib.startWeek === -1 ? 999 : b.contrib.startWeek;
-    return aW - bW;
-  });
+    // Determine availability badge
+    var badgeHtml = '';
+    if (avData && avData[name]) {
+      var personRole = isContact ? 'Lead' : 'Contributor';
+      var result = findEarliestStart(avData, name, size, personRole);
+      if (result.startWeek === -1) {
+        badgeHtml = '<span class="fm-ta-badge fm-ta-full">At capacity</span>';
+      } else if (result.startWeek <= curIdx) {
+        badgeHtml = '<span class="fm-ta-badge fm-ta-now">Available now</span>';
+      } else {
+        badgeHtml = '<span class="fm-ta-badge fm-ta-soon">' + cpWeekLabel(result.startWeek) + '</span>';
+      }
+    }
 
-  function badge(result) {
-    if (result.startWeek === -1) return '<span class="fm-avail-badge" style="background:#FEE2E2;color:#991B1B;">At capacity</span>';
-    if (result.startWeek <= curIdx) return '<span class="fm-avail-badge" style="background:#D1FAE5;color:#065F46;">Available now</span>';
-    return '<span class="fm-avail-badge" style="background:#DBEAFE;color:#1E40AF;">' + cpWeekLabel(result.startWeek) + '</span>';
-  }
-
-  var html = '<div class="fm-avail-panel-inner">';
-  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
-  html += '<span style="font-size:11px;font-weight:700;color:var(--navy);">Availability for ' + sizeLabels[size] + ' project (' + dur + ' weeks)</span>';
-  html += '<button type="button" onclick="renderFormAvail()" style="background:none;border:none;font-size:11px;color:#0088FF;cursor:pointer;font-weight:700;font-family:Lato,sans-serif;">Refresh</button>';
-  html += '</div>';
-
-  // Header
-  html += '<div style="display:flex;gap:4px;padding:4px 0;border-bottom:1px solid #E5E7EB;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;">';
-  html += '<span style="min-width:130px;">Team member</span>';
-  html += '<span style="flex:1;"></span>';
-  html += '<span style="min-width:90px;text-align:center;">As lead (' + leadPct + '%)</span>';
-  html += '<span style="min-width:90px;text-align:center;">As contributor (' + contribPct + '%)</span>';
-  html += '</div>';
-
-  results.forEach(function(r) {
-    html += '<div class="fm-avail-row">';
-    html += '<span class="fm-avail-name">' + esc(r.name) + '</span>';
-    html += '<span class="fm-avail-role">' + esc(r.role) + '</span>';
-    html += '<span style="min-width:90px;text-align:center;">' + badge(r.lead) + '</span>';
-    html += '<span style="min-width:90px;text-align:center;">' + badge(r.contrib) + '</span>';
+    var rowClass = 'fm-ta-row' + (checked ? ' fm-ta-checked' : '') + (isContact ? ' fm-ta-contact' : '');
+    html += '<div class="' + rowClass + '" onclick="fmToggleMember(\'' + esc(name).replace(/'/g, "\\'") + '\')">';
+    html += '<input type="checkbox" class="fm-ta-cb" name="fm-other-members" value="' + esc(name) + '"' + (checked ? ' checked' : '') + ' onclick="event.stopPropagation();fmToggleMember(\'' + esc(name).replace(/'/g, "\\'") + '\')">';
+    html += '<div class="fm-ta-avatar">' + initials + '</div>';
+    html += '<div style="flex:1;min-width:0;">';
+    html += '<div class="fm-ta-name">' + esc(name) + (isContact ? ' <span style="font-size:9px;background:#002669;color:#fff;padding:1px 5px;border-radius:4px;font-weight:700;vertical-align:middle;">LEAD</span>' : '') + '</div>';
+    if (role) html += '<div class="fm-ta-role">' + esc(role) + '</div>';
+    html += '</div>';
+    html += badgeHtml;
     html += '</div>';
   });
-  html += '</div>';
-  html += '<div class="fm-avail-note">Based on current allocations and the project size selected above. Click "Refresh" after changing the size.</div>';
 
-  panel.innerHTML = html;
+  container.innerHTML = html;
+}
+
+function fmToggleMember(name) {
+  var cb = document.querySelector('input[name="fm-other-members"][value="' + name + '"]');
+  if (!cb) return;
+  cb.checked = !cb.checked;
+  // Re-render to update row highlight
+  var currentMembers = [...document.querySelectorAll('input[name="fm-other-members"]:checked')].map(function(c) { return c.value; }).join(', ');
+  var contact = getVal('fm-contact') || '';
+  renderTeamAvailList(currentMembers, contact);
 }
 
 function buildProjectForm(p) {
@@ -7040,13 +7039,10 @@ function buildProjectForm(p) {
       fmField('Status', fmSelect('fm-status', FM_PROJ_STATUSES, v('status'), 'Select status…', false)) +
       fmField('Priority', fmSelect('fm-priority', FM_PROJ_PRIORITIES, v('priority'), 'Select priority…', false)) +
       fmProjectSizeField(v('project_size')) +
-      fmField('Primary Contact', fmSelect('fm-contact', FM_ACTIVE_MEMBERS || FM_TASK_ASSIGNEES, v('contact'), 'Select lead…', false)) +
-      fmField('Team Members', fmMemberMultiSelect('fm-other-members', FM_ACTIVE_MEMBERS || FM_TASK_ASSIGNEES, v('other_members')), false, true,
-        'Select all employees working on this project (in addition to the primary contact)') +
-      '<div class="fm-field span2" style="margin-top:-4px;">' +
-        '<div class="fm-avail-toggle" onclick="toggleFormAvail()"><span id="fm-avail-arrow">▶</span> Check team availability</div>' +
-        '<div id="fm-avail-panel" style="display:none;"></div>' +
-      '</div>' +
+      fmField('Project Lead', fmSelect('fm-contact', FM_ACTIVE_MEMBERS || FM_TASK_ASSIGNEES, v('contact'), 'Select lead…', false)) +
+      fmField('Team Members', '<div id="fm-team-avail-list"></div>' +
+        '<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">Select team members for this project. Availability is based on the project size selected above.</div>',
+        false, true) +
     '</div>' +
     '<div class="fm-section-label">Classification</div>' +
     '<div class="fm-grid">' +
@@ -7128,6 +7124,23 @@ function openFormModal(mode, id) {
   initSearchableSelect('fm-category');
   // Tool field uses searchable select in task forms
   if (!isProject) initSearchableSelect('fm-tool');
+  // Render unified team member selector with availability for project forms
+  if (isProject) {
+    var otherMembers = record ? (record.other_members || '') : '';
+    var contact = record ? (record.contact || '') : '';
+    renderTeamAvailList(otherMembers, contact);
+    // Re-render availability when size or contact changes
+    var sizeSelect = document.getElementById('fm-project-size');
+    if (sizeSelect) sizeSelect.addEventListener('change', function() {
+      var curMembers = [...document.querySelectorAll('input[name="fm-other-members"]:checked')].map(function(c) { return c.value; }).join(', ');
+      renderTeamAvailList(curMembers, getVal('fm-contact'));
+    });
+    var contactSelect = document.getElementById('fm-contact');
+    if (contactSelect) contactSelect.addEventListener('change', function() {
+      var curMembers = [...document.querySelectorAll('input[name="fm-other-members"]:checked')].map(function(c) { return c.value; }).join(', ');
+      renderTeamAvailList(curMembers, getVal('fm-contact'));
+    });
+  }
 }
 
 function closeFormModal() {
@@ -7557,7 +7570,7 @@ function renderProjectDetail(id) {
       <div class="detail-section">
         <div class="detail-section-label">Project Details</div>
         <div class="detail-meta-grid">
-          <div class="detail-meta-item"><label>Primary Contact</label><p>${esc(p.contact||'—')}</p></div>
+          <div class="detail-meta-item"><label>Project Lead</label><p>${esc(p.contact||'—')}</p></div>
           <div class="detail-meta-item"><label>Partner Department</label><p>${esc(p.partner_dept||'—')}</p></div>
           <div class="detail-meta-item"><label>ITD Team</label><p>${esc(p.itd_team||'—')}</p></div>
           <div class="detail-meta-item"><label>Category</label><p>${esc(p.category||'—')}</p></div>
