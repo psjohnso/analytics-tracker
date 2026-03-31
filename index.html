@@ -1785,6 +1785,8 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .fm-ta-name { font-size:13px; font-weight:700; color:var(--navy); }
 .fm-ta-role { font-size:11px; color:var(--text-muted); }
 .fm-ta-badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:8px; white-space:nowrap; flex-shrink:0; margin-left:auto; }
+.fm-ta-role-select { padding:2px 4px; border:1px solid #E5E7EB; border-radius:4px; font-size:10px; font-weight:700;
+  font-family:Lato,sans-serif; color:var(--navy); cursor:pointer; flex-shrink:0; margin-left:4px; background:#F9FAFB; }
 .fm-ta-now { background:#D1FAE5; color:#065F46; }
 .fm-ta-soon { background:#DBEAFE; color:#1E40AF; }
 .fm-ta-full { background:#FEE2E2; color:#991B1B; }
@@ -3151,7 +3153,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0016';
+const APP_VERSION = '0.10.0.0017';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -4884,7 +4886,8 @@ async function autoFillAllocationsForNewProject(fields) {
   }
   if (fields.other_members) {
     fields.other_members.split(',').map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(name) {
-      members.push({ name: name, role: 'Contributor' });
+      var memberRole = _formMemberRoles[name] || 'Contributor';
+      members.push({ name: name, role: memberRole });
     });
   }
   if (members.length === 0) {
@@ -7127,12 +7130,20 @@ function fmProjectSizeField(currentValue) {
 //  and availability badge. Replaces both the old checkbox grid and
 //  the separate availability panel.
 // ══════════════════════════════════════════════════════════════════════
+var _formMemberRoles = {}; // { name: 'Contributor'|'Reviewer' } — persists across re-renders
+
 function renderTeamAvailList(currentOtherMembers, currentContact) {
   var container = document.getElementById('fm-team-avail-list');
   if (!container) return;
 
   var members = FM_ACTIVE_MEMBERS || FM_TASK_ASSIGNEES || [];
   if (!members.length) { container.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">No team members found.</div>'; return; }
+
+  // Preserve current role selections before re-rendering
+  members.forEach(function(name) {
+    var sel = document.getElementById('fm-role-' + name.replace(/\s/g, '_'));
+    if (sel) _formMemberRoles[name] = sel.value;
+  });
 
   var selected = (currentOtherMembers || '').split(',').map(function(s) { return s.trim(); }).filter(Boolean);
   var size = getVal('fm-project-size') || 'M';
@@ -7148,16 +7159,18 @@ function renderTeamAvailList(currentOtherMembers, currentContact) {
     var initials = name.split(' ').map(function(w) { return w[0]; }).join('').slice(0, 2).toUpperCase();
     var checked = selected.includes(name);
     var isContact = name === contact;
-    var role = '';
+    var jobRole = '';
     if (RESOURCES_DATA && RESOURCES_DATA.people && RESOURCES_DATA.people[name]) {
-      role = RESOURCES_DATA.people[name].role || '';
+      jobRole = RESOURCES_DATA.people[name].role || '';
     }
 
-    // Determine availability badge
+    // Get selected project role for this member
+    var memberRole = isContact ? 'Lead' : (_formMemberRoles[name] || 'Contributor');
+
+    // Determine availability badge based on selected role
     var badgeHtml = '';
     if (avData && avData[name]) {
-      var personRole = isContact ? 'Lead' : 'Contributor';
-      var result = findEarliestStart(avData, name, size, personRole);
+      var result = findEarliestStart(avData, name, size, memberRole);
       if (result.startWeek === -1) {
         badgeHtml = '<span class="fm-ta-badge fm-ta-full">At capacity</span>';
       } else if (result.startWeek <= curIdx) {
@@ -7167,14 +7180,27 @@ function renderTeamAvailList(currentOtherMembers, currentContact) {
       }
     }
 
+    // Role dropdown for non-lead members
+    var roleHtml = '';
+    if (!isContact) {
+      var safeId = 'fm-role-' + name.replace(/\s/g, '_');
+      var contribSel = memberRole === 'Contributor' ? ' selected' : '';
+      var reviewerSel = memberRole === 'Reviewer' ? ' selected' : '';
+      roleHtml = '<select id="' + safeId + '" class="fm-ta-role-select" onclick="event.stopPropagation()" onchange="fmRoleChange(\'' + esc(name).replace(/'/g, "\\'") + '\',this.value)">' +
+        '<option value="Contributor"' + contribSel + '>Contributor</option>' +
+        '<option value="Reviewer"' + reviewerSel + '>Reviewer</option>' +
+      '</select>';
+    }
+
     var rowClass = 'fm-ta-row' + (checked ? ' fm-ta-checked' : '') + (isContact ? ' fm-ta-contact' : '');
     html += '<div class="' + rowClass + '" onclick="fmToggleMember(\'' + esc(name).replace(/'/g, "\\'") + '\')">';
     html += '<input type="checkbox" class="fm-ta-cb" name="fm-other-members" value="' + esc(name) + '"' + (checked ? ' checked' : '') + ' onclick="event.stopPropagation();fmToggleMember(\'' + esc(name).replace(/'/g, "\\'") + '\')">';
     html += '<div class="fm-ta-avatar">' + initials + '</div>';
     html += '<div style="flex:1;min-width:0;">';
     html += '<div class="fm-ta-name">' + esc(name) + (isContact ? ' <span style="font-size:9px;background:#002669;color:#fff;padding:1px 5px;border-radius:4px;font-weight:700;vertical-align:middle;">LEAD</span>' : '') + '</div>';
-    if (role) html += '<div class="fm-ta-role">' + esc(role) + '</div>';
+    if (jobRole) html += '<div class="fm-ta-role">' + esc(jobRole) + '</div>';
     html += '</div>';
+    html += roleHtml;
     html += badgeHtml;
     html += '</div>';
   });
@@ -7186,7 +7212,14 @@ function fmToggleMember(name) {
   var cb = document.querySelector('input[name="fm-other-members"][value="' + name + '"]');
   if (!cb) return;
   cb.checked = !cb.checked;
-  // Re-render to update row highlight
+  var currentMembers = [...document.querySelectorAll('input[name="fm-other-members"]:checked')].map(function(c) { return c.value; }).join(', ');
+  var contact = getVal('fm-contact') || '';
+  renderTeamAvailList(currentMembers, contact);
+}
+
+function fmRoleChange(name, role) {
+  _formMemberRoles[name] = role;
+  // Re-render to update availability badge for the new role
   var currentMembers = [...document.querySelectorAll('input[name="fm-other-members"]:checked')].map(function(c) { return c.value; }).join(', ');
   var contact = getVal('fm-contact') || '';
   renderTeamAvailList(currentMembers, contact);
@@ -7295,6 +7328,22 @@ function openFormModal(mode, id) {
   if (isProject) {
     var otherMembers = record ? (record.other_members || '') : '';
     var contact = record ? (record.contact || '') : '';
+    // Reset form member roles
+    _formMemberRoles = {};
+    // Pre-populate roles from existing allocation records when editing
+    if (isEdit && record && RESOURCES_DATA && RESOURCES_DATA.people) {
+      var memberNames = (otherMembers || '').split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+      memberNames.forEach(function(name) {
+        var person = RESOURCES_DATA.people[name];
+        if (person && person.allocations) {
+          person.allocations.forEach(function(a) {
+            if (a.project === record.title && a.role) {
+              _formMemberRoles[name] = a.role;
+            }
+          });
+        }
+      });
+    }
     renderTeamAvailList(otherMembers, contact);
     // Re-render availability when size or contact changes
     var sizeSelect = document.getElementById('fm-project-size');
