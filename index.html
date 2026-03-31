@@ -3148,7 +3148,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0012';
+const APP_VERSION = '0.10.0.0013';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -3196,6 +3196,7 @@ let RESOURCES_DATA = null;
 let TIME_ENTRIES = [];          // Array of time entry records for the current user
 let TASK_HOURS = {};            // { task_idx: totalHours } — aggregated across all users
 let TASK_HOURS_BY_PERSON = {};  // { task_idx: { name: hours } } — per person
+let TEAM_TIME_STATS = {};       // { name: { totalHours, weekHours, lastDate, entryCount } }
 let STATUS_HISTORY = [];        // Array of { project_id, project_title, status, changed_date, changed_by, objectId }
 
 let currentTab = 'overview';
@@ -9426,6 +9427,16 @@ async function loadTaskHours() {
     const features = await agolQuery(ARCGIS_CONFIG.timeEntriesUrl, 'hours IS NOT NULL');
     TASK_HOURS = {};        // { task_idx: totalHours } — team total
     TASK_HOURS_BY_PERSON = {}; // { task_idx: { name: hours } }
+    TEAM_TIME_STATS = {};   // { name: { totalHours, weekHours, lastDate, entryCount } }
+
+    // Compute current week boundaries for "this week" stats
+    var now = new Date();
+    var dayOfWeek = now.getDay();
+    var mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    var weekStart = new Date(now);
+    weekStart.setDate(now.getDate() + mondayOffset);
+    var weekStartStr = weekStart.getFullYear() + '-' + String(weekStart.getMonth()+1).padStart(2,'0') + '-' + String(weekStart.getDate()).padStart(2,'0');
+
     features.forEach(function(f) {
       const a = f.attributes;
       const idx = a.task_idx;
@@ -9436,12 +9447,30 @@ async function loadTaskHours() {
         if (!TASK_HOURS_BY_PERSON[idx]) TASK_HOURS_BY_PERSON[idx] = {};
         TASK_HOURS_BY_PERSON[idx][who] = (TASK_HOURS_BY_PERSON[idx][who] || 0) + hrs;
       }
+
+      // Build per-person stats for team dashboard
+      if (who && hrs > 0) {
+        if (!TEAM_TIME_STATS[who]) TEAM_TIME_STATS[who] = { totalHours: 0, weekHours: 0, lastDate: '', entryCount: 0 };
+        var stats = TEAM_TIME_STATS[who];
+        stats.totalHours += hrs;
+        stats.entryCount++;
+
+        // Parse work_date
+        var wd = a.work_date || '';
+        if (typeof wd === 'number') {
+          var d = new Date(wd);
+          wd = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+        }
+        if (wd && wd > stats.lastDate) stats.lastDate = wd;
+        if (wd && wd >= weekStartStr) stats.weekHours += hrs;
+      }
     });
-    console.log('[TimeTracking] Loaded hours for', Object.keys(TASK_HOURS).length, 'tasks');
+    console.log('[TimeTracking] Loaded hours for', Object.keys(TASK_HOURS).length, 'tasks,', Object.keys(TEAM_TIME_STATS).length, 'people');
   } catch (err) {
     console.warn('[TimeTracking] Could not load task hours:', err);
     TASK_HOURS = {};
     TASK_HOURS_BY_PERSON = {};
+    TEAM_TIME_STATS = {};
   }
 }
 
@@ -11179,6 +11208,92 @@ function renderSettingsPage(area) {
     '<div class="settings-section-header"><span>Allocation Defaults by Project Size</span></div>' +
     '<p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">Default weekly allocation percentages applied when auto-filling allocations. Values represent the percentage of a person\'s project-available time dedicated to a single project per week.</p>' +
     '<div id="alloc-defaults-editor"></div>' +
+  '</div>';
+
+  // ── Time Tracking Dashboard ─────────────────────────────
+  var activeNames = allNames.filter(function(n) { return people[n].active !== false; });
+  var ttEnabled = activeNames.filter(function(n) { return people[n].time_tracking === true; });
+  var ttWithEntries = ttEnabled.filter(function(n) { return TEAM_TIME_STATS[n] && TEAM_TIME_STATS[n].entryCount > 0; });
+
+  var todayStr = (function() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  })();
+
+  function ttDaysAgo(dateStr) {
+    if (!dateStr) return 'Never';
+    var d = new Date(dateStr + 'T12:00:00');
+    var now = new Date(); now.setHours(12,0,0,0);
+    var diff = Math.floor((now - d) / 86400000);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Yesterday';
+    if (diff < 7) return diff + ' days ago';
+    return dateStr;
+  }
+
+  var ttRows = activeNames.map(function(name) {
+    var p = people[name];
+    var enabled = p.time_tracking === true;
+    var stats = TEAM_TIME_STATS[name] || { totalHours: 0, weekHours: 0, lastDate: '', entryCount: 0 };
+    var initials = name.split(' ').map(function(w) { return w[0]; }).join('').slice(0,2).toUpperCase();
+
+    var statusBadge = '';
+    if (!enabled) {
+      statusBadge = '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;background:#F3F4F6;color:#9CA3AF;">Disabled</span>';
+    } else if (stats.lastDate === todayStr) {
+      statusBadge = '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;background:#D1FAE5;color:#065F46;">Logging today</span>';
+    } else if (stats.weekHours > 0) {
+      statusBadge = '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;background:#DBEAFE;color:#1E40AF;">Active this week</span>';
+    } else if (stats.entryCount > 0) {
+      statusBadge = '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;background:#FEF3C7;color:#92400E;">Inactive</span>';
+    } else {
+      statusBadge = '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;background:#FEE2E2;color:#991B1B;">No entries</span>';
+    }
+
+    return '<tr>' +
+      '<td style="font-weight:700;color:var(--navy);">' +
+        '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<div style="width:26px;height:26px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;">' + initials + '</div>' +
+          esc(name) +
+        '</div>' +
+      '</td>' +
+      '<td style="text-align:center;">' + statusBadge + '</td>' +
+      '<td style="text-align:right;font-weight:700;">' + (enabled ? Math.round(stats.weekHours * 10) / 10 + 'h' : '—') + '</td>' +
+      '<td style="text-align:right;">' + (enabled ? Math.round(stats.totalHours * 10) / 10 + 'h' : '—') + '</td>' +
+      '<td style="text-align:right;color:var(--text-muted);font-size:12px;">' + (enabled ? ttDaysAgo(stats.lastDate) : '—') + '</td>' +
+      '<td style="text-align:right;color:var(--text-muted);">' + (enabled ? stats.entryCount : '—') + '</td>' +
+    '</tr>';
+  }).join('');
+
+  html += '<div class="settings-section">' +
+    '<div class="settings-section-header"><span>Time Tracking Dashboard</span></div>' +
+    '<div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap;">' +
+      '<div style="background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:12px 16px;flex:1;min-width:120px;text-align:center;">' +
+        '<div style="font-size:22px;font-weight:800;color:var(--navy);">' + ttEnabled.length + '<span style="font-size:13px;font-weight:600;color:var(--text-muted);">/' + activeNames.length + '</span></div>' +
+        '<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;">Enabled</div>' +
+      '</div>' +
+      '<div style="background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:12px 16px;flex:1;min-width:120px;text-align:center;">' +
+        '<div style="font-size:22px;font-weight:800;color:var(--navy);">' + ttWithEntries.length + '</div>' +
+        '<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;">Have Logged Time</div>' +
+      '</div>' +
+      '<div style="background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:12px 16px;flex:1;min-width:120px;text-align:center;">' +
+        '<div style="font-size:22px;font-weight:800;color:var(--navy);">' + Math.round(activeNames.reduce(function(s, n) { return s + ((TEAM_TIME_STATS[n] || {}).weekHours || 0); }, 0) * 10) / 10 + 'h</div>' +
+        '<div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;">Team Hours This Week</div>' +
+      '</div>' +
+    '</div>' +
+    '<div style="overflow-x:auto;border:1px solid #E5E7EB;border-radius:10px;background:#fff;">' +
+      '<table class="member-table" style="margin:0;">' +
+        '<thead><tr>' +
+          '<th style="text-align:left;">Team Member</th>' +
+          '<th style="text-align:center;">Status</th>' +
+          '<th style="text-align:right;">This Week</th>' +
+          '<th style="text-align:right;">All Time</th>' +
+          '<th style="text-align:right;">Last Entry</th>' +
+          '<th style="text-align:right;">Entries</th>' +
+        '</tr></thead>' +
+        '<tbody>' + ttRows + '</tbody>' +
+      '</table>' +
+    '</div>' +
   '</div>';
 
   // ── Developer Mode ──────────────────────────────────────
