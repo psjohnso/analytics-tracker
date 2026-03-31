@@ -3148,7 +3148,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0009';
+const APP_VERSION = '0.10.0.0010';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -4726,8 +4726,19 @@ function aeRenderGrid() {
         '<option value="Lead"' + (a.role === 'Lead' ? ' selected' : '') + '>Lead</option>' +
         '<option value="Contributor"' + (a.role === 'Contributor' ? ' selected' : '') + '>Contributor</option>' +
         '<option value="Reviewer"' + (a.role === 'Reviewer' ? ' selected' : '') + '>Reviewer</option>' +
-      '</select>' +
-      '<span class="ae-autofill-btn" onclick="aeAutofillProject(' + ai + ')" title="Fill empty weeks with default % based on project size and role">⚡ Auto-fill</span>';
+      '</select>';
+    // Only show auto-fill if there are empty weeks within the project date range
+    var hasEmptyWeeks = false;
+    for (var ew = 0; ew < weeks.length; ew++) {
+      if ((a.fracs[ew] || 0) > 0) continue;
+      var wDate2 = weeks[ew];
+      var afterStart2 = !pStart || wDate2 >= pStart;
+      var beforeEnd2 = !pEnd || wDate2 <= pEnd;
+      if (afterStart2 && beforeEnd2) { hasEmptyWeeks = true; break; }
+    }
+    if (hasEmptyWeeks) {
+      row += '<span class="ae-autofill-btn" onclick="aeAutofillProject(' + ai + ')" title="Fill empty weeks with default % based on project size and role">⚡ Auto-fill</span>';
+    }
     if (pStart || pEnd) {
       row += '<span class="ae-date-range">';
       if (pStart) row += '&#9654; ' + pStart;
