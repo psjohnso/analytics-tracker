@@ -277,6 +277,19 @@ li strong { color: var(--navy); }
 <div class="tip-box">
   <strong>Check team availability:</strong> The Team Members selector shows each person's availability badge inline — you can see at a glance who is available now, who becomes available soon, and who is at capacity. The badge automatically reflects the project size selected above and shows Lead availability for the person selected as Project Lead, and Contributor availability for everyone else. Badges update when you change the project size or lead.
 </div>
+<div class="tip-box">
+  <strong>Project details for better planning:</strong> The project form includes three fields that help with task planning and AI suggestions: <strong>Deliverables</strong> (multi-select: Dashboard, Dataset, Web Application, Report, Map, ETL Pipeline, etc.), <strong>Data Sources</strong> (free text describing where data comes from), and <strong>Technical Requirements</strong> (free text for constraints like system integrations or compliance needs). These fields are optional but greatly improve the quality of AI-generated task suggestions.
+</div>
+
+<h3>AI Task Suggestions</h3>
+<p>On the project detail page, click the <strong>"✨ Suggest Tasks"</strong> button in the Tasks section to generate AI-powered task suggestions. The system sends your project's title, category, size, problem statement, description, deliverables, data sources, technical requirements, and team members to Claude, which returns 6-10 specific, actionable tasks tailored to your project.</p>
+<p>Each suggestion shows a title, description, recommended category, tool, priority, and suggested assignee. You can:</p>
+<ul>
+  <li><strong>Add</strong> individual tasks to create them one at a time</li>
+  <li><strong>Add All</strong> to create all remaining suggestions at once</li>
+  <li>Close the panel without adding any tasks</li>
+</ul>
+<p>Suggestions avoid duplicating existing tasks on the project. The more detail you provide in the project fields (especially deliverables, data sources, and problem statement), the more specific and useful the suggestions will be.</p>
 
 <h3>Project Statuses</h3>
 <p>Projects follow this lifecycle:</p>

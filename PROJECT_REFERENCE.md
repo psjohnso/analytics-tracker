@@ -5,7 +5,7 @@
 > **Update Rule:** This document MUST be updated after every application change. When working on this application, always check if this document needs updating.
 >
 > **Last Updated:** March 2026
-> **Current Version:** 0.10.0.0014 (see Version History at bottom)
+> **Current Version:** 0.10.0.0018 (see Version History at bottom)
 
 ---
 
@@ -138,6 +138,9 @@ https://services3.arcgis.com/9coHY2fvuFjG9HQX/ArcGIS/rest/services/{name}/Featur
 | `problem_statement` | String | 4000 | Yes | Problem statement |
 | `itd_team` | String | 50 | Yes | ITD team (from app_config) |
 | `project_size` | String | 5 | Yes | Project size: S, M, L, XL — drives allocation defaults |
+| `deliverables` | String | 500 | Yes | Comma-separated deliverable types (Dashboard, Dataset, Web Application, etc.) |
+| `data_sources` | String | 500 | Yes | Free text describing data sources (Hansen, Accela, ArcGIS Enterprise, etc.) |
+| `technical_requirements` | String | 1000 | Yes | Free text for technical constraints and requirements |
 
 **Critical:** The `end_` field mapping is the ONLY field name difference between ArcGIS and the app. Handled by:
 ```javascript
@@ -1292,6 +1295,10 @@ Step 1: "What best describes the primary nature of this project/task?"
 | 0.10.0.0012 | Time Logged section on project detail page with per-person breakdown |
 | 0.10.0.0013 | Time Tracking Dashboard in Settings with per-person stats and team KPIs |
 | 0.10.0.0014 | Insights/Analytics tab with project retrospectives, effort by size/category, reference library |
+| 0.10.0.0015 | Insights tab: add SVG charts with chart/table toggle for all four sections |
+| 0.10.0.0016 | Fix Insights charts to fill full container width |
+| 0.10.0.0017 | Add Contributor/Reviewer role dropdown per team member in project form |
+| 0.10.0.0018 | Add Deliverables/Data Sources/Technical Requirements fields; AI-powered task suggestion engine on project detail |
 
 ---
 

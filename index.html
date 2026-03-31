@@ -1791,6 +1791,34 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .fm-ta-soon { background:#DBEAFE; color:#1E40AF; }
 .fm-ta-full { background:#FEE2E2; color:#991B1B; }
 #fm-team-avail-list { background:#fff; border:1px solid #E5E7EB; border-radius:8px; overflow:hidden; max-height:320px; overflow-y:auto; }
+.fm-deliverables-grid { display:flex; flex-wrap:wrap; gap:6px; }
+.fm-deliv-check { display:flex; align-items:center; gap:4px; font-size:12px; color:var(--navy);
+  padding:3px 8px; border:1px solid #E5E7EB; border-radius:6px; cursor:pointer; transition:background 0.1s; }
+.fm-deliv-check:hover { background:#F0F4FF; }
+.fm-deliv-check input:checked + { background:#EFF6FF; }
+.fm-deliv-check input { width:13px; height:13px; accent-color:#002669; cursor:pointer; }
+
+/* ── Task Suggestion Panel ───────────────────────── */
+.suggest-panel { background:#FFFBEB; border:2px solid #FDE68A; border-radius:12px; padding:20px; margin-bottom:16px; }
+.suggest-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.suggest-title { font-size:16px; font-weight:800; color:#92400E; }
+.suggest-close { background:none; border:none; font-size:18px; color:#92400E; cursor:pointer; font-family:Lato,sans-serif; }
+.suggest-loading { text-align:center; padding:30px; color:#92400E; font-size:13px; font-weight:600; }
+.suggest-task { background:#fff; border:1px solid #E5E7EB; border-radius:10px; padding:12px 16px; margin-bottom:8px;
+  display:flex; align-items:flex-start; gap:12px; }
+.suggest-task.accepted { opacity:0.5; pointer-events:none; }
+.suggest-task-body { flex:1; min-width:0; }
+.suggest-task-title { font-size:13px; font-weight:700; color:var(--navy); margin-bottom:3px; }
+.suggest-task-desc { font-size:12px; color:var(--text-muted); line-height:1.5; }
+.suggest-task-meta { display:flex; gap:8px; margin-top:6px; flex-wrap:wrap; }
+.suggest-task-chip { font-size:10px; font-weight:700; padding:2px 8px; border-radius:6px; background:#F3F4F6; color:#374151; }
+.suggest-accept-btn { padding:6px 14px; background:#002669; color:#fff; border:none; border-radius:6px;
+  font-size:11px; font-weight:700; font-family:Lato,sans-serif; cursor:pointer; flex-shrink:0; align-self:center; }
+.suggest-accept-btn:hover { background:#1a3a7c; }
+.suggest-footer { display:flex; justify-content:space-between; align-items:center; margin-top:14px; }
+.suggest-accept-all { padding:8px 18px; background:#002669; color:#fff; border:none; border-radius:8px;
+  font-size:12px; font-weight:700; font-family:Lato,sans-serif; cursor:pointer; }
+.suggest-accept-all:hover { background:#1a3a7c; }
 
 
 /* ── IDEA SUBMISSION MODAL ─────────────────────────────────────────── */
@@ -3153,7 +3181,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0017';
+const APP_VERSION = '0.10.0.0018';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -3496,6 +3524,220 @@ function addTaskToProject(projectObjectId, projectTitle) {
       projSelect.value = projectTitle;
     }
   }, 50);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  AI TASK SUGGESTION ENGINE
+//  Uses Claude API to generate task suggestions based on project context
+// ══════════════════════════════════════════════════════════════════════
+var _suggestedTasks = []; // current suggestions
+var _suggestProjectId = null;
+
+async function suggestTasksForProject(projectObjectId) {
+  var p = PROJECTS.find(function(pr) { return pr.objectId === projectObjectId; });
+  if (!p) { showToast('Project not found.', 'error'); return; }
+  _suggestProjectId = projectObjectId;
+
+  // Gather existing tasks for this project
+  var existingTasks = TASKS.filter(function(t) { return t.project === p.title; }).map(function(t) { return t.title; });
+
+  // Gather available categories and tools
+  var categories = (FM_TASK_CATEGORIES || []).join(', ');
+  var tools = (FM_TASK_TOOLS_ACTIVE || FM_TASK_TOOLS || []).join(', ');
+  var members = [];
+  if (p.contact) members.push(p.contact + ' (Lead)');
+  if (p.other_members) {
+    p.other_members.split(',').map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(n) {
+      var role = _formMemberRoles[n] || 'Contributor';
+      members.push(n + ' (' + role + ')');
+    });
+  }
+
+  // Show loading state
+  var panel = document.getElementById('suggest-panel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'suggest-panel';
+    panel.className = 'suggest-panel';
+    var tasksSection = document.querySelector('.detail-section:last-of-type');
+    if (tasksSection) tasksSection.parentNode.insertBefore(panel, tasksSection);
+    else document.querySelector('.detail-body').appendChild(panel);
+  }
+  panel.style.display = '';
+  panel.innerHTML = '<div class="suggest-header"><span class="suggest-title">✨ AI Task Suggestions</span>' +
+    '<button class="suggest-close" onclick="closeSuggestPanel()">✕</button></div>' +
+    '<div class="suggest-loading"><div style="font-size:24px;margin-bottom:8px;">🤔</div>Analyzing project context and generating task suggestions…</div>';
+
+  // Scroll to the panel
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Build the prompt
+  var prompt = 'You are a project management assistant for a City of Tucson government GIS/Data Analytics team. ' +
+    'Based on the following project details, suggest 6-10 specific, actionable tasks that would be needed to complete this project. ' +
+    'Each task should be concrete and scoped to roughly 2-20 hours of work.\n\n' +
+    'For each task, provide:\n' +
+    '- title: a clear, specific task name (not generic like "Research" but specific like "Extract crime incident data from Hansen API")\n' +
+    '- description: 1-2 sentences explaining the work\n' +
+    '- category: choose from: ' + categories + '\n' +
+    '- tool: choose the primary tool from: ' + tools + '\n' +
+    '- priority: High, Medium, or Low\n' +
+    '- suggested_assignee: choose from the team members listed, or leave blank\n\n' +
+    'PROJECT DETAILS:\n' +
+    'Title: ' + p.title + '\n' +
+    'Category: ' + (p.category || 'Not set') + '\n' +
+    'Size: ' + (p.project_size || 'Not set') + '\n' +
+    'Partner Department: ' + (p.partner_dept || 'Not set') + '\n' +
+    'Problem Statement: ' + (p.problem_statement || 'Not provided') + '\n' +
+    'Description: ' + (p.description || 'Not provided') + '\n' +
+    'Deliverables: ' + (p.deliverables || 'Not specified') + '\n' +
+    'Data Sources: ' + (p.data_sources || 'Not specified') + '\n' +
+    'Technical Requirements: ' + (p.technical_requirements || 'Not specified') + '\n' +
+    'Team Members: ' + (members.length > 0 ? members.join(', ') : 'Not assigned') + '\n';
+
+  if (existingTasks.length > 0) {
+    prompt += '\nEXISTING TASKS (do not duplicate these):\n' + existingTasks.map(function(t) { return '- ' + t; }).join('\n') + '\n';
+  }
+
+  prompt += '\nRespond ONLY with a JSON array (no markdown, no backticks, no preamble). Each element should have: title, description, category, tool, priority, suggested_assignee.';
+
+  try {
+    var response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    var data = await response.json();
+    var text = (data.content || []).map(function(c) { return c.text || ''; }).join('');
+    var clean = text.replace(/```json|```/g, '').trim();
+    _suggestedTasks = JSON.parse(clean);
+    renderSuggestions(p);
+  } catch (err) {
+    console.error('[TaskSuggest] Failed:', err);
+    panel.innerHTML = '<div class="suggest-header"><span class="suggest-title">✨ AI Task Suggestions</span>' +
+      '<button class="suggest-close" onclick="closeSuggestPanel()">✕</button></div>' +
+      '<div style="text-align:center;padding:20px;color:#991B1B;font-size:13px;">' +
+        '<div style="font-size:24px;margin-bottom:8px;">⚠️</div>' +
+        'Failed to generate suggestions. ' + esc(err.message) +
+        '<br><button onclick="suggestTasksForProject(' + projectObjectId + ')" style="margin-top:10px;padding:6px 14px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;font-family:Lato,sans-serif;cursor:pointer;">Try Again</button>' +
+      '</div>';
+  }
+}
+
+function renderSuggestions(project) {
+  var panel = document.getElementById('suggest-panel');
+  if (!panel || !_suggestedTasks.length) return;
+
+  var html = '<div class="suggest-header"><span class="suggest-title">✨ AI Task Suggestions</span>' +
+    '<button class="suggest-close" onclick="closeSuggestPanel()">✕</button></div>';
+  html += '<div style="font-size:11px;color:#92400E;margin-bottom:12px;">Review the suggested tasks below. Click "Add" to create each task, or "Add All" to create them all at once.</div>';
+
+  _suggestedTasks.forEach(function(task, i) {
+    var accepted = task._accepted ? ' accepted' : '';
+    html += '<div class="suggest-task' + accepted + '" id="suggest-task-' + i + '">';
+    html += '<div class="suggest-task-body">';
+    html += '<div class="suggest-task-title">' + esc(task.title) + '</div>';
+    html += '<div class="suggest-task-desc">' + esc(task.description || '') + '</div>';
+    html += '<div class="suggest-task-meta">';
+    if (task.category) html += '<span class="suggest-task-chip">' + esc(task.category) + '</span>';
+    if (task.tool) html += '<span class="suggest-task-chip">' + esc(task.tool) + '</span>';
+    if (task.priority) html += '<span class="suggest-task-chip">' + esc(task.priority) + '</span>';
+    if (task.suggested_assignee) html += '<span class="suggest-task-chip">👤 ' + esc(task.suggested_assignee) + '</span>';
+    html += '</div></div>';
+    if (!task._accepted) {
+      html += '<button class="suggest-accept-btn" onclick="acceptSuggestedTask(' + i + ')">Add</button>';
+    } else {
+      html += '<span style="font-size:11px;font-weight:700;color:#22C55E;flex-shrink:0;align-self:center;">✓ Added</span>';
+    }
+    html += '</div>';
+  });
+
+  var allAccepted = _suggestedTasks.every(function(t) { return t._accepted; });
+  var remaining = _suggestedTasks.filter(function(t) { return !t._accepted; }).length;
+  html += '<div class="suggest-footer">';
+  html += '<span style="font-size:12px;color:#92400E;">' + remaining + ' suggestion' + (remaining !== 1 ? 's' : '') + ' remaining</span>';
+  if (!allAccepted) {
+    html += '<button class="suggest-accept-all" onclick="acceptAllSuggestedTasks()">Add All (' + remaining + ')</button>';
+  } else {
+    html += '<span style="font-size:12px;font-weight:700;color:#22C55E;">All tasks added!</span>';
+  }
+  html += '</div>';
+
+  panel.innerHTML = html;
+}
+
+async function acceptSuggestedTask(index) {
+  var task = _suggestedTasks[index];
+  if (!task || task._accepted) return;
+
+  var project = PROJECTS.find(function(p) { return p.objectId === _suggestProjectId; });
+  if (!project) return;
+
+  var fields = {
+    title: task.title,
+    description: task.description || null,
+    status: 'Active',
+    priority: task.priority || 'Medium',
+    project: project.title,
+    category: task.category || null,
+    tool: task.tool || null,
+    assignee: task.suggested_assignee || null,
+  };
+
+  try {
+    await DataStore.createTask(fields);
+    task._accepted = true;
+    renderSuggestions(project);
+    showToast('Task "' + task.title + '" created.', 'success');
+    markDataDirty();
+  } catch (err) {
+    showToast('Failed to create task: ' + err.message, 'error');
+  }
+}
+
+async function acceptAllSuggestedTasks() {
+  var project = PROJECTS.find(function(p) { return p.objectId === _suggestProjectId; });
+  if (!project) return;
+
+  var remaining = _suggestedTasks.filter(function(t) { return !t._accepted; });
+  if (remaining.length === 0) return;
+
+  var created = 0;
+  for (var i = 0; i < _suggestedTasks.length; i++) {
+    if (_suggestedTasks[i]._accepted) continue;
+    var task = _suggestedTasks[i];
+    var fields = {
+      title: task.title,
+      description: task.description || null,
+      status: 'Active',
+      priority: task.priority || 'Medium',
+      project: project.title,
+      category: task.category || null,
+      tool: task.tool || null,
+      assignee: task.suggested_assignee || null,
+    };
+    try {
+      await DataStore.createTask(fields);
+      task._accepted = true;
+      created++;
+    } catch (err) {
+      console.error('[TaskSuggest] Failed to create task:', task.title, err);
+    }
+  }
+  renderSuggestions(project);
+  showToast('Created ' + created + ' task' + (created !== 1 ? 's' : '') + '.', 'success');
+  markDataDirty();
+}
+
+function closeSuggestPanel() {
+  var panel = document.getElementById('suggest-panel');
+  if (panel) panel.style.display = 'none';
+  _suggestedTasks = [];
+  _suggestProjectId = null;
 }
 
 function setFilter(type, val) {
@@ -6689,6 +6931,23 @@ function fmTextarea(id, value, placeholder, rows) {
     (placeholder||'') + '">' + (value ? esc(value) : '') + '</textarea>';
 }
 
+const FM_DELIVERABLE_OPTIONS = [
+  'Dashboard', 'Dataset', 'Web Application', 'Report', 'Map / Web Map',
+  'ETL Pipeline', 'API / Service', 'Documentation', 'Training', 'Analysis / Study',
+  'Mobile App', 'Script / Automation', 'Data Model', 'Integration'
+];
+
+function fmDeliverables(id, currentVal) {
+  var selected = (currentVal || '').split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+  var html = '<div class="fm-deliverables-grid" id="' + id + '-wrap">';
+  FM_DELIVERABLE_OPTIONS.forEach(function(opt) {
+    var checked = selected.includes(opt) ? ' checked' : '';
+    html += '<label class="fm-deliv-check"><input type="checkbox" name="' + id + '" value="' + esc(opt) + '"' + checked + '>' + esc(opt) + '</label>';
+  });
+  html += '</div>';
+  return html;
+}
+
 function fmField(label, inputHtml, required, span2, hint) {
   const cls = 'fm-field' + (span2 ? ' span2' : '');
   const req  = required ? '<span class="req">*</span>' : '';
@@ -7260,6 +7519,10 @@ function buildProjectForm(p) {
     '<div class="fm-grid">' +
       fmField('Problem Statement', fmTextarea('fm-problem', v('problem_statement'), 'Describe the problem this project solves…', 3), false, true) +
       fmField('Description', fmTextarea('fm-description', v('description'), 'Project description…', 3), false, true) +
+      fmField('Deliverables', fmDeliverables('fm-deliverables', v('deliverables')), false, true,
+        'What will this project produce?') +
+      fmField('Data Sources', fmTextarea('fm-data-sources', v('data_sources'), 'e.g. Hansen, Accela, ArcGIS Enterprise, CSV from partner dept…', 2), false, true) +
+      fmField('Technical Requirements', fmTextarea('fm-tech-reqs', v('technical_requirements'), 'e.g. Must integrate with existing system, ADA compliant, real-time updates…', 2), false, true) +
     '</div>';
 }
 
@@ -7378,6 +7641,9 @@ function collectProjectFields() {
   // Collect checked team members from the checkbox grid
   const memberBoxes = document.querySelectorAll('input[name="fm-other-members"]:checked');
   const otherMembers = [...memberBoxes].map(cb => cb.value).join(', ') || null;
+  // Collect checked deliverables
+  const delivBoxes = document.querySelectorAll('input[name="fm-deliverables"]:checked');
+  const deliverables = [...delivBoxes].map(cb => cb.value).join(', ') || null;
   return {
     title:             title,
     status:            getVal('fm-status')       || null,
@@ -7393,6 +7659,9 @@ function collectProjectFields() {
     working_due:       getVal('fm-working-due')  || null,
     problem_statement: getVal('fm-problem')      || null,
     description:       getVal('fm-description')  || null,
+    deliverables:      deliverables,
+    data_sources:      getVal('fm-data-sources') || null,
+    technical_requirements: getVal('fm-tech-reqs') || null,
   };
 }
 
@@ -7809,6 +8078,23 @@ function renderProjectDetail(id) {
         <div class="detail-prose">${esc(p.description)}</div>
       </div>` : ''}
 
+      ${p.deliverables ? `<div class="detail-section">
+        <div class="detail-section-label">Deliverables</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;padding:4px 0;">
+          ${p.deliverables.split(',').map(function(d) { return '<span style="display:inline-block;background:#EEF2FF;color:#002669;font-size:12px;font-weight:700;padding:3px 10px;border-radius:6px;">' + esc(d.trim()) + '</span>'; }).join('')}
+        </div>
+      </div>` : ''}
+
+      ${p.data_sources ? `<div class="detail-section">
+        <div class="detail-section-label">Data Sources</div>
+        <div class="detail-prose">${esc(p.data_sources)}</div>
+      </div>` : ''}
+
+      ${p.technical_requirements ? `<div class="detail-section">
+        <div class="detail-section-label">Technical Requirements</div>
+        <div class="detail-prose">${esc(p.technical_requirements)}</div>
+      </div>` : ''}
+
       ${p.urgency_notes ? `<div class="detail-section">
         <div class="detail-section-label" style="color:#C24200;">Urgency / Timeline Notes</div>
         <div class="detail-prose">${esc(p.urgency_notes)}</div>
@@ -7852,7 +8138,10 @@ function renderProjectDetail(id) {
       <div class="detail-section">
         <div class="detail-section-label detail-section-label-flex">
           <span>Tasks (${relTasks.length})${relTasks.length ? ` · <span style="font-weight:400;font-size:12px;color:var(--text-muted);">${getProjectHours(p.title)}h logged</span>` : ''}</span>
-          <button onclick="addTaskToProject(${p.objectId}, '${esc(p.title).replace(/'/g, "\\'")}')" class="btn-navy-md">＋ Add Task</button>
+          <div style="display:flex;gap:6px;">
+            <button onclick="suggestTasksForProject(${p.objectId})" class="btn-navy-md" style="background:#FFDB22;color:#92400E;border-color:#FFDB22;" onmouseover="this.style.background='#F0CC00'" onmouseout="this.style.background='#FFDB22'">✨ Suggest Tasks</button>
+            <button onclick="addTaskToProject(${p.objectId}, '${esc(p.title).replace(/'/g, "\\'")}')" class="btn-navy-md">＋ Add Task</button>
+          </div>
         </div>
         <div class="detail-tasks-table">
           ${relTasks.length ? `<div class="detail-tasks-header">
