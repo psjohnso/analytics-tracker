@@ -259,6 +259,9 @@ li strong { color: var(--navy); }
 <h3>Creating and Editing Projects</h3>
 <p>To create a new project, an Admin must promote a submitted idea. Standard users can submit ideas through the "💡 Submit Idea" button. Once promoted, projects can be edited by clicking into the detail view and modifying fields. Changes save directly to the ArcGIS Online projects feature service. <strong>Project names must be unique</strong> — the application prevents creating or renaming a project to a name that already exists (case-insensitive).</p>
 <div class="tip-box">
+  <strong>Idea review — team availability:</strong> On the Weekly Idea Review screen, each idea card includes a collapsible <strong>"Team availability"</strong> section. Click it to see when each team member could start the project — as either a Lead or Contributor — based on their current allocations and capacity. You can change the project size to see how availability shifts. This helps you make informed decisions about which ideas to promote and who to assign.
+</div>
+<div class="tip-box">
   <strong>Choosing a category:</strong> The category field features a searchable dropdown — start typing to filter. If you're unsure which category fits, click <strong>"🧭 Help me choose a category"</strong> below the field. A short 2-question wizard will guide you to the right one.
 </div>
 <div class="tip-box">
@@ -346,6 +349,15 @@ li strong { color: var(--navy); }
 <!-- ═══════════════════════════════════════════════════ -->
 <h2 id="forecast-tab">Forecast Tab</h2>
 <p>The Forecast tab projects team capacity into the future based on current allocation patterns. It shows how loaded each person is over a configurable window (default 13 weeks from the current week), helping managers identify periods of over- or under-capacity and plan resource assignments accordingly.</p>
+
+<h3>Capacity Planner</h3>
+<p>At the top of the Forecast tab, the <strong>Capacity Planner</strong> answers the question: "When can each person take on a new project?" Select a project size (S/M/L/XL) and role (Lead, Contributor, or Reviewer) to see:</p>
+<ul>
+  <li><strong>Earliest start date</strong> per team member — the first week where the person has sustained capacity for the full expected project duration without exceeding 100% utilization.</li>
+  <li><strong>Timeline bars</strong> showing current utilization (green/yellow/red) with the proposed new project allocation overlaid in navy blue.</li>
+  <li><strong>Blocking projects</strong> — which current projects are consuming the capacity that prevents an earlier start.</li>
+</ul>
+<p>The planner uses the allocation defaults from Settings (e.g., a Medium project Lead needs 25% of project time) and the size-based expected durations (S=2 weeks, M=6 weeks, L=13 weeks, XL=26 weeks). It checks every future week to find the first point where the person can sustain that allocation for the full duration.</p>
 
 <h3>What the Forecast Shows</h3>
 <p>The Forecast tab has three main sections:</p>

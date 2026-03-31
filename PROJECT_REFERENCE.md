@@ -5,7 +5,7 @@
 > **Update Rule:** This document MUST be updated after every application change. When working on this application, always check if this document needs updating.
 >
 > **Last Updated:** March 2026
-> **Current Version:** 0.10.0.0000 (see Version History at bottom)
+> **Current Version:** 0.10.0.0005 (see Version History at bottom)
 
 ---
 
@@ -758,12 +758,37 @@ function epochToDateStr(val) {
 ### Resources Tab — see Section 11
 
 ### Forecast Tab
-- Forward-looking capacity using "snapshot" approach
-- Each person's most recent allocation fractions projected forward
+- **Capacity Planner** (top section) — "When can each person take on a new project?"
+  - Dropdowns for project size (S/M/L/XL) and role (Lead/Contributor/Reviewer)
+  - Runs `findEarliestStart()` for each team member
+  - Shows timeline bars (existing util + proposed new project overlay)
+  - Shows blocking projects when start is delayed
+  - `SIZE_DURATIONS = { S: 2, M: 6, L: 13, XL: 26 }` (weeks)
+  - State: `_cpSize`, `_cpRole`; functions: `cpRenderPlanner()`, `buildCapacityPlannerSection()`
+- **Summary Cards** — per-person capacity cards sorted most-available first
+- Forward-looking capacity using real records first, snapshot fallback for gaps
 - Configurable window (default 13 weeks from current week)
 - Project end dates respected — allocation freed when project ends
-- Team-level utilization heatmap
-- Per-person capacity/allocation chart
+- Team-level utilization stacked area chart
+- Per-person utilization heatmap
+
+### Idea Review — Team Availability
+- Each idea card has a collapsible "Team availability" section
+- Shows when each team member can start as Lead or Contributor
+- Size dropdown per idea (defaults to project's size or M)
+- Uses same `findEarliestStart()` engine as Capacity Planner
+- Functions: `toggleIdeaAvail()`, `renderIdeaAvail()`
+
+### `findEarliestStart(avData, personName, projectSize, role)`
+Core engine shared by Capacity Planner and Idea Review:
+```javascript
+// For each candidate start week W (from current week forward):
+//   For each week W to W + SIZE_DURATIONS[size]:
+//     needed = (allocationDefaults[size][role] / 100) × proj_cap[W]
+//     if (current_alloc[W] + needed > proj_cap[W]) → fail, try next W
+//   If ALL weeks pass → return { startWeek: W }
+// If no slot found → return { startWeek: -1, blockers: [project names consuming capacity] }
+```
 
 ### Settings Tab — see Section 14
 
@@ -1185,7 +1210,8 @@ git push origin main
 - [ ] Allocation defaults system (app_config, Settings editor, auto-fill integration)
 - [ ] Capacity formula: (weekly_hours - absences) × 0.75 × proj_pct
 - [ ] Week type detection for 9/80 schedules
-- [ ] Forecast tab (snapshot projection, team heatmap)
+- [ ] Forecast tab (snapshot projection, team heatmap, capacity planner with findEarliestStart)
+- [ ] Idea Review team availability section (collapsible, per-idea size selector)
 
 ### Phase 5: Admin & Advanced
 - [ ] Settings tab (Team Leads only)
@@ -1251,7 +1277,12 @@ Step 1: "What best describes the primary nature of this project/task?"
 | 0.9.0+ | Work schedule system (5/8, 4/10, 9/80), daily start/end times |
 | 0.9.1.0000 | Schedule-aware capacity formula, My Week display |
 | 0.9.2+ | Time tracking: per-employee opt-in, start/stop timers, auto-calculated hours |
-| 0.10.0.0000 | Project sizing (S/M/L/XL) with 4-question scoring wizard, allocation defaults by size × role, role dropdown and auto-fill in allocation editor, allocation defaults editor in Settings |
+| 0.10.0.0000 | Project sizing (S/M/L/XL) with 4-question scoring wizard, allocation defaults by size x role, role dropdown and auto-fill in allocation editor, allocation defaults editor in Settings |
+| 0.10.0.0001 | Lock Original End Date on Active projects; auto-copy Working Due Date; auto-fill allocations on new Active project creation; require size for Active |
+| 0.10.0.0002 | Include Scheduled status in auto-fill allocation trigger and size requirement |
+| 0.10.0.0003 | Add hover tooltips to Project Review status buttons |
+| 0.10.0.0004 | Forecast uses real allocation records for all weeks, snapshot only as fallback for gaps |
+| 0.10.0.0005 | Capacity Planner on Forecast tab (earliest start finder); Team Availability on Idea Review cards |
 
 ---
 
