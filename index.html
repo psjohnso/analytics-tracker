@@ -3181,7 +3181,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0020';
+const APP_VERSION = '0.10.0.0021';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -3671,7 +3671,15 @@ function renderSuggestions(project) {
     if (task.category) html += '<span class="suggest-task-chip">' + esc(task.category) + '</span>';
     if (task.tool) html += '<span class="suggest-task-chip">' + esc(task.tool) + '</span>';
     if (task.priority) html += '<span class="suggest-task-chip">' + esc(task.priority) + '</span>';
-    if (task.suggested_assignee) html += '<span class="suggest-task-chip">👤 ' + esc(task.suggested_assignee) + '</span>';
+    // Editable assignee dropdown
+    var members = FM_ACTIVE_MEMBERS || FM_TASK_ASSIGNEES || [];
+    html += '<select id="suggest-assignee-' + i + '" onchange="suggestAssigneeChange(' + i + ',this.value)" style="font-size:10px;font-weight:700;padding:2px 6px;border:1px solid #E5E7EB;border-radius:6px;font-family:Lato,sans-serif;color:var(--navy);background:#F9FAFB;cursor:pointer;">';
+    html += '<option value="">Unassigned</option>';
+    members.forEach(function(m) {
+      var sel = (task.suggested_assignee === m) ? ' selected' : '';
+      html += '<option value="' + esc(m) + '"' + sel + '>' + esc(m) + '</option>';
+    });
+    html += '</select>';
     html += '</div></div>';
     if (!task._accepted) {
       html += '<button class="suggest-accept-btn" onclick="acceptSuggestedTask(' + i + ')">Add</button>';
@@ -3695,9 +3703,19 @@ function renderSuggestions(project) {
   panel.innerHTML = html;
 }
 
+function suggestAssigneeChange(index, value) {
+  if (_suggestedTasks[index]) {
+    _suggestedTasks[index].suggested_assignee = value || null;
+  }
+}
+
 async function acceptSuggestedTask(index) {
   var task = _suggestedTasks[index];
   if (!task || task._accepted) return;
+
+  // Read current assignee from dropdown (user may have changed it)
+  var assigneeSelect = document.getElementById('suggest-assignee-' + index);
+  var assignee = assigneeSelect ? assigneeSelect.value : (task.suggested_assignee || null);
 
   var project = PROJECTS.find(function(p) { return p.objectId === _suggestProjectId; });
   if (!project) return;
@@ -3710,7 +3728,7 @@ async function acceptSuggestedTask(index) {
     project: project.title,
     category: task.category || null,
     tool: task.tool || null,
-    assignee: task.suggested_assignee || null,
+    assignee: assignee || null,
   };
 
   try {
@@ -3735,6 +3753,8 @@ async function acceptAllSuggestedTasks() {
   for (var i = 0; i < _suggestedTasks.length; i++) {
     if (_suggestedTasks[i]._accepted) continue;
     var task = _suggestedTasks[i];
+    var assigneeSelect = document.getElementById('suggest-assignee-' + i);
+    var assignee = assigneeSelect ? assigneeSelect.value : (task.suggested_assignee || null);
     var fields = {
       title: task.title,
       description: task.description || null,
@@ -3743,7 +3763,7 @@ async function acceptAllSuggestedTasks() {
       project: project.title,
       category: task.category || null,
       tool: task.tool || null,
-      assignee: task.suggested_assignee || null,
+      assignee: assignee || null,
     };
     try {
       await DataStore.createTask(fields);
