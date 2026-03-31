@@ -3181,7 +3181,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0021';
+const APP_VERSION = '0.10.0.0022';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -3672,7 +3672,7 @@ function renderSuggestions(project) {
     if (task.tool) html += '<span class="suggest-task-chip">' + esc(task.tool) + '</span>';
     if (task.priority) html += '<span class="suggest-task-chip">' + esc(task.priority) + '</span>';
     // Editable assignee dropdown
-    var members = FM_ACTIVE_MEMBERS || FM_TASK_ASSIGNEES || [];
+    var members = RESOURCES_DATA ? Object.keys(RESOURCES_DATA.people).filter(function(n) { return RESOURCES_DATA.people[n].active !== false; }).sort() : (FM_ACTIVE_MEMBERS || FM_TASK_ASSIGNEES || []);
     html += '<select id="suggest-assignee-' + i + '" onchange="suggestAssigneeChange(' + i + ',this.value)" style="font-size:10px;font-weight:700;padding:2px 6px;border:1px solid #E5E7EB;border-radius:6px;font-family:Lato,sans-serif;color:var(--navy);background:#F9FAFB;cursor:pointer;">';
     html += '<option value="">Unassigned</option>';
     members.forEach(function(m) {
