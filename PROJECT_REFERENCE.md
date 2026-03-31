@@ -5,7 +5,7 @@
 > **Update Rule:** This document MUST be updated after every application change. When working on this application, always check if this document needs updating.
 >
 > **Last Updated:** March 2026
-> **Current Version:** 0.10.0.0005 (see Version History at bottom)
+> **Current Version:** 0.10.0.0014 (see Version History at bottom)
 
 ---
 
@@ -1283,6 +1283,15 @@ Step 1: "What best describes the primary nature of this project/task?"
 | 0.10.0.0003 | Add hover tooltips to Project Review status buttons |
 | 0.10.0.0004 | Forecast uses real allocation records for all weeks, snapshot only as fallback for gaps |
 | 0.10.0.0005 | Capacity Planner on Forecast tab (earliest start finder); Team Availability on Idea Review cards |
+| 0.10.0.0006 | Fix idea review size dropdown resetting on change |
+| 0.10.0.0007 | Add team availability panel to project create/edit form |
+| 0.10.0.0008 | Unified team member selector with inline availability badges; rename Primary Contact to Project Lead |
+| 0.10.0.0009 | Calc info popups explaining calculated values with formulas and guide links |
+| 0.10.0.0010 | Only show auto-fill button in allocation editor when empty weeks exist |
+| 0.10.0.0011 | Gentle time tracking reminder on My Work when no time logged today |
+| 0.10.0.0012 | Time Logged section on project detail page with per-person breakdown |
+| 0.10.0.0013 | Time Tracking Dashboard in Settings with per-person stats and team KPIs |
+| 0.10.0.0014 | Insights/Analytics tab with project retrospectives, effort by size/category, reference library |
 
 ---
 

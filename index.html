@@ -2358,6 +2358,9 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
       <button class="tab-btn" onclick="switchTab('forecast')">
         📊 Forecast
       </button>
+      <button class="tab-btn" onclick="switchTab('insights')">
+        💡 Insights
+      </button>
       <button class="tab-btn" id="tab-settings" onclick="switchTab('settings')" style="display:none;">
         ⚙️ Settings
       </button>
@@ -3148,7 +3151,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0013';
+const APP_VERSION = '0.10.0.0014';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -3522,14 +3525,14 @@ function switchTab(tab) {
   currentDetail = null;
   currentTab = tab;
   currentPage = 1;
-  const tabIds = ['overview','mywork','projects','tasks','resources','forecast','settings'];
+  const tabIds = ['overview','mywork','projects','tasks','resources','forecast','insights','settings'];
   document.querySelectorAll('.tab-btn').forEach((b,i) => {
     b.classList.toggle('active', tabIds[i] === tab);
   });
-  document.getElementById('view-toggle').style.display = (tab === 'overview' || tab === 'mywork' || tab === 'resources' || tab === 'settings' || tab === 'forecast') ? 'none' : 'flex';
+  document.getElementById('view-toggle').style.display = (tab === 'overview' || tab === 'mywork' || tab === 'resources' || tab === 'settings' || tab === 'forecast' || tab === 'insights') ? 'none' : 'flex';
   document.getElementById('sort-select').style.display = (tab === 'projects' || tab === 'tasks') ? '' : 'none';
   // Hide entire toolbar on tabs that don't need it
-  document.querySelector('.toolbar').style.display = (tab === 'mywork' || tab === 'settings') ? 'none' : '';
+  document.querySelector('.toolbar').style.display = (tab === 'mywork' || tab === 'settings' || tab === 'insights') ? 'none' : '';
   const addBtn = document.getElementById('btn-add-new');
   if (tab === 'tasks') { addBtn.style.display='flex'; addBtn.textContent='＋ New Task'; }
   else { addBtn.style.display='none'; }
@@ -3543,7 +3546,7 @@ function switchTab(tab) {
     const badge = document.getElementById('idea-count-badge');
     if (badge) badge.textContent = ideaCount > 0 ? ideaCount : '';
   }
-  if (tab === 'forecast' || tab === 'settings' || tab === 'mywork') {
+  if (tab === 'forecast' || tab === 'settings' || tab === 'mywork' || tab === 'insights') {
     document.getElementById('view-toggle').style.display = 'none';
     document.getElementById('btn-add-new').style.display = 'none';
   }
@@ -3737,6 +3740,15 @@ function render() {
   if (currentTab === 'settings') {
     document.querySelector('.app-body').classList.remove('detail-mode');
     renderSettingsPage(area);
+    const pg = document.getElementById('pagination');
+    if (pg) pg.remove();
+    document.getElementById('result-count').textContent = '';
+    return;
+  }
+
+  if (currentTab === 'insights') {
+    document.querySelector('.app-body').classList.remove('detail-mode');
+    area.innerHTML = buildInsightsPage();
     const pg = document.getElementById('pagination');
     if (pg) pg.remove();
     document.getElementById('result-count').textContent = '';
@@ -8111,6 +8123,176 @@ function buildCapacityPlannerSection() {
       '<div style="font-size:12px;color:var(--text-muted);padding-bottom:6px;">' + pct + '% of project time/week' + calcInfoIcon('autoFillPct') + ' for ' + SIZE_DURATIONS[_cpSize] + ' weeks</div>' +
     '</div>' +
     '<div id="cp-planner-body"></div>' +
+  '</div>';
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  INSIGHTS / ANALYTICS TAB
+//  Project retrospectives for completed work. Builds a reference
+//  library of actual effort by category and size over time.
+// ═══════════════════════════════════════════════════════════════════════
+function buildInsightsPage() {
+  var completed = PROJECTS.filter(function(p) { return p.status === 'Complete'; });
+  var all = PROJECTS.filter(function(p) { return p.status !== 'Idea' && p.status !== 'Canceled'; });
+
+  // Compute per-project stats
+  var projStats = completed.map(function(p) {
+    var hrs = getProjectHours(p.title);
+    var personData = getProjectHoursByPerson(p.title);
+    var teamSize = personData.length;
+
+    // Duration in weeks
+    var durWeeks = null;
+    if (p.start && (p.actual_end || p.end)) {
+      var s = new Date(p.start + 'T12:00:00');
+      var e = new Date((p.actual_end || p.end) + 'T12:00:00');
+      durWeeks = Math.max(1, Math.round((e - s) / (7 * 86400000)));
+    }
+
+    // Was it on time?
+    var onTime = null;
+    if (p.end && p.actual_end) {
+      onTime = p.actual_end <= p.end;
+    }
+
+    return {
+      title: p.title,
+      category: p.category || 'Uncategorized',
+      size: p.project_size || '—',
+      hours: hrs,
+      teamSize: teamSize,
+      durWeeks: durWeeks,
+      start: p.start || '',
+      end: p.actual_end || p.end || '',
+      onTime: onTime,
+      personData: personData,
+    };
+  });
+
+  // Sort by most recently completed
+  projStats.sort(function(a, b) { return b.end > a.end ? 1 : b.end < a.end ? -1 : 0; });
+
+  var totalHrs = projStats.reduce(function(s, p) { return s + p.hours; }, 0);
+  var avgHrs = completed.length > 0 ? totalHrs / completed.length : 0;
+  var withHours = projStats.filter(function(p) { return p.hours > 0; });
+  var onTimeCount = projStats.filter(function(p) { return p.onTime === true; }).length;
+  var lateCount = projStats.filter(function(p) { return p.onTime === false; }).length;
+  var trackedCount = onTimeCount + lateCount;
+
+  // ── Summary KPIs ──────────────────────────────────────
+  var kpis = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px;">';
+  kpis += '<div class="res-kpi"><div class="kpi-label">Completed Projects</div><div class="kpi-value">' + completed.length + '</div></div>';
+  kpis += '<div class="res-kpi"><div class="kpi-label">Total Hours Logged</div><div class="kpi-value">' + Math.round(totalHrs) + 'h</div></div>';
+  kpis += '<div class="res-kpi"><div class="kpi-label">Avg Hours / Project' + calcInfoIcon('ytdHours') + '</div><div class="kpi-value">' + Math.round(avgHrs) + 'h</div></div>';
+  kpis += '<div class="res-kpi"><div class="kpi-label">Projects with Time Data</div><div class="kpi-value">' + withHours.length + '</div></div>';
+  if (trackedCount > 0) {
+    kpis += '<div class="res-kpi"><div class="kpi-label">On-Time Delivery</div><div class="kpi-value" style="color:' + (onTimeCount / trackedCount >= 0.7 ? '#22C55E' : '#F59E0B') + ';">' + Math.round(onTimeCount / trackedCount * 100) + '%</div></div>';
+  }
+  kpis += '</div>';
+
+  // ── By Size ───────────────────────────────────────────
+  var sizes = ['S', 'M', 'L', 'XL'];
+  var bySizeRows = sizes.map(function(sz) {
+    var items = projStats.filter(function(p) { return p.size === sz; });
+    var withH = items.filter(function(p) { return p.hours > 0; });
+    var totalH = items.reduce(function(s, p) { return s + p.hours; }, 0);
+    var avgH = withH.length > 0 ? totalH / withH.length : 0;
+    var durations = items.filter(function(p) { return p.durWeeks; }).map(function(p) { return p.durWeeks; });
+    var avgDur = durations.length > 0 ? Math.round(durations.reduce(function(s, d) { return s + d; }, 0) / durations.length) : null;
+    var expected = SIZE_DURATIONS[sz] || '—';
+
+    return '<tr>' +
+      '<td style="font-weight:700;color:var(--navy);">' + sz + '</td>' +
+      '<td style="text-align:center;">' + items.length + '</td>' +
+      '<td style="text-align:right;">' + (withH.length > 0 ? Math.round(avgH) + 'h' : '—') + '</td>' +
+      '<td style="text-align:right;">' + (avgDur ? avgDur + ' wks' : '—') + '</td>' +
+      '<td style="text-align:right;color:var(--text-muted);">' + expected + ' wks</td>' +
+    '</tr>';
+  }).join('');
+
+  var bySizeTable = '<div style="overflow-x:auto;border:1px solid #E5E7EB;border-radius:10px;background:#fff;">' +
+    '<table class="member-table" style="margin:0;">' +
+      '<thead><tr><th>Size</th><th style="text-align:center;">Projects</th><th style="text-align:right;">Avg Hours</th><th style="text-align:right;">Avg Duration</th><th style="text-align:right;">Expected</th></tr></thead>' +
+      '<tbody>' + bySizeRows + '</tbody>' +
+    '</table></div>';
+
+  // ── By Category ───────────────────────────────────────
+  var catMap = {};
+  projStats.forEach(function(p) {
+    if (!catMap[p.category]) catMap[p.category] = { count: 0, hours: 0, withHours: 0 };
+    catMap[p.category].count++;
+    catMap[p.category].hours += p.hours;
+    if (p.hours > 0) catMap[p.category].withHours++;
+  });
+  var catEntries = Object.keys(catMap).map(function(cat) {
+    return { category: cat, count: catMap[cat].count, hours: catMap[cat].hours, avg: catMap[cat].withHours > 0 ? catMap[cat].hours / catMap[cat].withHours : 0 };
+  }).sort(function(a, b) { return b.hours - a.hours; });
+
+  var byCatRows = catEntries.map(function(c) {
+    var barPct = catEntries[0].hours > 0 ? Math.round(c.hours / catEntries[0].hours * 100) : 0;
+    return '<tr>' +
+      '<td style="font-weight:700;color:var(--navy);max-width:200px;overflow:hidden;text-overflow:ellipsis;">' + esc(c.category) + '</td>' +
+      '<td style="text-align:center;">' + c.count + '</td>' +
+      '<td style="text-align:right;">' + Math.round(c.hours) + 'h</td>' +
+      '<td style="text-align:right;">' + (c.avg > 0 ? Math.round(c.avg) + 'h' : '—') + '</td>' +
+      '<td style="width:120px;"><div style="height:6px;background:#E5E7EB;border-radius:3px;"><div style="height:6px;background:var(--navy);border-radius:3px;width:' + barPct + '%;"></div></div></td>' +
+    '</tr>';
+  }).join('');
+
+  var byCatTable = '<div style="overflow-x:auto;border:1px solid #E5E7EB;border-radius:10px;background:#fff;">' +
+    '<table class="member-table" style="margin:0;">' +
+      '<thead><tr><th>Category</th><th style="text-align:center;">Projects</th><th style="text-align:right;">Total Hours</th><th style="text-align:right;">Avg Hours</th><th></th></tr></thead>' +
+      '<tbody>' + byCatRows + '</tbody>' +
+    '</table></div>';
+
+  // ── Completed Projects Detail Table ───────────────────
+  var projRows = projStats.map(function(p) {
+    var sizeBadge = p.size !== '—' ? '<span style="display:inline-block;background:#F0E6FF;color:#6B21A8;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;">' + p.size + '</span>' : '';
+    var onTimeBadge = '';
+    if (p.onTime === true) onTimeBadge = '<span style="font-size:10px;color:#22C55E;font-weight:700;">On time</span>';
+    if (p.onTime === false) onTimeBadge = '<span style="font-size:10px;color:#EF4444;font-weight:700;">Late</span>';
+
+    return '<tr>' +
+      '<td style="font-weight:700;color:var(--navy);max-width:200px;overflow:hidden;text-overflow:ellipsis;" title="' + esc(p.title) + '">' + esc(p.title) + '</td>' +
+      '<td style="text-align:center;">' + sizeBadge + '</td>' +
+      '<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:var(--text-muted);">' + esc(p.category) + '</td>' +
+      '<td style="text-align:right;font-weight:700;">' + (p.hours > 0 ? p.hours + 'h' : '—') + '</td>' +
+      '<td style="text-align:center;">' + (p.teamSize > 0 ? p.teamSize : '—') + '</td>' +
+      '<td style="text-align:right;">' + (p.durWeeks ? p.durWeeks + ' wks' : '—') + '</td>' +
+      '<td style="text-align:center;">' + onTimeBadge + '</td>' +
+    '</tr>';
+  }).join('');
+
+  var projTable = projStats.length === 0
+    ? '<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:14px;"><div style="font-size:36px;margin-bottom:12px;">📊</div><div style="font-weight:700;margin-bottom:4px;">No completed projects yet</div><div>As projects are completed and time is logged, retrospective data will appear here to help with future estimation.</div></div>'
+    : '<div style="overflow-x:auto;border:1px solid #E5E7EB;border-radius:10px;background:#fff;">' +
+      '<table class="member-table" style="margin:0;">' +
+        '<thead><tr><th>Project</th><th style="text-align:center;">Size</th><th>Category</th><th style="text-align:right;">Hours</th><th style="text-align:center;">Team</th><th style="text-align:right;">Duration</th><th style="text-align:center;">Delivery</th></tr></thead>' +
+        '<tbody>' + projRows + '</tbody>' +
+      '</table></div>';
+
+  // ── Build page ────────────────────────────────────────
+  return '<div style="padding:28px 32px;">' +
+    '<div style="margin-bottom:24px;">' +
+      '<div style="font-size:22px;font-weight:800;color:var(--navy);margin-bottom:4px;">💡 Project Insights</div>' +
+      '<div style="font-size:13px;color:var(--text-muted);">Retrospective data from completed projects. As you log more time, this becomes your reference library for future estimation.</div>' +
+    '</div>' +
+    kpis +
+    (completed.length > 0 ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">' +
+      '<div>' +
+        '<div style="font-size:16px;font-weight:800;color:var(--navy);margin-bottom:10px;">By Project Size</div>' +
+        '<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">Average actual hours and duration compared to size-based estimates</div>' +
+        bySizeTable +
+      '</div>' +
+      '<div>' +
+        '<div style="font-size:16px;font-weight:800;color:var(--navy);margin-bottom:10px;">By Category</div>' +
+        '<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">Which types of work require the most effort</div>' +
+        byCatTable +
+      '</div>' +
+    '</div>' : '') +
+    '<div style="font-size:16px;font-weight:800;color:var(--navy);margin-bottom:10px;">Completed Projects</div>' +
+    '<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">All finished projects with actual effort data · sorted most recent first</div>' +
+    projTable +
   '</div>';
 }
 

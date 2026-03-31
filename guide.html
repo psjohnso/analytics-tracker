@@ -123,6 +123,7 @@ li strong { color: var(--navy); }
   <a href="#tasks-tab">Tasks Tab</a>
   <a href="#resources-tab">Resources Tab</a>
   <a href="#forecast-tab">Forecast Tab</a>
+  <a href="#insights-tab">Insights Tab</a>
   <a href="#settings-tab">Settings Tab</a>
   <div class="nav-section">Reference</div>
   <a href="#capacity-math">Capacity & Utilization Math</a>
@@ -429,6 +430,26 @@ li strong { color: var(--navy); }
   <li><strong>Static snapshot:</strong> The forecast doesn't account for planned changes in allocation. If you know someone will move from Project A to Project B next month, the forecast won't reflect this until you actually update their allocations.</li>
   <li><strong>No new project predictions:</strong> The forecast only projects existing allocations forward — it can't predict when new projects will start consuming capacity.</li>
 </ul>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2 id="insights-tab">Insights Tab</h2>
+<p>The Insights tab provides retrospective data from completed projects, building a reference library that helps with future estimation and planning. As your team logs more time and completes more projects, this tab becomes increasingly valuable.</p>
+
+<h3>Summary KPIs</h3>
+<p>At the top, summary cards show the total number of completed projects, total hours logged across all projects, average hours per project, how many projects have time data, and on-time delivery rate (for projects with both an original end date and actual completion date).</p>
+
+<h3>By Project Size</h3>
+<p>Shows how many projects have been completed at each size (S, M, L, XL), along with the average actual hours and average duration. The "Expected" column shows the size-based duration assumption (S=2 weeks, M=6, L=13, XL=26) for comparison — over time you can see whether your size estimates match reality.</p>
+
+<h3>By Category</h3>
+<p>Groups completed projects by category, showing total and average hours per category. A bar chart indicates relative effort. This helps answer questions like "Dashboard projects typically take about 80 hours" — a reference point for future estimation.</p>
+
+<h3>Completed Projects Table</h3>
+<p>Every completed project listed with its size, category, total hours logged, team size (number of people who logged time), actual duration in weeks, and on-time delivery status. Sorted most recent first.</p>
+
+<div class="tip-box">
+  <strong>Building estimation capability:</strong> The Insights tab is designed to grow with your team. Start by logging time consistently (Phase 1), then use this tab to spot patterns (Phase 2). Over time, the averages by size and category become your estimation reference library — "this new project is similar to X, which took about Y hours" (Phase 3).
+</div>
 
 <!-- ═══════════════════════════════════════════════════ -->
 <h2 id="settings-tab">Settings Tab (Admin Only)</h2>
