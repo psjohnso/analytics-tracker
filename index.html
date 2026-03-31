@@ -3151,7 +3151,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0015';
+const APP_VERSION = '0.10.0.0016';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -8202,10 +8202,10 @@ function buildInsightsPage() {
     return { size: sz, count: items.length, avgH: Math.round(avgH), avgDur: avgDur, expected: SIZE_DURATIONS[sz] };
   });
   var sizeMaxH = Math.max.apply(null, sizeData.map(function(d) { return d.avgH; }).concat([10]));
-  var svgW = 400, svgH = 200, padL = 45, padR = 15, padT = 15, padB = 40;
+  var svgW = 500, svgH = 220, padL = 45, padR = 20, padT = 15, padB = 40;
   var chartW = svgW - padL - padR, chartH = svgH - padT - padB;
-  var barGroupW = chartW / 4, barW = barGroupW * 0.5;
-  var sizeSvg = '<svg viewBox="0 0 ' + svgW + ' ' + svgH + '" style="width:100%;max-width:420px;display:block;">';
+  var barGroupW = chartW / 4, barW = barGroupW * 0.6;
+  var sizeSvg = '<svg viewBox="0 0 ' + svgW + ' ' + svgH + '" style="width:100%;display:block;">';
   for (var gi = 0; gi <= 4; gi++) {
     var gy = padT + chartH - (gi / 4 * chartH);
     sizeSvg += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (svgW - padR) + '" y2="' + gy + '" stroke="#E5E7EB" stroke-width="0.5"/>';
@@ -8233,7 +8233,7 @@ function buildInsightsPage() {
   var catMaxH = catEntries.length > 0 ? catEntries[0].hours : 1;
   var catBarH = 24, catGap = 6, catSvgH = Math.max(120, catEntries.length * (catBarH + catGap) + 20);
   var catLabelW = 140, catChartW = 260;
-  var catSvg = '<svg viewBox="0 0 ' + (catLabelW + catChartW + 50) + ' ' + catSvgH + '" style="width:100%;max-width:450px;display:block;">';
+  var catSvg = '<svg viewBox="0 0 ' + (catLabelW + catChartW + 50) + ' ' + catSvgH + '" style="width:100%;display:block;">';
   var catColors = ['#002669', '#1E40AF', '#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE', '#DBEAFE'];
   catEntries.forEach(function(c, i) {
     var y = 10 + i * (catBarH + catGap);
@@ -8260,7 +8260,7 @@ function buildInsightsPage() {
     var maxHrs2 = Math.max.apply(null, hrsArr.concat([10]));
     var tlCW = tlW - tlPadL - tlPadR, tlCH = tlH - tlPadT - tlPadB;
     var sizeColors = { S: '#22C55E', M: '#3B82F6', L: '#F59E0B', XL: '#EF4444', '\u2014': '#9CA3AF' };
-    tlSvg = '<svg viewBox="0 0 ' + tlW + ' ' + tlH + '" style="width:100%;max-width:620px;display:block;">';
+    tlSvg = '<svg viewBox="0 0 ' + tlW + ' ' + tlH + '" style="width:100%;display:block;">';
     for (var tgi = 0; tgi <= 4; tgi++) {
       var tgy = tlPadT + tlCH - (tgi / 4 * tlCH);
       tlSvg += '<line x1="' + tlPadL + '" y1="' + tgy + '" x2="' + (tlW - tlPadR) + '" y2="' + tgy + '" stroke="#E5E7EB" stroke-width="0.5"/>';
