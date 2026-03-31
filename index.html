@@ -1719,6 +1719,26 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .fc-ls-item { display: flex; align-items: center; gap: 5px; }
 .fc-ls-swatch { width: 12px; height: 12px; border-radius: 2px; }
 
+/* ── Calc Info Popups ─────────────────────────────── */
+.calc-info { display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px;
+  border-radius:50%; background:#E5E7EB; color:#6B7280; font-size:9px; font-weight:700;
+  cursor:pointer; vertical-align:middle; margin-left:3px; line-height:1; font-style:normal;
+  font-family:Lato,sans-serif; user-select:none; transition:background 0.15s; }
+.calc-info:hover { background:#D1D5DB; color:#374151; }
+#calc-popup { display:none; position:absolute; z-index:10001; background:#fff; border:1px solid #E5E7EB;
+  border-radius:10px; padding:12px 16px; max-width:340px; font-size:12px; line-height:1.6;
+  color:#374151; font-family:Lato,sans-serif; box-shadow:0 4px 16px rgba(0,0,0,0.12); }
+#calc-popup .calc-popup-title { font-size:11px; font-weight:800; color:#002669; text-transform:uppercase;
+  letter-spacing:0.04em; margin-bottom:6px; }
+#calc-popup .calc-popup-body { margin-bottom:8px; }
+#calc-popup .calc-popup-formula { background:#F3F4F6; border-radius:6px; padding:6px 10px;
+  font-family:'Courier New',monospace; font-size:11px; color:#374151; margin:6px 0; }
+#calc-popup .calc-popup-link { font-size:11px; font-weight:700; color:#0088FF; text-decoration:none; }
+#calc-popup .calc-popup-link:hover { text-decoration:underline; }
+#calc-popup .calc-popup-close { position:absolute; top:6px; right:10px; font-size:14px; color:#9CA3AF;
+  cursor:pointer; background:none; border:none; font-family:Lato,sans-serif; line-height:1; }
+#calc-popup .calc-popup-close:hover { color:#374151; }
+
 /* ── Capacity Planner ────────────────────────────── */
 .cp-section { margin-bottom: 28px; }
 .cp-controls { display:flex; gap:12px; align-items:flex-end; margin-bottom:16px; flex-wrap:wrap; }
@@ -3128,7 +3148,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0008';
+const APP_VERSION = '0.10.0.0009';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -4029,6 +4049,129 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ══════════════════════════════════════════════════════════════════════
+//  CALC INFO POPUPS — explains how calculated values are derived
+// ══════════════════════════════════════════════════════════════════════
+const CALC_EXPLANATIONS = {
+  utilization: {
+    title: 'Utilization',
+    body: 'The percentage of your available project time that is currently allocated to projects.',
+    formula: 'Utilization = Allocated Hours \u00f7 Project Capacity',
+    guide: 'capacity-math'
+  },
+  projCapacity: {
+    title: 'Project capacity',
+    body: 'The maximum hours available for project work this week, after accounting for your schedule, absences, the 75% productivity factor, and your project time percentage.',
+    formula: '(Scheduled Hours \u2212 Absences) \u00d7 0.75 \u00d7 Project Time %',
+    guide: 'capacity-math'
+  },
+  availableHours: {
+    title: 'Available hours',
+    body: 'Hours remaining for new project work this week. This is the gap between your project capacity and what is already allocated.',
+    formula: 'Available = Project Capacity \u2212 Allocated Hours',
+    guide: 'capacity-math'
+  },
+  allocatedHours: {
+    title: 'Allocated hours',
+    body: 'Total hours committed to projects this week, calculated from your allocation percentages and project capacity.',
+    formula: 'Allocated = Sum of (Fraction \u00d7 Project Capacity) for each project',
+    guide: 'resources-tab'
+  },
+  ytdHours: {
+    title: 'Hours logged YTD',
+    body: 'The sum of all allocated project hours from the start of the year through the current week. Based on allocation records, not time tracking entries.',
+    formula: 'Sum of weekly allocated hours from Week 1 to current week',
+    guide: 'resources-tab'
+  },
+  allocTotal: {
+    title: 'Total allocated',
+    body: 'The combined allocation percentage across all projects for this week. Over 100% means the person is overcommitted.',
+    formula: 'Sum of all project allocation percentages for this week',
+    guide: 'resources-tab'
+  },
+  avgFree: {
+    title: 'Average free hours per week',
+    body: 'The average unallocated project hours per week across the forecast window. Higher means more room for new work.',
+    formula: 'Avg of (Project Capacity \u2212 Allocated Hours) per week over the window',
+    guide: 'forecast-tab'
+  },
+  teamUtil: {
+    title: 'Team utilization',
+    body: 'The average utilization across all team members for the forecast window. Shows how loaded the team is overall.',
+    formula: 'Avg of individual utilization percentages across the window',
+    guide: 'forecast-tab'
+  },
+  heatmapCell: {
+    title: 'Utilization heatmap',
+    body: 'Each cell shows one person\u2019s utilization for one week. Green means available capacity, yellow is getting tight, red means at or over capacity.',
+    guide: 'forecast-tab'
+  },
+  earliestStart: {
+    title: 'Earliest start date',
+    body: 'The first week where this person can sustain the required allocation percentage for the full project duration without exceeding 100% utilization. Based on the project size and role selected.',
+    formula: 'For each future week: check if (Current Alloc + New Project %) \u2264 100% for every week in the duration',
+    guide: 'forecast-tab'
+  },
+  autoFillPct: {
+    title: 'Default allocation percentage',
+    body: 'The default weekly allocation set when a project is created or auto-filled. Based on the project size (S/M/L/XL) and the person\u2019s role (Lead/Contributor/Reviewer). Configurable by admins in Settings.',
+    guide: 'resources-tab'
+  },
+  productivityFactor: {
+    title: 'Productivity factor (75%)',
+    body: 'Only 75% of available work hours are counted as productive project time. The remaining 25% accounts for meetings, email, admin tasks, and context-switching.',
+    guide: 'capacity-math'
+  },
+  overdue: {
+    title: 'Overdue tasks',
+    body: 'Tasks where the Working Due Date has passed and the status is not Complete or Canceled.',
+    formula: 'Working Due Date < Today AND Status is not Complete/Canceled',
+    guide: null
+  }
+};
+
+function calcInfoIcon(key) {
+  return ' <span class="calc-info" onclick="showCalcPopup(event,\'' + key + '\')">i</span>';
+}
+
+function showCalcPopup(evt, key) {
+  evt.stopPropagation();
+  var info = CALC_EXPLANATIONS[key];
+  if (!info) return;
+  var popup = document.getElementById('calc-popup');
+  if (!popup) {
+    popup = document.createElement('div');
+    popup.id = 'calc-popup';
+    document.body.appendChild(popup);
+    document.addEventListener('click', function(e) {
+      if (!popup.contains(e.target) && !e.target.classList.contains('calc-info')) {
+        popup.style.display = 'none';
+      }
+    });
+  }
+  var html = '<button class="calc-popup-close" onclick="document.getElementById(\'calc-popup\').style.display=\'none\'">\u2715</button>';
+  html += '<div class="calc-popup-title">' + esc(info.title) + '</div>';
+  html += '<div class="calc-popup-body">' + esc(info.body) + '</div>';
+  if (info.formula) {
+    html += '<div class="calc-popup-formula">' + esc(info.formula) + '</div>';
+  }
+  if (info.guide) {
+    html += '<a class="calc-popup-link" href="guide.html#' + info.guide + '" target="_blank">Learn more in the guide \u2192</a>';
+  }
+  popup.innerHTML = html;
+  popup.style.display = 'block';
+
+  // Position near the clicked icon
+  var rect = evt.target.getBoundingClientRect();
+  var popW = 340;
+  var left = rect.left + window.scrollX - popW / 2 + 7;
+  if (left < 8) left = 8;
+  if (left + popW > window.innerWidth - 8) left = window.innerWidth - popW - 8;
+  var top = rect.bottom + window.scrollY + 8;
+  popup.style.left = left + 'px';
+  popup.style.top = top + 'px';
+}
+
 // Resolve the correct project title for a task by looking up project title first
 // (since project names are unique), then falling back to project_id.
 function resolveProjectTitle(t) {
@@ -4351,19 +4494,19 @@ function renderResources(area) {
       <div style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
         <div>
           <span style="font-size:18px;font-weight:800;color:var(--navy);">${esc(selectedPerson)}</span>
-          <span style="margin-left:10px;font-size:13px;color:var(--text-muted);">${esc(p.role)} · ${esc(p.team)} team · ${(p.proj_pct*100).toFixed(0)}% project-available</span>
+          <span style="margin-left:10px;font-size:13px;color:var(--text-muted);">${esc(p.role)} · ${esc(p.team)} team · ${(p.proj_pct*100).toFixed(0)}% project-available${calcInfoIcon('projCapacity')}</span>
         </div>
         <button data-person="${esc(selectedPerson)}" onclick="openAllocEditor(this.dataset.person)" style="padding:8px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;" onmouseover="this.style.background='#1a3a7c'" onmouseout="this.style.background='var(--navy)'">✏️ Edit Allocations</button>
       </div>
 
       <div class="res-kpi-row">
         <div class="res-kpi">
-          <div class="kpi-label">Most Recent Week Utilization</div>
+          <div class="kpi-label">Most Recent Week Utilization${calcInfoIcon('utilization')}</div>
           <div class="kpi-value" style="color:${kpiColor};">${cwUtil.toFixed(0)}%</div>
           <div class="kpi-sub">${cwAlloc.toFixed(1)}h of ${cwCap.toFixed(1)}h capacity</div>
         </div>
         <div class="res-kpi">
-          <div class="kpi-label">Available (Most Recent Week)</div>
+          <div class="kpi-label">Available (Most Recent Week)${calcInfoIcon('availableHours')}</div>
           <div class="kpi-value">${Math.max(0,cwCap-cwAlloc).toFixed(1)}h</div>
           <div class="kpi-sub">unallocated project hours</div>
         </div>
@@ -4373,7 +4516,7 @@ function renderResources(area) {
           <div class="kpi-sub">with allocations</div>
         </div>
         <div class="res-kpi">
-          <div class="kpi-label">Hours Logged YTD</div>
+          <div class="kpi-label">Hours Logged YTD${calcInfoIcon('ytdHours')}</div>
           <div class="kpi-value">${totalAllocYTD.toFixed(0)}h</div>
           <div class="kpi-sub">through current week</div>
         </div>
@@ -4621,7 +4764,7 @@ function aeRenderGrid() {
   });
 
   // Total row
-  let totRow = '<tr class="ae-total-row"><td class="ae-proj-td">Total allocated</td>';
+  let totRow = '<tr class="ae-total-row"><td class="ae-proj-td">Total allocated' + calcInfoIcon('allocTotal') + '</td>';
   for (const wi of wIdxs) {
     const total = allocs.reduce(function(s, a) { return s + Math.round((a.fracs[wi] || 0) * 100); }, 0);
     const cls   = total === 0 ? 'zero' : total > 100 ? 'over' : 'ok';
@@ -7041,7 +7184,7 @@ function buildProjectForm(p) {
       fmProjectSizeField(v('project_size')) +
       fmField('Project Lead', fmSelect('fm-contact', FM_ACTIVE_MEMBERS || FM_TASK_ASSIGNEES, v('contact'), 'Select lead…', false)) +
       fmField('Team Members', '<div id="fm-team-avail-list"></div>' +
-        '<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">Select team members for this project. Availability is based on the project size selected above.</div>',
+        '<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">Select team members for this project. Availability' + calcInfoIcon('earliestStart') + ' is based on the project size selected above.</div>',
         false, true) +
     '</div>' +
     '<div class="fm-section-label">Classification</div>' +
@@ -7919,11 +8062,11 @@ function buildCapacityPlannerSection() {
   var pct = (_allocationDefaults[_cpSize] || {})[_cpRole] || 0;
 
   return '<div class="cp-section">' +
-    '<div class="fc-section-label">Capacity planner <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--text-muted);">When can each person take on a new project?</span></div>' +
+    '<div class="fc-section-label">Capacity planner' + calcInfoIcon('earliestStart') + ' <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--text-muted);">When can each person take on a new project?</span></div>' +
     '<div class="cp-controls">' +
       '<div><label>Project size</label><select onchange="cpSetSize(this.value)">' + sizeOpts + '</select></div>' +
       '<div><label>Role</label><select onchange="cpSetRole(this.value)">' + roleOpts + '</select></div>' +
-      '<div style="font-size:12px;color:var(--text-muted);padding-bottom:6px;">' + pct + '% of project time/week for ' + SIZE_DURATIONS[_cpSize] + ' weeks</div>' +
+      '<div style="font-size:12px;color:var(--text-muted);padding-bottom:6px;">' + pct + '% of project time/week' + calcInfoIcon('autoFillPct') + ' for ' + SIZE_DURATIONS[_cpSize] + ' weeks</div>' +
     '</div>' +
     '<div id="cp-planner-body"></div>' +
   '</div>';
@@ -7979,13 +8122,13 @@ function buildForecastPage() {
       <div class="fc-who-name" title="${name}">${name}</div>
       <div class="fc-who-role">${d.role}</div>
       <div class="fc-who-avail" style="color:${col.bar === '#22C55E' || col.bar === '#4ADE80' ? '#15803D' : col.bar};">${avHrs}h</div>
-      <div class="fc-who-avail-label">avg free / week</div>
+      <div class="fc-who-avail-label">avg free / week${calcInfoIcon('avgFree')}</div>
       <svg width="${sparkW}" height="${sparkH}" style="display:block;margin-bottom:6px;">${sparks}</svg>
       <div class="fc-mini-bar-bg">
         <div class="fc-mini-bar-fill" style="width:${pct}%;background:${col.bar};"></div>
       </div>
       <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-top:4px;">
-        <span>${pct}% allocated</span>
+        <span>${pct}% allocated${calcInfoIcon('utilization')}</span>
         <span>${Math.round(avgCap)}h cap</span>
       </div>
     </div>`;
@@ -8140,14 +8283,14 @@ function buildForecastPage() {
       </div>
 
       <div class="fc-team-section">
-        <div class="fc-section-label">How loaded is the team? <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--text-muted);">${Math.round(avgTeamUtil * 100)}% avg team utilization over window</span></div>
+        <div class="fc-section-label">How loaded is the team?${calcInfoIcon('teamUtil')} <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--text-muted);">${Math.round(avgTeamUtil * 100)}% avg team utilization over window</span></div>
         <div class="fc-team-chart-wrap">
           ${teamChartSVG}
         </div>
       </div>
 
       <div class="fc-when-section">
-        <div class="fc-section-label">When is each person available?</div>
+        <div class="fc-section-label">When is each person available?${calcInfoIcon('heatmapCell')}</div>
         <div class="fc-hm-scroll">
           <table class="fc-hm-table">
             <thead>
@@ -10562,9 +10705,9 @@ function renderMyWork(area) {
   html += '<div class="mywork-kpi"><div class="mywork-kpi-value">' + activeProjects.length + '</div><div class="mywork-kpi-label">Active Projects</div></div>';
   html += '<div class="mywork-kpi"><div class="mywork-kpi-value">' + openTasks.length + '</div><div class="mywork-kpi-label">Open Tasks</div></div>';
   const totalOverdue = overdueTasks.length + overdueProjects.length;
-  html += '<div class="mywork-kpi"><div class="mywork-kpi-value' + (totalOverdue > 0 ? ' alert' : '') + '">' + totalOverdue + '</div><div class="mywork-kpi-label">Overdue</div></div>';
+  html += '<div class="mywork-kpi"><div class="mywork-kpi-value' + (totalOverdue > 0 ? ' alert' : '') + '">' + totalOverdue + '</div><div class="mywork-kpi-label">Overdue' + calcInfoIcon('overdue') + '</div></div>';
   html += '<div class="mywork-kpi"><div class="mywork-kpi-value' + (dueThisWeek.length > 0 ? ' warn' : '') + '">' + dueThisWeek.length + '</div><div class="mywork-kpi-label">Due This Week</div></div>';
-  html += '<div class="mywork-kpi"><div class="mywork-kpi-value ' + utilClass + '">' + weekUtil + '%</div><div class="mywork-kpi-label">Utilization</div></div>';
+  html += '<div class="mywork-kpi"><div class="mywork-kpi-value ' + utilClass + '">' + weekUtil + '%</div><div class="mywork-kpi-label">Utilization' + calcInfoIcon('utilization') + '</div></div>';
   html += '</div>';
 
   // ── Time Tracking panel (only shown when viewing own work) ─────────
@@ -10626,8 +10769,8 @@ function renderMyWork(area) {
     } else {
       const availableHours = Math.max(0, weekCapHours - weekAllocHours);
       html += '<div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">';
-      html += '<strong>' + Math.round(weekAllocHours * 10) / 10 + 'h</strong> allocated of <strong>' + Math.round(weekCapHours * 10) / 10 + 'h</strong> capacity';
-      html += ' · <strong style="color:' + (availableHours > 0 ? '#22C55E' : '#EF4444') + ';">' + Math.round(availableHours * 10) / 10 + 'h</strong> available';
+      html += '<strong>' + Math.round(weekAllocHours * 10) / 10 + 'h</strong> allocated of <strong>' + Math.round(weekCapHours * 10) / 10 + 'h</strong> capacity' + calcInfoIcon('projCapacity');
+      html += ' · <strong style="color:' + (availableHours > 0 ? '#22C55E' : '#EF4444') + ';">' + Math.round(availableHours * 10) / 10 + 'h</strong> available' + calcInfoIcon('availableHours');
       html += '</div>';
     weekAllocations.forEach(function(a) {
       const pct = weekCapHours > 0 ? (a.hours / weekCapHours * 100) : 0;
