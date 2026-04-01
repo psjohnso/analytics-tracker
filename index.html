@@ -3181,7 +3181,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0025';
+const APP_VERSION = '0.10.0.0026';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -3532,6 +3532,49 @@ function addTaskToProject(projectObjectId, projectTitle) {
 // ══════════════════════════════════════════════════════════════════════
 var _suggestedTasks = []; // current suggestions
 var _suggestProjectId = null;
+var _suggestDetail = 'high'; // 'high' | 'medium' | 'low'
+
+async function openSuggestPicker(projectObjectId) {
+  _suggestProjectId = projectObjectId;
+  var panel = document.getElementById('suggest-panel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'suggest-panel';
+    panel.className = 'suggest-panel';
+    var tasksSection = document.querySelector('.detail-section:last-of-type');
+    if (tasksSection) tasksSection.parentNode.insertBefore(panel, tasksSection);
+    else document.querySelector('.detail-body').appendChild(panel);
+  }
+  panel.style.display = '';
+  panel.innerHTML = '<div class="suggest-header"><span class="suggest-title">✨ AI Task Suggestions</span>' +
+    '<button class="suggest-close" onclick="closeSuggestPanel()">✕</button></div>' +
+    '<div style="padding:8px 0;">' +
+      '<div style="font-size:13px;font-weight:700;color:#92400E;margin-bottom:10px;">Choose a detail level:</div>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
+        '<div onclick="suggestWithDetail(\'low\')" style="flex:1;min-width:140px;cursor:pointer;background:#fff;border:2px solid ' + (_suggestDetail === 'low' ? 'var(--navy)' : '#E5E7EB') + ';border-radius:10px;padding:14px;text-align:center;transition:border-color 0.15s;" onmouseover="this.style.borderColor=\'var(--navy)\'" onmouseout="this.style.borderColor=\'' + (_suggestDetail === 'low' ? 'var(--navy)' : '#E5E7EB') + '\'">' +
+          '<div style="font-size:20px;margin-bottom:4px;">📋</div>' +
+          '<div style="font-size:13px;font-weight:800;color:var(--navy);">Low</div>' +
+          '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Major phases<br>1-3 days each<br>4-8 tasks</div>' +
+        '</div>' +
+        '<div onclick="suggestWithDetail(\'medium\')" style="flex:1;min-width:140px;cursor:pointer;background:#fff;border:2px solid ' + (_suggestDetail === 'medium' ? 'var(--navy)' : '#E5E7EB') + ';border-radius:10px;padding:14px;text-align:center;transition:border-color 0.15s;" onmouseover="this.style.borderColor=\'var(--navy)\'" onmouseout="this.style.borderColor=\'' + (_suggestDetail === 'medium' ? 'var(--navy)' : '#E5E7EB') + '\'">' +
+          '<div style="font-size:20px;margin-bottom:4px;">📝</div>' +
+          '<div style="font-size:13px;font-weight:800;color:var(--navy);">Medium</div>' +
+          '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Grouped activities<br>4-16 hours each<br>8-15 tasks</div>' +
+        '</div>' +
+        '<div onclick="suggestWithDetail(\'high\')" style="flex:1;min-width:140px;cursor:pointer;background:#fff;border:2px solid ' + (_suggestDetail === 'high' ? 'var(--navy)' : '#E5E7EB') + ';border-radius:10px;padding:14px;text-align:center;transition:border-color 0.15s;" onmouseover="this.style.borderColor=\'var(--navy)\'" onmouseout="this.style.borderColor=\'' + (_suggestDetail === 'high' ? 'var(--navy)' : '#E5E7EB') + '\'">' +
+          '<div style="font-size:20px;margin-bottom:4px;">🔬</div>' +
+          '<div style="font-size:13px;font-weight:800;color:var(--navy);">High</div>' +
+          '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Atomic steps<br>1-8 hours each<br>15-25+ tasks</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function suggestWithDetail(level) {
+  _suggestDetail = level;
+  suggestTasksForProject(_suggestProjectId);
+}
 
 async function suggestTasksForProject(projectObjectId) {
   var p = PROJECTS.find(function(pr) { return pr.objectId === projectObjectId; });
@@ -3566,16 +3609,29 @@ async function suggestTasksForProject(projectObjectId) {
   panel.style.display = '';
   panel.innerHTML = '<div class="suggest-header"><span class="suggest-title">✨ AI Task Suggestions</span>' +
     '<button class="suggest-close" onclick="closeSuggestPanel()">✕</button></div>' +
-    '<div class="suggest-loading"><div style="font-size:24px;margin-bottom:8px;">🤔</div>Analyzing project context and generating task breakdown…<br><span style="font-size:11px;opacity:0.7;">This may take 10-15 seconds for complex projects.</span></div>';
+    '<div class="suggest-loading"><div style="font-size:24px;margin-bottom:8px;">🤔</div>Generating ' + _suggestDetail + '-detail task breakdown…<br><span style="font-size:11px;opacity:0.7;">This may take 10-15 seconds for complex projects.</span></div>';
 
   // Scroll to the panel
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+  // Detail-level-specific prompt instructions
+  var detailInstructions = {
+    low: 'Suggest the major phases or milestones needed to complete this project. ' +
+      'Each task should represent a significant chunk of work (1-3 days / 8-24 hours). ' +
+      'Aim for 4-8 high-level tasks that capture the overall project lifecycle. ' +
+      'Order them so prerequisite phases come first.',
+    medium: 'Suggest the key activities needed to complete this project. ' +
+      'Each task should represent a meaningful work activity (4-16 hours). ' +
+      'Aim for 8-15 tasks that break the project into manageable pieces without being overly granular. ' +
+      'Order them so tasks with prerequisites come after the tasks they depend on.',
+    high: 'Suggest ALL the tasks needed to complete this project — as many as make sense for the scope and size. Do not artificially limit the count. ' +
+      'Each task should be atomic — small enough that one person could complete it in a single focused work session (roughly 1-8 hours). Break larger activities into their component steps. ' +
+      'Order tasks so that prerequisite tasks come first. If Task B depends on Task A being done, Task A must appear earlier in the list. Group related tasks together within that dependency order.'
+  };
+
   // Build the prompt
   var prompt = 'You are a project management assistant for a City of Tucson government GIS/Data Analytics team. ' +
-    'Based on the following project details, suggest ALL the tasks that would be needed to complete this project — as many as make sense for the scope and size. Do not artificially limit the count. ' +
-    'Each task should be atomic — small enough that one person could complete it in a single focused work session (roughly 1-8 hours). Break larger activities into their component steps. ' +
-    'Order tasks so that prerequisite tasks come first. If Task B depends on Task A being done, Task A must appear earlier in the list. Group related tasks together within that dependency order.\n\n' +
+    detailInstructions[_suggestDetail] + '\n\n' +
     'For each task, provide:\n' +
     '- title: a clear, specific task name (not generic like "Research" but specific like "Extract crime incident data from Hansen API")\n' +
     '- description: 1-2 sentences explaining the work\n' +
@@ -3658,7 +3714,9 @@ function renderSuggestions(project) {
   var panel = document.getElementById('suggest-panel');
   if (!panel || !_suggestedTasks.length) return;
 
+  var detailLabels = { low: 'Low detail · major phases', medium: 'Medium detail · grouped activities', high: 'High detail · atomic steps' };
   var html = '<div class="suggest-header"><span class="suggest-title">✨ AI Task Suggestions</span>' +
+    '<span style="font-size:10px;font-weight:700;color:#92400E;background:#FEF3C7;padding:2px 8px;border-radius:6px;margin-left:8px;">' + (detailLabels[_suggestDetail] || '') + '</span>' +
     '<button class="suggest-close" onclick="closeSuggestPanel()">✕</button></div>';
   html += '<div style="font-size:11px;color:#92400E;margin-bottom:12px;">Tasks are ordered by dependency — prerequisites first. Review and adjust assignees, then click "Add" or "Add All."</div>';
 
@@ -8250,7 +8308,7 @@ function renderProjectDetail(id) {
         <div class="detail-section-label detail-section-label-flex">
           <span>Tasks (${relTasks.length})${relTasks.length ? ` · <span style="font-weight:400;font-size:12px;color:var(--text-muted);">${getProjectHours(p.title)}h logged</span>` : ''}</span>
           <div style="display:flex;gap:6px;">
-            <button onclick="suggestTasksForProject(${p.objectId})" class="btn-navy-md" style="background:#FFDB22;color:#92400E;border-color:#FFDB22;" onmouseover="this.style.background='#F0CC00'" onmouseout="this.style.background='#FFDB22'">✨ Suggest Tasks</button>
+            <button onclick="openSuggestPicker(${p.objectId})" class="btn-navy-md" style="background:#FFDB22;color:#92400E;border-color:#FFDB22;" onmouseover="this.style.background='#F0CC00'" onmouseout="this.style.background='#FFDB22'">✨ Suggest Tasks</button>
             <button onclick="addTaskToProject(${p.objectId}, '${esc(p.title).replace(/'/g, "\\'")}')" class="btn-navy-md">＋ Add Task</button>
           </div>
         </div>
