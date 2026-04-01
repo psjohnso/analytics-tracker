@@ -3181,7 +3181,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0024';
+const APP_VERSION = '0.10.0.0025';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -3566,16 +3566,16 @@ async function suggestTasksForProject(projectObjectId) {
   panel.style.display = '';
   panel.innerHTML = '<div class="suggest-header"><span class="suggest-title">✨ AI Task Suggestions</span>' +
     '<button class="suggest-close" onclick="closeSuggestPanel()">✕</button></div>' +
-    '<div class="suggest-loading"><div style="font-size:24px;margin-bottom:8px;">🤔</div>Analyzing project context and generating task suggestions…</div>';
+    '<div class="suggest-loading"><div style="font-size:24px;margin-bottom:8px;">🤔</div>Analyzing project context and generating task breakdown…<br><span style="font-size:11px;opacity:0.7;">This may take 10-15 seconds for complex projects.</span></div>';
 
   // Scroll to the panel
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   // Build the prompt
   var prompt = 'You are a project management assistant for a City of Tucson government GIS/Data Analytics team. ' +
-    'Based on the following project details, suggest 6-10 specific, actionable tasks that would be needed to complete this project. ' +
-    'List them in the order they should be completed — from initial setup and data gathering through development, testing, and deployment. ' +
-    'Each task should be concrete and scoped to roughly 2-20 hours of work.\n\n' +
+    'Based on the following project details, suggest ALL the tasks that would be needed to complete this project — as many as make sense for the scope and size. Do not artificially limit the count. ' +
+    'Each task should be atomic — small enough that one person could complete it in a single focused work session (roughly 1-8 hours). Break larger activities into their component steps. ' +
+    'Order tasks so that prerequisite tasks come first. If Task B depends on Task A being done, Task A must appear earlier in the list. Group related tasks together within that dependency order.\n\n' +
     'For each task, provide:\n' +
     '- title: a clear, specific task name (not generic like "Research" but specific like "Extract crime incident data from Hansen API")\n' +
     '- description: 1-2 sentences explaining the work\n' +
@@ -3611,7 +3611,7 @@ async function suggestTasksForProject(projectObjectId) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 4000,
+        max_tokens: 8000,
         messages: [{ role: 'user', content: prompt }]
       })
     });
@@ -3660,7 +3660,7 @@ function renderSuggestions(project) {
 
   var html = '<div class="suggest-header"><span class="suggest-title">✨ AI Task Suggestions</span>' +
     '<button class="suggest-close" onclick="closeSuggestPanel()">✕</button></div>';
-  html += '<div style="font-size:11px;color:#92400E;margin-bottom:12px;">Tasks are listed in suggested completion order. Review and adjust assignees, then click "Add" or "Add All."</div>';
+  html += '<div style="font-size:11px;color:#92400E;margin-bottom:12px;">Tasks are ordered by dependency — prerequisites first. Review and adjust assignees, then click "Add" or "Add All."</div>';
 
   _suggestedTasks.forEach(function(task, i) {
     var accepted = task._accepted ? ' accepted' : '';
