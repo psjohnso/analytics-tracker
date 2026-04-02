@@ -124,6 +124,7 @@ li strong { color: var(--navy); }
   <a href="#resources-tab">Resources Tab</a>
   <a href="#forecast-tab">Forecast Tab</a>
   <a href="#insights-tab">Insights Tab</a>
+  <a href="#issues-tab">Issues Tab</a>
   <a href="#settings-tab">Settings Tab</a>
   <div class="nav-section">Reference</div>
   <a href="#capacity-math">Capacity & Utilization Math</a>
@@ -463,6 +464,33 @@ li strong { color: var(--navy); }
 <div class="tip-box">
   <strong>Building estimation capability:</strong> The Insights tab is designed to grow with your team. Start by logging time consistently (Phase 1), then use this tab to spot patterns (Phase 2). Over time, the averages by size and category become your estimation reference library — "this new project is similar to X, which took about Y hours" (Phase 3).
 </div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<h2 id="issues-tab">Issues Tab</h2>
+<p>The Issues tab is a built-in bug tracker and improvement request system for the Analytics Tracker application itself. Any team member can submit issues and see their status — it's the team's way of collaboratively improving the tool.</p>
+
+<h3>Issue Types</h3>
+<ul>
+  <li><strong>🐛 Bug:</strong> Something isn't working correctly. Includes a "Steps to Reproduce" field to help with diagnosis.</li>
+  <li><strong>✨ Improvement:</strong> A suggestion for a new feature, better UX, or quality-of-life change.</li>
+</ul>
+
+<h3>Status Workflow</h3>
+<p>Each issue follows a four-step workflow:</p>
+<p><strong>Submitted → Accepted → In Progress → Done</strong></p>
+<ul>
+  <li><strong>Submitted:</strong> Newly reported by a team member. Awaiting triage.</li>
+  <li><strong>Accepted:</strong> Reviewed and confirmed as valid. Prioritized for work.</li>
+  <li><strong>In Progress:</strong> Currently being worked on.</li>
+  <li><strong>Done:</strong> Resolved and deployed. The resolved date is recorded automatically.</li>
+</ul>
+<p>Use the <strong>→ Next Status</strong> button on each issue card to advance it through the workflow.</p>
+
+<h3>Filtering</h3>
+<p>Filter by type (All, Bugs, Improvements) and status (Open, All, Done) using the pill buttons at the top. Open issues are sorted by priority (High first), then by submission date.</p>
+
+<h3>Submitting an Issue</h3>
+<p>Click <strong>"＋ Report Issue"</strong> to open the submission form. Fill in the type, title, description, steps to reproduce (for bugs), and priority. Your name and the current date are recorded automatically.</p>
 
 <!-- ═══════════════════════════════════════════════════ -->
 <h2 id="settings-tab">Settings Tab (Admin Only)</h2>

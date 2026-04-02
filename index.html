@@ -1820,6 +1820,55 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   font-size:12px; font-weight:700; font-family:Lato,sans-serif; cursor:pointer; }
 .suggest-accept-all:hover { background:#1a3a7c; }
 
+/* ── Issues Tab ──────────────────────────────────── */
+.issues-page { padding:28px 32px; }
+.issues-header { display:flex; align-items:center; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
+.issues-title { font-size:22px; font-weight:800; color:var(--navy); }
+.issues-filters { display:flex; gap:4px; }
+.issues-pill { padding:5px 14px; border:1px solid #E5E7EB; border-radius:20px; font-size:12px; font-weight:700;
+  font-family:Lato,sans-serif; cursor:pointer; background:#fff; color:var(--text-muted); transition:all 0.15s; }
+.issues-pill.active { background:var(--navy); color:#fff; border-color:var(--navy); }
+.issues-pill:hover:not(.active) { border-color:var(--navy); color:var(--navy); }
+.issues-submit-btn { margin-left:auto; padding:8px 18px; background:#FFDB22; color:#92400E; border:none;
+  border-radius:8px; font-size:12px; font-weight:800; font-family:Lato,sans-serif; cursor:pointer; }
+.issues-submit-btn:hover { background:#F0CC00; }
+.issues-list { display:flex; flex-direction:column; gap:10px; }
+.issue-card { background:#fff; border:1px solid #E5E7EB; border-radius:12px; padding:16px 20px;
+  transition:border-color 0.15s; }
+.issue-card:hover { border-color:#CBD5E1; }
+.issue-card-top { display:flex; align-items:flex-start; gap:12px; }
+.issue-type-icon { width:32px; height:32px; border-radius:8px; display:flex; align-items:center;
+  justify-content:center; font-size:16px; flex-shrink:0; }
+.issue-type-bug { background:#FEE2E2; }
+.issue-type-improvement { background:#DBEAFE; }
+.issue-card-body { flex:1; min-width:0; }
+.issue-card-title { font-size:14px; font-weight:700; color:var(--navy); margin-bottom:4px; }
+.issue-card-desc { font-size:12px; color:var(--text-muted); line-height:1.5; margin-bottom:8px; }
+.issue-card-meta { display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-size:11px; }
+.issue-status-badge { font-size:10px; font-weight:700; padding:2px 10px; border-radius:8px; }
+.issue-status-Submitted { background:#FEF3C7; color:#92400E; }
+.issue-status-Accepted { background:#DBEAFE; color:#1E40AF; }
+.issue-status-InProgress { background:#F0E6FF; color:#6B21A8; }
+.issue-status-Done { background:#D1FAE5; color:#065F46; }
+.issue-priority-chip { font-size:10px; font-weight:700; padding:2px 8px; border-radius:6px; background:#F3F4F6; color:#374151; }
+.issue-card-actions { display:flex; gap:4px; margin-left:auto; flex-shrink:0; }
+.issue-action-btn { padding:4px 10px; border:1px solid #E5E7EB; border-radius:6px; font-size:10px;
+  font-weight:700; font-family:Lato,sans-serif; cursor:pointer; background:#fff; color:var(--navy); }
+.issue-action-btn:hover { background:#F0F4FF; }
+.issue-empty { text-align:center; padding:60px; color:var(--text-muted); }
+
+/* ── Issue Form Modal ────────────────────────────── */
+.issue-form-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9998;
+  justify-content:center; align-items:center; }
+.issue-form-backdrop.open { display:flex; }
+.issue-form-modal { background:#fff; border-radius:14px; width:520px; max-width:92vw; max-height:85vh;
+  overflow-y:auto; padding:24px; }
+.issue-form-title { font-size:18px; font-weight:800; color:var(--navy); margin-bottom:16px; }
+.issue-form-field { margin-bottom:14px; }
+.issue-form-label { font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase;
+  letter-spacing:0.04em; margin-bottom:4px; display:block; }
+.issue-form-btns { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; }
+
 
 /* ── IDEA SUBMISSION MODAL ─────────────────────────────────────────── */
 .idea-modal-backdrop {
@@ -2390,6 +2439,9 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
       </button>
       <button class="tab-btn" onclick="switchTab('insights')">
         💡 Insights
+      </button>
+      <button class="tab-btn" onclick="switchTab('issues')">
+        🐛 Issues <span class="tab-count" id="issues-tab-count"></span>
       </button>
       <button class="tab-btn" id="tab-settings" onclick="switchTab('settings')" style="display:none;">
         ⚙️ Settings
@@ -3181,7 +3233,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0026';
+const APP_VERSION = '0.10.0.0027';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -3222,6 +3274,7 @@ const Internal = {
 
 let PROJECTS = [];
 let TASKS = [];
+let ISSUES = [];  // { objectId, title, type, description, steps_to_reproduce, status, priority, submitted_by, submitted_date, resolved_date }
 
 // RESOURCES_DATA is loaded from ArcGIS Online REST services at startup.
 // See loadResourcesData() for the query logic that reconstructs this object.
@@ -3874,14 +3927,14 @@ function switchTab(tab) {
   currentDetail = null;
   currentTab = tab;
   currentPage = 1;
-  const tabIds = ['overview','mywork','projects','tasks','resources','forecast','insights','settings'];
+  const tabIds = ['overview','mywork','projects','tasks','resources','forecast','insights','issues','settings'];
   document.querySelectorAll('.tab-btn').forEach((b,i) => {
     b.classList.toggle('active', tabIds[i] === tab);
   });
-  document.getElementById('view-toggle').style.display = (tab === 'overview' || tab === 'mywork' || tab === 'resources' || tab === 'settings' || tab === 'forecast' || tab === 'insights') ? 'none' : 'flex';
+  document.getElementById('view-toggle').style.display = (tab === 'overview' || tab === 'mywork' || tab === 'resources' || tab === 'settings' || tab === 'forecast' || tab === 'insights' || tab === 'issues') ? 'none' : 'flex';
   document.getElementById('sort-select').style.display = (tab === 'projects' || tab === 'tasks') ? '' : 'none';
   // Hide entire toolbar on tabs that don't need it
-  document.querySelector('.toolbar').style.display = (tab === 'mywork' || tab === 'settings' || tab === 'insights') ? 'none' : '';
+  document.querySelector('.toolbar').style.display = (tab === 'mywork' || tab === 'settings' || tab === 'insights' || tab === 'issues') ? 'none' : '';
   const addBtn = document.getElementById('btn-add-new');
   if (tab === 'tasks') { addBtn.style.display='flex'; addBtn.textContent='＋ New Task'; }
   else { addBtn.style.display='none'; }
@@ -3895,7 +3948,7 @@ function switchTab(tab) {
     const badge = document.getElementById('idea-count-badge');
     if (badge) badge.textContent = ideaCount > 0 ? ideaCount : '';
   }
-  if (tab === 'forecast' || tab === 'settings' || tab === 'mywork' || tab === 'insights') {
+  if (tab === 'forecast' || tab === 'settings' || tab === 'mywork' || tab === 'insights' || tab === 'issues') {
     document.getElementById('view-toggle').style.display = 'none';
     document.getElementById('btn-add-new').style.display = 'none';
   }
@@ -4098,6 +4151,15 @@ function render() {
   if (currentTab === 'insights') {
     document.querySelector('.app-body').classList.remove('detail-mode');
     area.innerHTML = buildInsightsPage();
+    const pg = document.getElementById('pagination');
+    if (pg) pg.remove();
+    document.getElementById('result-count').textContent = '';
+    return;
+  }
+
+  if (currentTab === 'issues') {
+    document.querySelector('.app-body').classList.remove('detail-mode');
+    area.innerHTML = buildIssuesPage();
     const pg = document.getElementById('pagination');
     if (pg) pg.remove();
     document.getElementById('result-count').textContent = '';
@@ -5561,6 +5623,7 @@ async function saveAllData() {
 
     await loadResourcesData();
     initResourcesWeekIndices();
+    await loadIssues();
 
     hideLoadingOverlay();
     markSynced('Refreshed: ' + PROJECTS.length + ' projects, ' + TASKS.length + ' tasks');
@@ -5618,6 +5681,7 @@ const ARCGIS_CONFIG = {
   appConfigUrl:     'https://services3.arcgis.com/9coHY2fvuFjG9HQX/ArcGIS/rest/services/app_config/FeatureServer/0',
   timeEntriesUrl:   'https://services3.arcgis.com/9coHY2fvuFjG9HQX/ArcGIS/rest/services/time_series/FeatureServer/0',
   statusHistoryUrl: 'https://services3.arcgis.com/9coHY2fvuFjG9HQX/ArcGIS/rest/services/status_history/FeatureServer/0',
+  issuesUrl:        'https://services3.arcgis.com/9coHY2fvuFjG9HQX/ArcGIS/rest/services/issues/FeatureServer/0',
 };
 
 // ── AI TASK SUGGESTION PROXY ─────────────────────────────────────────
@@ -8031,6 +8095,10 @@ async function markProjectComplete(objectId) {
   if (Auth.fullName && isTimeTrackingEnabled()) {
     await loadTimeEntries();
   }
+
+  // Step 5: Load issues
+  await loadIssues();
+
   markDataDirty();
   render(); // re-render with time data
 })();
@@ -12834,5 +12902,327 @@ async function absValueChanged(input) {
     </div>
   </div>
 </div>
+
+<!-- ISSUE FORM MODAL -->
+<div id="issue-form-backdrop" class="issue-form-backdrop" onclick="if(event.target===this)closeIssueForm()">
+  <div class="issue-form-modal">
+    <div class="issue-form-title" id="issue-form-title">Report an Issue</div>
+    <div id="issue-form-body"></div>
+    <div class="issue-form-btns">
+      <button onclick="closeIssueForm()" style="padding:8px 18px;background:#fff;border:1px solid #E5E7EB;border-radius:8px;font-size:12px;font-weight:700;font-family:Lato,sans-serif;cursor:pointer;color:var(--navy);">Cancel</button>
+      <button onclick="submitIssueForm()" style="padding:8px 18px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;font-family:Lato,sans-serif;cursor:pointer;">Submit</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+//  ISSUES TAB — Bug & Improvement Tracker
+// ═══════════════════════════════════════════════════════════════════════
+var _issuesFilter = 'all'; // 'all' | 'Bug' | 'Improvement'
+var _issuesStatusFilter = 'open'; // 'open' | 'all' | 'done'
+var _editingIssueId = null;
+
+async function loadIssues() {
+  try {
+    var features = await agolQuery(ARCGIS_CONFIG.issuesUrl);
+    ISSUES = features.map(function(f) {
+      var a = f.attributes;
+      return {
+        objectId: a.OBJECTID || a.ObjectId || a.objectid,
+        title: a.title || '',
+        type: a.type || 'Bug',
+        description: a.description || '',
+        steps_to_reproduce: a.steps_to_reproduce || '',
+        status: a.status || 'Submitted',
+        priority: a.priority || 'Medium',
+        submitted_by: a.submitted_by || '',
+        submitted_date: a.submitted_date || '',
+        resolved_date: a.resolved_date || '',
+      };
+    });
+    console.log('[Issues] Loaded', ISSUES.length, 'issues');
+    updateIssuesTabCount();
+  } catch (err) {
+    console.warn('[Issues] Load failed:', err);
+    ISSUES = [];
+  }
+}
+
+function updateIssuesTabCount() {
+  var openCount = ISSUES.filter(function(iss) { return iss.status !== 'Done'; }).length;
+  var badge = document.getElementById('issues-tab-count');
+  if (badge) badge.textContent = openCount > 0 ? openCount : '';
+}
+
+function setIssuesFilter(type) {
+  _issuesFilter = type;
+  document.getElementById('content-area').innerHTML = buildIssuesPage();
+}
+
+function setIssuesStatusFilter(status) {
+  _issuesStatusFilter = status;
+  document.getElementById('content-area').innerHTML = buildIssuesPage();
+}
+
+function buildIssuesPage() {
+  var filtered = ISSUES.slice();
+
+  // Type filter
+  if (_issuesFilter !== 'all') {
+    filtered = filtered.filter(function(iss) { return iss.type === _issuesFilter; });
+  }
+
+  // Status filter
+  if (_issuesStatusFilter === 'open') {
+    filtered = filtered.filter(function(iss) { return iss.status !== 'Done'; });
+  } else if (_issuesStatusFilter === 'done') {
+    filtered = filtered.filter(function(iss) { return iss.status === 'Done'; });
+  }
+
+  // Sort: open issues by priority then date, done issues by resolved date
+  var priOrder = { High: 0, Medium: 1, Low: 2 };
+  filtered.sort(function(a, b) {
+    if (a.status === 'Done' && b.status !== 'Done') return 1;
+    if (a.status !== 'Done' && b.status === 'Done') return -1;
+    if (a.status === 'Done' && b.status === 'Done') return (b.resolved_date || '').localeCompare(a.resolved_date || '');
+    var pa = priOrder[a.priority] != null ? priOrder[a.priority] : 1;
+    var pb = priOrder[b.priority] != null ? priOrder[b.priority] : 1;
+    if (pa !== pb) return pa - pb;
+    return (b.submitted_date || '').localeCompare(a.submitted_date || '');
+  });
+
+  var openCount = ISSUES.filter(function(iss) { return iss.status !== 'Done'; }).length;
+  var bugCount = ISSUES.filter(function(iss) { return iss.type === 'Bug' && iss.status !== 'Done'; }).length;
+  var impCount = ISSUES.filter(function(iss) { return iss.type === 'Improvement' && iss.status !== 'Done'; }).length;
+
+  var html = '<div class="issues-page">';
+
+  // Header
+  html += '<div class="issues-header">';
+  html += '<div class="issues-title">🐛 Issues & Improvements</div>';
+  html += '<div class="issues-filters">';
+  html += '<button class="issues-pill' + (_issuesFilter === 'all' ? ' active' : '') + '" onclick="setIssuesFilter(\'all\')">All (' + openCount + ')</button>';
+  html += '<button class="issues-pill' + (_issuesFilter === 'Bug' ? ' active' : '') + '" onclick="setIssuesFilter(\'Bug\')">🐛 Bugs (' + bugCount + ')</button>';
+  html += '<button class="issues-pill' + (_issuesFilter === 'Improvement' ? ' active' : '') + '" onclick="setIssuesFilter(\'Improvement\')">✨ Improvements (' + impCount + ')</button>';
+  html += '</div>';
+  html += '<div class="issues-filters" style="margin-left:8px;">';
+  html += '<button class="issues-pill' + (_issuesStatusFilter === 'open' ? ' active' : '') + '" onclick="setIssuesStatusFilter(\'open\')">Open</button>';
+  html += '<button class="issues-pill' + (_issuesStatusFilter === 'all' ? ' active' : '') + '" onclick="setIssuesStatusFilter(\'all\')">All</button>';
+  html += '<button class="issues-pill' + (_issuesStatusFilter === 'done' ? ' active' : '') + '" onclick="setIssuesStatusFilter(\'done\')">Done</button>';
+  html += '</div>';
+  html += '<button class="issues-submit-btn" onclick="openIssueForm()">＋ Report Issue</button>';
+  html += '</div>';
+
+  // Issue cards
+  if (filtered.length === 0) {
+    html += '<div class="issue-empty">';
+    html += '<div style="font-size:48px;margin-bottom:12px;">' + (_issuesStatusFilter === 'done' ? '✅' : '🎉') + '</div>';
+    html += '<div style="font-weight:700;font-size:16px;color:var(--navy);margin-bottom:4px;">' + (_issuesStatusFilter === 'done' ? 'No resolved issues yet' : 'No open issues!') + '</div>';
+    html += '<div>' + (_issuesStatusFilter === 'done' ? 'Resolved issues will appear here.' : 'Everything is running smoothly. Report a bug or suggest an improvement if you spot something.') + '</div>';
+    html += '</div>';
+  } else {
+    html += '<div class="issues-list">';
+    filtered.forEach(function(iss) {
+      var typeIcon = iss.type === 'Bug' ? '🐛' : '✨';
+      var typeClass = iss.type === 'Bug' ? 'issue-type-bug' : 'issue-type-improvement';
+      var statusClass = 'issue-status-' + iss.status.replace(/\s/g, '');
+
+      html += '<div class="issue-card">';
+      html += '<div class="issue-card-top">';
+      html += '<div class="issue-type-icon ' + typeClass + '">' + typeIcon + '</div>';
+      html += '<div class="issue-card-body">';
+      html += '<div class="issue-card-title">' + esc(iss.title) + '</div>';
+      if (iss.description) html += '<div class="issue-card-desc">' + esc(iss.description) + '</div>';
+      if (iss.type === 'Bug' && iss.steps_to_reproduce) {
+        html += '<div style="font-size:11px;color:#991B1B;background:#FEF2F2;border-radius:6px;padding:6px 10px;margin-bottom:8px;">';
+        html += '<span style="font-weight:700;">Steps to reproduce:</span> ' + esc(iss.steps_to_reproduce);
+        html += '</div>';
+      }
+      html += '<div class="issue-card-meta">';
+      html += '<span class="issue-status-badge ' + statusClass + '">' + esc(iss.status) + '</span>';
+      if (iss.priority) html += '<span class="issue-priority-chip">' + esc(iss.priority) + '</span>';
+      if (iss.submitted_by) html += '<span style="color:var(--text-muted);">by ' + esc(iss.submitted_by) + '</span>';
+      if (iss.submitted_date) html += '<span style="color:var(--text-muted);">' + esc(iss.submitted_date) + '</span>';
+      html += '</div>';
+      html += '</div>';
+
+      // Actions
+      html += '<div class="issue-card-actions">';
+      var statuses = ['Submitted', 'Accepted', 'In Progress', 'Done'];
+      var nextIdx = statuses.indexOf(iss.status) + 1;
+      if (nextIdx > 0 && nextIdx < statuses.length) {
+        html += '<button class="issue-action-btn" onclick="advanceIssueStatus(' + iss.objectId + ')" title="Move to ' + statuses[nextIdx] + '">→ ' + statuses[nextIdx] + '</button>';
+      }
+      html += '<button class="issue-action-btn" onclick="openIssueForm(' + iss.objectId + ')" title="Edit">✏</button>';
+      html += '<button class="issue-action-btn" onclick="deleteIssue(' + iss.objectId + ')" title="Delete" style="color:#EF4444;">🗑</button>';
+      html += '</div>';
+
+      html += '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function openIssueForm(issueId) {
+  _editingIssueId = issueId || null;
+  var iss = issueId ? ISSUES.find(function(i) { return i.objectId == issueId; }) : null;
+
+  var titleText = iss ? 'Edit Issue' : 'Report an Issue';
+  document.getElementById('issue-form-title').textContent = titleText;
+
+  var html = '<div class="issue-form-field">';
+  html += '<label class="issue-form-label">Type</label>';
+  html += '<select id="issue-type" class="fm-input" onchange="toggleIssueSteps()">';
+  html += '<option value="Bug"' + (iss && iss.type === 'Bug' ? ' selected' : (!iss ? ' selected' : '')) + '>🐛 Bug</option>';
+  html += '<option value="Improvement"' + (iss && iss.type === 'Improvement' ? ' selected' : '') + '>✨ Improvement</option>';
+  html += '</select></div>';
+
+  html += '<div class="issue-form-field">';
+  html += '<label class="issue-form-label">Title</label>';
+  html += '<input id="issue-title" class="fm-input" type="text" placeholder="Brief summary of the issue…" value="' + (iss ? esc(iss.title) : '') + '">';
+  html += '</div>';
+
+  html += '<div class="issue-form-field">';
+  html += '<label class="issue-form-label">Description</label>';
+  html += '<textarea id="issue-desc" class="fm-textarea" rows="3" placeholder="What happened? What did you expect?">' + (iss ? esc(iss.description) : '') + '</textarea>';
+  html += '</div>';
+
+  var stepsDisplay = (!iss || iss.type === 'Bug') ? '' : 'display:none;';
+  html += '<div class="issue-form-field" id="issue-steps-field" style="' + stepsDisplay + '">';
+  html += '<label class="issue-form-label">Steps to Reproduce (for bugs)</label>';
+  html += '<textarea id="issue-steps" class="fm-textarea" rows="2" placeholder="1. Go to…  2. Click on…  3. See error…">' + (iss ? esc(iss.steps_to_reproduce) : '') + '</textarea>';
+  html += '</div>';
+
+  html += '<div class="issue-form-field">';
+  html += '<label class="issue-form-label">Priority</label>';
+  html += '<select id="issue-priority" class="fm-input">';
+  ['High', 'Medium', 'Low'].forEach(function(p) {
+    var sel = (iss && iss.priority === p) ? ' selected' : (!iss && p === 'Medium' ? ' selected' : '');
+    html += '<option value="' + p + '"' + sel + '>' + p + '</option>';
+  });
+  html += '</select></div>';
+
+  if (iss) {
+    html += '<div class="issue-form-field">';
+    html += '<label class="issue-form-label">Status</label>';
+    html += '<select id="issue-status" class="fm-input">';
+    ['Submitted', 'Accepted', 'In Progress', 'Done'].forEach(function(s) {
+      html += '<option value="' + s + '"' + (iss.status === s ? ' selected' : '') + '>' + s + '</option>';
+    });
+    html += '</select></div>';
+  }
+
+  document.getElementById('issue-form-body').innerHTML = html;
+  document.getElementById('issue-form-backdrop').classList.add('open');
+}
+
+function toggleIssueSteps() {
+  var type = document.getElementById('issue-type').value;
+  var stepsField = document.getElementById('issue-steps-field');
+  if (stepsField) stepsField.style.display = type === 'Bug' ? '' : 'none';
+}
+
+function closeIssueForm() {
+  document.getElementById('issue-form-backdrop').classList.remove('open');
+  _editingIssueId = null;
+}
+
+async function submitIssueForm() {
+  var title = (document.getElementById('issue-title').value || '').trim();
+  if (!title) { showToast('Please enter a title.', 'warn'); return; }
+
+  var today = new Date();
+  var todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+  var type = document.getElementById('issue-type').value;
+  var statusEl = document.getElementById('issue-status');
+
+  var attrs = {
+    title: title,
+    type: type,
+    description: (document.getElementById('issue-desc').value || '').trim(),
+    steps_to_reproduce: type === 'Bug' ? (document.getElementById('issue-steps').value || '').trim() : '',
+    priority: document.getElementById('issue-priority').value,
+  };
+
+  if (_editingIssueId) {
+    // Edit existing
+    attrs.OBJECTID = _editingIssueId;
+    if (statusEl) {
+      attrs.status = statusEl.value;
+      if (statusEl.value === 'Done') attrs.resolved_date = todayStr;
+    }
+    try {
+      await agolApplyEdits(ARCGIS_CONFIG.issuesUrl, { updates: [{ attributes: attrs }] });
+      showToast('Issue updated.', 'success');
+    } catch (err) {
+      showToast('Failed to update: ' + err.message, 'error');
+      return;
+    }
+  } else {
+    // New issue
+    attrs.status = 'Submitted';
+    attrs.submitted_by = Auth.fullName || 'Anonymous';
+    attrs.submitted_date = todayStr;
+    try {
+      await agolApplyEdits(ARCGIS_CONFIG.issuesUrl, { adds: [{ attributes: attrs }] });
+      showToast('Issue submitted! Thank you for the feedback.', 'success');
+    } catch (err) {
+      showToast('Failed to submit: ' + err.message, 'error');
+      return;
+    }
+  }
+
+  closeIssueForm();
+  await loadIssues();
+  if (currentTab === 'issues') {
+    document.getElementById('content-area').innerHTML = buildIssuesPage();
+  }
+}
+
+async function advanceIssueStatus(issueId) {
+  var iss = ISSUES.find(function(i) { return i.objectId == issueId; });
+  if (!iss) return;
+  var statuses = ['Submitted', 'Accepted', 'In Progress', 'Done'];
+  var idx = statuses.indexOf(iss.status);
+  if (idx < 0 || idx >= statuses.length - 1) return;
+  var newStatus = statuses[idx + 1];
+
+  var attrs = { OBJECTID: issueId, status: newStatus };
+  if (newStatus === 'Done') {
+    var today = new Date();
+    attrs.resolved_date = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+  }
+
+  try {
+    await agolApplyEdits(ARCGIS_CONFIG.issuesUrl, { updates: [{ attributes: attrs }] });
+    showToast('Issue moved to ' + newStatus + '.', 'success');
+    await loadIssues();
+    if (currentTab === 'issues') {
+      document.getElementById('content-area').innerHTML = buildIssuesPage();
+    }
+  } catch (err) {
+    showToast('Failed to update: ' + err.message, 'error');
+  }
+}
+
+async function deleteIssue(issueId) {
+  if (!confirm('Delete this issue? This cannot be undone.')) return;
+  try {
+    await agolApplyEdits(ARCGIS_CONFIG.issuesUrl, { deletes: [issueId] });
+    showToast('Issue deleted.', 'success');
+    await loadIssues();
+    if (currentTab === 'issues') {
+      document.getElementById('content-area').innerHTML = buildIssuesPage();
+    }
+  } catch (err) {
+    showToast('Failed to delete: ' + err.message, 'error');
+  }
+}
+</script>
 
 </body></html>

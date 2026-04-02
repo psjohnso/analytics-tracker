@@ -5,7 +5,7 @@
 > **Update Rule:** This document MUST be updated after every application change. When working on this application, always check if this document needs updating.
 >
 > **Last Updated:** March 2026
-> **Current Version:** 0.10.0.0018 (see Version History at bottom)
+> **Current Version:** 0.10.0.0027 (see Version History at bottom)
 
 ---
 
@@ -257,7 +257,21 @@ weekly_hours = sum of daily_hours for Mon-Fri of current week type (A or B)
 | `work_date` | Date Only | No | Calendar date for daily grouping |
 | `notes` | String(500) | Yes | Work description |
 
-### 3.8 weekly_capacity (LEGACY — NO LONGER QUERIED)
+### 3.8 issues
+
+| Field | Type | Length | Null | Description |
+|-------|------|--------|------|-------------|
+| `title` | String | 500 | No | Brief summary of the issue |
+| `type` | String | 20 | No | "Bug" or "Improvement" |
+| `description` | String | 4000 | Yes | Detailed description |
+| `steps_to_reproduce` | String | 2000 | Yes | How to reproduce (bugs only) |
+| `status` | String | 20 | No | Submitted → Accepted → In Progress → Done |
+| `priority` | String | 10 | No | High, Medium, or Low |
+| `submitted_by` | String | 100 | Yes | Name of submitter |
+| `submitted_date` | String | 20 | Yes | YYYY-MM-DD submission date |
+| `resolved_date` | String | 20 | Yes | YYYY-MM-DD when marked Done |
+
+### 3.9 weekly_capacity (LEGACY — NO LONGER QUERIED)
 
 This service exists but is **not used by the application**. All capacity is computed client-side.
 
@@ -1299,6 +1313,8 @@ Step 1: "What best describes the primary nature of this project/task?"
 | 0.10.0.0016 | Fix Insights charts to fill full container width |
 | 0.10.0.0017 | Add Contributor/Reviewer role dropdown per team member in project form |
 | 0.10.0.0018 | Add Deliverables/Data Sources/Technical Requirements fields; AI-powered task suggestion engine on project detail |
+| 0.10.0.0019-26 | AI proxy configuration, JSON parsing fixes, editable assignees, detail level picker, cascade deletion, atomic task ordering |
+| 0.10.0.0027 | Issues tab — bug tracker and improvement requests with Submitted→Accepted→In Progress→Done workflow |
 
 ---
 
