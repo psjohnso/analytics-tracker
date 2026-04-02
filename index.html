@@ -3234,7 +3234,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0029';
+const APP_VERSION = '0.10.0.0030';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -4173,10 +4173,65 @@ function render() {
     const projDir  = currentView === 'list' ? projListSortDir : 'asc';
     let data = sortData(filterProjects(), projSort, projDir);
     const total = data.length;
-    data = data.slice((currentPage-1)*PAGE_SIZE, currentPage*PAGE_SIZE);
-    document.getElementById('result-count').textContent = `${total} project${total!==1?'s':''}`;
-    area.innerHTML = currentView === 'grid' ? renderProjectGrid(data) : renderProjectList(data);
-    renderPagination(total, 'proj');
+
+    // Check if a single member filter is active — if so, group by role
+    if (activeFilters.member.length === 1 && total > 0) {
+      var memberName = activeFilters.member[0];
+
+      // Split into Lead vs Contributor/Reviewer
+      var leadProjects = data.filter(function(p) { return p.contact === memberName; });
+      var otherProjects = data.filter(function(p) { return p.contact !== memberName; });
+
+      // Look up roles from allocations for the "other" group
+      var personData = RESOURCES_DATA && RESOURCES_DATA.people ? RESOURCES_DATA.people[memberName] : null;
+      function getMemberRole(projTitle) {
+        if (!personData || !personData.allocations) return 'Team Member';
+        var alloc = personData.allocations.find(function(a) { return a.project === projTitle; });
+        return (alloc && alloc.role) ? alloc.role : 'Team Member';
+      }
+
+      // Further split others into Contributor and Reviewer
+      var contribProjects = otherProjects.filter(function(p) { return getMemberRole(p.title) !== 'Reviewer'; });
+      var reviewerProjects = otherProjects.filter(function(p) { return getMemberRole(p.title) === 'Reviewer'; });
+
+      document.getElementById('result-count').textContent = total + ' project' + (total !== 1 ? 's' : '') + ' for ' + memberName;
+
+      var groupHtml = '';
+      if (leadProjects.length > 0) {
+        groupHtml += '<div style="margin-bottom:24px;">';
+        groupHtml += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--navy);">';
+        groupHtml += '<span style="font-size:16px;font-weight:800;color:var(--navy);">Leading</span>';
+        groupHtml += '<span style="font-size:12px;font-weight:700;background:var(--navy);color:#fff;padding:2px 10px;border-radius:10px;">' + leadProjects.length + '</span>';
+        groupHtml += '</div>';
+        groupHtml += currentView === 'grid' ? renderProjectGrid(leadProjects) : renderProjectList(leadProjects);
+        groupHtml += '</div>';
+      }
+      if (contribProjects.length > 0) {
+        groupHtml += '<div style="margin-bottom:24px;">';
+        groupHtml += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #3B82F6;">';
+        groupHtml += '<span style="font-size:16px;font-weight:800;color:#1E40AF;">Contributing</span>';
+        groupHtml += '<span style="font-size:12px;font-weight:700;background:#3B82F6;color:#fff;padding:2px 10px;border-radius:10px;">' + contribProjects.length + '</span>';
+        groupHtml += '</div>';
+        groupHtml += currentView === 'grid' ? renderProjectGrid(contribProjects) : renderProjectList(contribProjects);
+        groupHtml += '</div>';
+      }
+      if (reviewerProjects.length > 0) {
+        groupHtml += '<div style="margin-bottom:24px;">';
+        groupHtml += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #9CA3AF;">';
+        groupHtml += '<span style="font-size:16px;font-weight:800;color:#6B7280;">Reviewing</span>';
+        groupHtml += '<span style="font-size:12px;font-weight:700;background:#9CA3AF;color:#fff;padding:2px 10px;border-radius:10px;">' + reviewerProjects.length + '</span>';
+        groupHtml += '</div>';
+        groupHtml += currentView === 'grid' ? renderProjectGrid(reviewerProjects) : renderProjectList(reviewerProjects);
+        groupHtml += '</div>';
+      }
+      area.innerHTML = groupHtml || '<div class="empty-state">No projects match your filters.</div>';
+      renderPagination(0, 'proj'); // hide pagination in grouped view
+    } else {
+      data = data.slice((currentPage-1)*PAGE_SIZE, currentPage*PAGE_SIZE);
+      document.getElementById('result-count').textContent = `${total} project${total!==1?'s':''}`;
+      area.innerHTML = currentView === 'grid' ? renderProjectGrid(data) : renderProjectList(data);
+      renderPagination(total, 'proj');
+    }
   } else {
     let data = sortData(filterTasks(), taskSortKey, taskSortDir);
     const total = data.length;
