@@ -262,7 +262,7 @@ weekly_hours = sum of daily_hours for Mon-Fri of current week type (A or B)
 | Field | Type | Length | Null | Description |
 |-------|------|--------|------|-------------|
 | `title` | String | 500 | No | Brief summary of the issue |
-| `type` | String | 20 | No | "Bug" or "Improvement" |
+| `type_` | String | 20 | No | "Bug" or "Improvement" (named type_ because "type" is reserved by ArcGIS) |
 | `description` | String | 4000 | Yes | Detailed description |
 | `steps_to_reproduce` | String | 2000 | Yes | How to reproduce (bugs only) |
 | `status` | String | 20 | No | Submitted → Accepted → In Progress → Done |

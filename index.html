@@ -3233,7 +3233,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0027';
+const APP_VERSION = '0.10.0.0028';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -12931,7 +12931,7 @@ async function loadIssues() {
       return {
         objectId: a.OBJECTID || a.ObjectId || a.objectid,
         title: a.title || '',
-        type: a.type || 'Bug',
+        type: a.type_ || 'Bug',
         description: a.description || '',
         steps_to_reproduce: a.steps_to_reproduce || '',
         status: a.status || 'Submitted',
@@ -13143,7 +13143,7 @@ async function submitIssueForm() {
 
   var attrs = {
     title: title,
-    type: type,
+    type_: type,
     description: (document.getElementById('issue-desc').value || '').trim(),
     steps_to_reproduce: type === 'Bug' ? (document.getElementById('issue-steps').value || '').trim() : '',
     priority: document.getElementById('issue-priority').value,
