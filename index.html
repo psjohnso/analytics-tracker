@@ -3234,7 +3234,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0031';
+const APP_VERSION = '0.10.0.0032';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -3940,8 +3940,8 @@ function switchTab(tab) {
   if (tab === 'tasks') { addBtn.style.display='flex'; addBtn.textContent='＋ New Task'; }
   else { addBtn.style.display='none'; }
   document.getElementById('weekly-filter-btn').style.display = (tab === 'projects' || tab === 'tasks') ? 'flex' : 'none';
-  document.getElementById('open-projects-btn').style.display = (tab === 'projects' || tab === 'tasks') ? 'flex' : 'none';
-  document.getElementById('open-tasks-btn').style.display = (tab === 'projects' || tab === 'tasks') ? 'flex' : 'none';
+  document.getElementById('open-projects-btn').style.display = (tab === 'projects') ? 'flex' : 'none';
+  document.getElementById('open-tasks-btn').style.display = (tab === 'tasks') ? 'flex' : 'none';
   const ideaCount = PROJECTS.filter(p => p.status === 'Idea').length;
   const reviewBtn = document.getElementById('btn-review-ideas');
   if (reviewBtn) {
@@ -8135,6 +8135,96 @@ async function markProjectComplete(objectId) {
   render();
 }
 
+// ══════════════════════════════════════════════════════════════════════
+//  BATCH TASK UPDATES — select and update multiple tasks at once
+// ══════════════════════════════════════════════════════════════════════
+function getSelectedTaskIds() {
+  return [...document.querySelectorAll('.batch-task-cb:checked')].map(function(cb) { return parseInt(cb.dataset.taskId); });
+}
+
+function toggleSelectAllTasks(checked) {
+  document.querySelectorAll('.batch-task-cb').forEach(function(cb) { cb.checked = checked; });
+  updateBatchBar();
+}
+
+function updateBatchBar() {
+  var selected = getSelectedTaskIds();
+  var bar = document.getElementById('batch-action-bar');
+  var count = document.getElementById('batch-count');
+  if (bar) bar.style.display = selected.length > 0 ? 'flex' : 'none';
+  if (count) count.textContent = selected.length + ' selected';
+  // Update select-all checkbox state
+  var selectAll = document.getElementById('batch-select-all');
+  var allCbs = document.querySelectorAll('.batch-task-cb');
+  if (selectAll && allCbs.length > 0) {
+    selectAll.checked = selected.length === allCbs.length;
+    selectAll.indeterminate = selected.length > 0 && selected.length < allCbs.length;
+  }
+}
+
+async function applyBatchUpdate() {
+  if (!Auth.loggedIn) { showToast('You must be signed in.', 'warn'); return; }
+  var ids = getSelectedTaskIds();
+  if (ids.length === 0) { showToast('No tasks selected.', 'warn'); return; }
+
+  var newStatus = document.getElementById('batch-status').value;
+  var newPriority = document.getElementById('batch-priority').value;
+  var newAssignee = document.getElementById('batch-assignee').value;
+
+  if (!newStatus && !newPriority && !newAssignee) {
+    showToast('Select a status, priority, or assignee to apply.', 'warn');
+    return;
+  }
+
+  var label = [];
+  if (newStatus) label.push('status → ' + newStatus);
+  if (newPriority) label.push('priority → ' + newPriority);
+  if (newAssignee) label.push('assignee → ' + newAssignee);
+  if (!confirm('Update ' + ids.length + ' task(s)?\n\n' + label.join('\n'))) return;
+
+  var today = new Date();
+  var todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+  var updated = 0;
+
+  for (var i = 0; i < ids.length; i++) {
+    var fields = {};
+    if (newStatus) fields.status = newStatus;
+    if (newPriority) fields.priority = newPriority;
+    if (newAssignee) fields.assignee = newAssignee;
+    if (newStatus === 'Complete') fields.actual_end = todayStr;
+    try {
+      await DataStore.updateTask(ids[i], fields);
+      updated++;
+    } catch (err) {
+      console.error('[Batch] Failed to update task:', ids[i], err);
+    }
+  }
+
+  showToast('Updated ' + updated + ' task(s).', 'success');
+  markDataDirty();
+  render();
+}
+
+async function batchDeleteTasks() {
+  if (!Auth.loggedIn) { showToast('You must be signed in.', 'warn'); return; }
+  var ids = getSelectedTaskIds();
+  if (ids.length === 0) { showToast('No tasks selected.', 'warn'); return; }
+  if (!confirm('Delete ' + ids.length + ' selected task(s)? This cannot be undone.')) return;
+
+  var deleted = 0;
+  for (var i = 0; i < ids.length; i++) {
+    try {
+      await DataStore.deleteTask(ids[i]);
+      deleted++;
+    } catch (err) {
+      console.error('[Batch] Failed to delete task:', ids[i], err);
+    }
+  }
+  showToast('Deleted ' + deleted + ' task(s).', 'success');
+  markDataDirty();
+  render();
+}
+
 // ── Bootstrap ──
 // ── Application Init: Authenticate, then load ArcGIS Online data ──
 (async function appInit() {
@@ -8329,8 +8419,11 @@ function renderProjectDetail(id) {
     const myHrs = getMyTaskHours(t.idx);
     const hrsDisplay = taskHrs > 0 ? hoursLabel(taskHrs, myHrs) : '—';
     const canComplete = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
-    return `<div class="detail-task-row" onclick="openTaskFromProject(${t.objectId})">
-      <div class="detail-task-title">${esc(t.title)}</div>
+    return `<div class="detail-task-row">
+      <div class="detail-task-cell" style="width:28px;flex:0 0 28px;text-align:center;" onclick="event.stopPropagation()">
+        <input type="checkbox" class="batch-task-cb" data-task-id="${t.objectId}" onchange="updateBatchBar()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--navy);">
+      </div>
+      <div class="detail-task-title" onclick="openTaskFromProject(${t.objectId})" style="cursor:pointer;">${esc(t.title)}</div>
       <div class="detail-task-cell"><span class="status-pill" style="background:${sc}22;color:${sc};"><span style="width:5px;height:5px;border-radius:50%;background:${sc};display:inline-block;"></span>${t.status||'—'}</span></div>
       <div class="detail-task-cell"><span class="priority-badge priority-${t.priority||'null'}">${t.priority||'—'}</span></div>
       <div class="detail-task-cell" style="color:var(--text-muted);">${esc(t.assignee||'—')}</div>
@@ -8465,8 +8558,32 @@ function renderProjectDetail(id) {
             <button onclick="addTaskToProject(${p.objectId}, '${esc(p.title).replace(/'/g, "\\'")}')" class="btn-navy-md">＋ Add Task</button>
           </div>
         </div>
+        <div id="batch-action-bar" style="display:none;background:#EEF2FF;border:1px solid #BFDBFE;border-radius:10px;padding:10px 16px;margin-bottom:10px;display:none;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span style="font-size:12px;font-weight:700;color:var(--navy);" id="batch-count">0 selected</span>
+          <select id="batch-status" class="fm-input" style="font-size:11px;padding:4px 8px;width:auto;min-width:100px;">
+            <option value="">Set status…</option>
+            <option value="Active">Active</option>
+            <option value="Pending">Pending</option>
+            <option value="Complete">Complete</option>
+            <option value="Canceled">Canceled</option>
+            <option value="Waiting for Response">Waiting for Response</option>
+          </select>
+          <select id="batch-priority" class="fm-input" style="font-size:11px;padding:4px 8px;width:auto;min-width:100px;">
+            <option value="">Set priority…</option>
+            <option value="High">High</option>
+            <option value="Medium">Medium</option>
+            <option value="Low">Low</option>
+          </select>
+          <select id="batch-assignee" class="fm-input" style="font-size:11px;padding:4px 8px;width:auto;min-width:120px;">
+            <option value="">Set assignee…</option>
+            ${(RESOURCES_DATA ? Object.keys(RESOURCES_DATA.people).filter(function(n) { return RESOURCES_DATA.people[n].active !== false; }).sort() : []).map(function(n) { return '<option value="' + esc(n) + '">' + esc(n) + '</option>'; }).join('')}
+          </select>
+          <button onclick="applyBatchUpdate()" style="padding:5px 14px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;font-family:Lato,sans-serif;cursor:pointer;">Apply</button>
+          <button onclick="batchDeleteTasks()" style="padding:5px 14px;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:6px;font-size:11px;font-weight:700;font-family:Lato,sans-serif;cursor:pointer;">Delete Selected</button>
+        </div>
         <div class="detail-tasks-table">
           ${relTasks.length ? `<div class="detail-tasks-header">
+            <div style="width:28px;flex:0 0 28px;text-align:center;"><input type="checkbox" id="batch-select-all" onchange="toggleSelectAllTasks(this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--navy);"></div>
             <div>Task</div><div>Status</div><div>Priority</div><div>Assignee</div><div>Due Date</div><div>Hours</div><div></div>
           </div>` : ''}
           ${taskRows}
