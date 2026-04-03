@@ -2240,6 +2240,8 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .mywork-compact-row:hover { border-color:var(--navy); background:#F0F4FF; }
 .mywork-compact-title { flex:1; font-size:13px; font-weight:600; color:var(--text); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .mywork-compact-badge { font-size:11px; font-weight:600; padding:3px 10px; border-radius:12px; white-space:nowrap; }
+.mw-status-select { font-size:10px; font-weight:700; padding:2px 4px; border-radius:8px; border:1px solid;
+  font-family:Lato,sans-serif; cursor:pointer; flex-shrink:0; appearance:auto; min-width:70px; }
 .mywork-alloc-bar { height:8px; border-radius:4px; background:#E5E7EB; overflow:hidden; flex:0 0 80px; }
 .mywork-alloc-fill { height:100%; border-radius:4px; }
 .mywork-empty { padding:20px; text-align:center; color:var(--text-muted); font-size:13px; background:#F9FAFB; border-radius:10px; }
@@ -3234,7 +3236,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0032';
+const APP_VERSION = '0.10.0.0033';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -11272,6 +11274,40 @@ function toggleMyWorkProjects() {
   }
 }
 
+async function mwQuickStatus(selectEl) {
+  var type = selectEl.dataset.type;
+  var id = parseInt(selectEl.dataset.id);
+  var newStatus = selectEl.value;
+  if (!Auth.loggedIn) { showToast('You must be signed in.', 'warn'); return; }
+
+  var today = new Date();
+  var todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+
+  if (type === 'task') {
+    var fields = { status: newStatus };
+    if (newStatus === 'Complete') fields.actual_end = todayStr;
+    try {
+      await DataStore.updateTask(id, fields);
+      showToast('Task status updated to ' + newStatus + '.', 'success');
+    } catch (err) {
+      showToast('Failed to update: ' + err.message, 'error');
+      return;
+    }
+  } else if (type === 'project') {
+    var pFields = { status: newStatus };
+    if (newStatus === 'Complete') pFields.actual_end = todayStr;
+    try {
+      await DataStore.updateProject(id, pFields);
+      showToast('Project status updated to ' + newStatus + '.', 'success');
+    } catch (err) {
+      showToast('Failed to update: ' + err.message, 'error');
+      return;
+    }
+  }
+  markDataDirty();
+  render();
+}
+
 function toggleGantt() {
   const panel = document.getElementById('mywork-gantt');
   const arrow = document.getElementById('gantt-arrow');
@@ -11440,17 +11476,22 @@ function buildMyWorkTaskRow(t, statusColor, status, todayStr, hrsLabelFn) {
   const tHrs = getTaskHours(t.idx);
   const mHrs = hrsLabelFn ? hrsLabelFn(t.idx) : getMyTaskHours(t.idx);
   const canComplete = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
-  let out = '<div class="mywork-compact-row" onclick="openTask(' + t.objectId + ')">';
-  out += '<span class="mywork-compact-badge" style="background:' + statusColor + '22;color:' + statusColor + ';">' + esc(status) + '</span>';
-  out += '<span class="mywork-compact-title">' + esc(t.title) + '</span>';
+  let out = '<div class="mywork-compact-row">';
+  // Inline status dropdown
+  out += '<select class="mw-status-select" data-type="task" data-id="' + t.objectId + '" onchange="mwQuickStatus(this)" onclick="event.stopPropagation()" style="background:' + statusColor + '18;color:' + statusColor + ';border-color:' + statusColor + '44;">';
+  ['Active', 'Pending', 'On Hold', 'Waiting for Response', 'Complete', 'Canceled'].forEach(function(s) {
+    out += '<option value="' + s + '"' + (t.status === s ? ' selected' : '') + '>' + s + '</option>';
+  });
+  out += '</select>';
+  out += '<span class="mywork-compact-title" onclick="openTask(' + t.objectId + ')" style="cursor:pointer;">' + esc(t.title) + '</span>';
   if (tHrs > 0) {
-    out += '<span class="mywork-hrs-badge">⏱ ' + hoursLabel(tHrs, mHrs) + '</span>';
+    out += '<span class="mywork-hrs-badge">\u23f1 ' + hoursLabel(tHrs, mHrs) + '</span>';
   }
   if (eDue) {
-    out += '<span style="font-size:11px;font-weight:600;white-space:nowrap;color:' + (isOverdue ? '#EF4444' : 'var(--text-muted)') + ';">' + (isOverdue ? '⚠ ' : '') + eDue + '</span>';
+    out += '<span style="font-size:11px;font-weight:600;white-space:nowrap;color:' + (isOverdue ? '#EF4444' : 'var(--text-muted)') + ';">' + (isOverdue ? '\u26a0 ' : '') + eDue + '</span>';
   }
   if (canComplete) {
-    out += '<button onclick="event.stopPropagation();markTaskComplete(' + t.objectId + ')" class="btn-complete-sm" title="Mark as Complete">✓</button>';
+    out += '<button onclick="event.stopPropagation();markTaskComplete(' + t.objectId + ')" class="btn-complete-sm" title="Mark as Complete">\u2713</button>';
   }
   out += '</div>';
   return out;
@@ -12073,9 +12114,14 @@ function renderMyWork(area) {
       const totalCount = taskCount.length;
       const taskLabel = totalCount > 0 ? doneCount + '/' + totalCount + ' tasks done' : 'No tasks';
       const isContact = p.contact === name;
-      out += '<div class="mywork-compact-row" onclick="openProject(' + p.objectId + ')">';
-      out += '<span class="mywork-compact-badge" style="background:' + statusColor + '22;color:' + statusColor + ';">' + esc(status) + '</span>';
-      out += '<span class="mywork-compact-title">' + esc(p.title) + '</span>';
+      out += '<div class="mywork-compact-row">';
+      // Inline status dropdown
+      out += '<select class="mw-status-select" data-type="project" data-id="' + p.objectId + '" onchange="mwQuickStatus(this)" onclick="event.stopPropagation()" style="background:' + statusColor + '18;color:' + statusColor + ';border-color:' + statusColor + '44;">';
+      ['Active', 'Scheduled', 'On Hold', 'Future', 'Complete', 'Canceled'].forEach(function(s) {
+        out += '<option value="' + s + '"' + (p.status === s ? ' selected' : '') + '>' + s + '</option>';
+      });
+      out += '</select>';
+      out += '<span class="mywork-compact-title" onclick="openProject(' + p.objectId + ')" style="cursor:pointer;">' + esc(p.title) + '</span>';
       out += '<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">' + taskLabel + '</span>';
       if (isContact) out += '<span class="mywork-lead-badge">Lead</span>';
       out += '</div>';
