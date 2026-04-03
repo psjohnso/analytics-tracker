@@ -3234,7 +3234,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0030';
+const APP_VERSION = '0.10.0.0031';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -6588,6 +6588,35 @@ const DataStore = {
         markSynced('Project updated');
         // Log status change to history
         if (statusChanged) logStatusChange(PROJECTS[i].id, PROJECTS[i].title, newStatus);
+
+        // ── Cascade: cancel open tasks when project is canceled ──
+        if (statusChanged && newStatus === 'Canceled') {
+          var projTitle = PROJECTS[i].title;
+          var tasksToCancel = TASKS.filter(function(t) {
+            return t.project === projTitle && t.status !== 'Complete' && t.status !== 'Canceled';
+          });
+          if (tasksToCancel.length > 0) {
+            var cancelUpdates = [];
+            tasksToCancel.forEach(function(t) {
+              t.status = 'Canceled';
+              if (t.objectId) {
+                cancelUpdates.push({ attributes: { ObjectId: t.objectId, status: 'Canceled' } });
+              }
+            });
+            if (cancelUpdates.length > 0) {
+              try {
+                for (var ci2 = 0; ci2 < cancelUpdates.length; ci2 += 100) {
+                  var batch = cancelUpdates.slice(ci2, ci2 + 100);
+                  await agolApplyEdits(ARCGIS_CONFIG.tasksUrl, { updates: batch });
+                }
+                console.log('[Cascade] Canceled', cancelUpdates.length, 'tasks for project:', projTitle);
+                showToast('Canceled ' + cancelUpdates.length + ' open task(s) for this project.', 'info');
+              } catch (err2) {
+                console.error('[Cascade] Failed to cancel tasks:', err2);
+              }
+            }
+          }
+        }
       } catch (err) {
         console.error('ArcGIS updateProject failed:', err);
         markDirty();
