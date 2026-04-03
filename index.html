@@ -237,25 +237,25 @@ body {
 
 .detail-tasks-header {
   display: grid;
-  grid-template-columns: 2.5fr 1fr 0.8fr 1fr 0.9fr 0.7fr 40px;
+  grid-template-columns: 32px 2.5fr 1fr 0.8fr 1fr 0.9fr 0.6fr 90px;
   background: var(--navy);
   color: #fff;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  padding: 10px 16px;
-  gap: 12px;
+  padding: 8px 16px;
+  gap: 10px;
 }
 
 .detail-task-row {
   display: grid;
-  grid-template-columns: 2.5fr 1fr 0.8fr 1fr 0.9fr 0.7fr 40px;
-  padding: 12px 16px;
-  gap: 12px;
+  grid-template-columns: 32px 2.5fr 1fr 0.8fr 1fr 0.9fr 0.6fr 90px;
+  padding: 6px 16px;
+  gap: 10px;
   border-top: 1px solid var(--border);
   font-size: 13px;
-  cursor: pointer;
+  cursor: default;
   transition: background 0.1s ease;
   align-items: center;
   background: var(--white);
@@ -3236,7 +3236,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0034';
+const APP_VERSION = '0.10.0.0035';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -8421,9 +8421,10 @@ function renderProjectDetail(id) {
     const myHrs = getMyTaskHours(t.idx);
     const hrsDisplay = taskHrs > 0 ? hoursLabel(taskHrs, myHrs) : '—';
     const canComplete = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
+    const sc2 = sc;
     return `<div class="detail-task-row">
-      <div class="detail-task-cell" style="width:28px;flex:0 0 28px;text-align:center;" onclick="event.stopPropagation()">
-        <input type="checkbox" class="batch-task-cb" data-task-id="${t.objectId}" onchange="updateBatchBar()" style="width:15px;height:15px;cursor:pointer;accent-color:var(--navy);">
+      <div style="text-align:center;" onclick="event.stopPropagation()">
+        <input type="checkbox" class="batch-task-cb" data-task-id="${t.objectId}" onchange="updateBatchBar()" style="width:14px;height:14px;cursor:pointer;accent-color:var(--navy);">
       </div>
       <div class="detail-task-title" onclick="openTaskFromProject(${t.objectId})" style="cursor:pointer;">${esc(t.title)}</div>
       <div class="detail-task-cell"><span class="status-pill" style="background:${sc}22;color:${sc};"><span style="width:5px;height:5px;border-radius:50%;background:${sc};display:inline-block;"></span>${t.status||'—'}</span></div>
@@ -8431,7 +8432,11 @@ function renderProjectDetail(id) {
       <div class="detail-task-cell" style="color:var(--text-muted);">${esc(t.assignee||'—')}</div>
       <div class="detail-task-cell" style="color:var(--text-muted);">${t.working_due||t.due||'—'}</div>
       <div class="detail-task-cell" style="font-weight:700;color:var(--navy);">${hrsDisplay}</div>
-      <div class="detail-task-cell" style="text-align:center;">${canComplete ? `<button onclick="event.stopPropagation();markTaskComplete(${t.objectId})" class="btn-complete-lg" title="Mark as Complete">✓</button>` : ''}</div>
+      <div class="detail-task-cell" onclick="event.stopPropagation()">
+        <select class="mw-status-select" data-type="task" data-id="${t.objectId}" onchange="mwQuickStatus(this)" style="font-size:9px;padding:2px 3px;min-width:78px;background:${sc2}18;color:${sc2};border-color:${sc2}44;">
+          ${['Active','Pending','On Hold','Waiting for Response','Complete','Canceled'].map(function(s) { return '<option value="' + s + '"' + (t.status === s ? ' selected' : '') + '>' + s + '</option>'; }).join('')}
+        </select>
+      </div>
     </div>`;
   }).join('') : `<div style="padding:32px;text-align:center;color:var(--text-muted);font-style:italic;">No tasks linked to this project.</div>`;
 
@@ -8439,6 +8444,7 @@ function renderProjectDetail(id) {
   const projTotalHrs = getProjectHours(p.title);
   const projMyHrs = getMyProjectHours(p.title);
   const projHrsRow = relTasks.length && projTotalHrs > 0 ? `<div class="detail-task-row" style="background:#F0F4FF;cursor:default;font-weight:700;">
+    <div></div>
     <div class="detail-task-title" style="font-weight:800;color:var(--navy);">Total</div>
     <div class="detail-task-cell"></div><div class="detail-task-cell"></div><div class="detail-task-cell"></div><div class="detail-task-cell"></div>
     <div class="detail-task-cell" style="font-weight:800;color:var(--navy);">${hoursLabel(projTotalHrs, projMyHrs)}</div>
@@ -8585,8 +8591,8 @@ function renderProjectDetail(id) {
         </div>
         <div class="detail-tasks-table">
           ${relTasks.length ? `<div class="detail-tasks-header">
-            <div style="width:28px;flex:0 0 28px;text-align:center;"><input type="checkbox" id="batch-select-all" onchange="toggleSelectAllTasks(this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--navy);"></div>
-            <div>Task</div><div>Status</div><div>Priority</div><div>Assignee</div><div>Due Date</div><div>Hours</div><div></div>
+            <div style="text-align:center;"><input type="checkbox" id="batch-select-all" onchange="toggleSelectAllTasks(this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:#fff;" title="Select all"></div>
+            <div>Task</div><div>Status</div><div>Priority</div><div>Assignee</div><div>Due Date</div><div>Hours</div><div>Set Status</div>
           </div>` : ''}
           ${taskRows}
           ${projHrsRow}
