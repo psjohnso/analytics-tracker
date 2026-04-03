@@ -3236,7 +3236,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0033';
+const APP_VERSION = '0.10.0.0034';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -11744,19 +11744,28 @@ function renderMyWork(area) {
   });
 
   // Stale projects — Active/Scheduled projects not updated in over 14 days
+  // A task update counts as project activity
   const staleStatuses = ['Active', 'Scheduled'];
   myProjects.filter(function(p) { return staleStatuses.indexOf(p.status) >= 0; }).forEach(function(p) {
-    const editDate = p.EditDate || p.editDate || p.edit_date || null;
-    if (!editDate) return; // no edit tracking — skip
-    const daysSinceUpdate = Math.floor((Date.now() - editDate) / (1000 * 60 * 60 * 24));
+    // Find the most recent edit date across the project AND its tasks
+    var lastActivity = p.EditDate || p.editDate || p.edit_date || null;
+    var projTasks = TASKS.filter(function(t) { return t.project === p.title || (!t.project && t.project_id == p.id); });
+    projTasks.forEach(function(t) {
+      var taskEdit = t.EditDate || t.editDate || t.edit_date || null;
+      if (taskEdit && (!lastActivity || taskEdit > lastActivity)) {
+        lastActivity = taskEdit;
+      }
+    });
+    if (!lastActivity) return; // no edit tracking — skip
+    const daysSinceUpdate = Math.floor((Date.now() - lastActivity) / (1000 * 60 * 60 * 24));
     if (daysSinceUpdate > 14) {
-      const lastUpdated = new Date(editDate);
+      const lastUpdated = new Date(lastActivity);
       const dateStr = lastUpdated.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       alerts.push({
         icon: '⏳', type: 'project', id: p.objectId,
         title: p.title,
         meta: 'Project · ' + p.status,
-        reason: 'No updates in ' + daysSinceUpdate + ' days (last: ' + dateStr + ')',
+        reason: 'No project or task updates in ' + daysSinceUpdate + ' days (last: ' + dateStr + ')',
         priority: 2,
       });
     }
