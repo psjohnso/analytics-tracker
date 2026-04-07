@@ -3264,7 +3264,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0042';
+const APP_VERSION = '0.10.0.0043';
 
 // ── Markdown rendering config ────────────────────────────────────────
 if (typeof marked !== 'undefined') {
@@ -6093,6 +6093,25 @@ async function agolApplyEdits(serviceUrl, edits) {
   const result = await resp.json();
   if (handleAgolTokenError(result)) throw new Error('Token expired — re-authenticating');
   if (result.error) throw new Error('ArcGIS applyEdits error: ' + (result.error.message || JSON.stringify(result.error)));
+
+  // Check per-record results for failures
+  var resultArrays = ['addResults', 'updateResults', 'deleteResults'];
+  var failures = [];
+  resultArrays.forEach(function(key) {
+    if (result[key]) {
+      result[key].forEach(function(r) {
+        if (r.success === false) {
+          var errMsg = r.error ? (r.error.description || r.error.message || JSON.stringify(r.error)) : 'Unknown error';
+          failures.push(key + ' OID ' + (r.objectId || '?') + ': ' + errMsg);
+        }
+      });
+    }
+  });
+  if (failures.length > 0) {
+    console.error('[ArcGIS] Per-record failures:', failures);
+    throw new Error('ArcGIS save failed: ' + failures[0]);
+  }
+
   return result;
 }
 
@@ -8187,18 +8206,24 @@ async function handleFormSubmit(andDownload) {
     }
   }
 
-  if (isEdit) {
-    if (isProject) await DataStore.updateProject(Editor.editId, fields);
-    else           await DataStore.updateTask(Editor.editId, fields);
-  } else {
-    const created = isProject ? await DataStore.createProject(fields) : await DataStore.createTask(fields);
-    // After create: open the new record's detail view
-    Editor.editId = isProject ? created.objectId : created.objectId;
+  try {
+    if (isEdit) {
+      if (isProject) await DataStore.updateProject(Editor.editId, fields);
+      else           await DataStore.updateTask(Editor.editId, fields);
+    } else {
+      const created = isProject ? await DataStore.createProject(fields) : await DataStore.createTask(fields);
+      // After create: open the new record's detail view
+      Editor.editId = isProject ? created.objectId : created.objectId;
 
-    // ── Auto-fill allocations for new Active/Scheduled projects ─────────
-    if (isProject && (fields.status === 'Active' || fields.status === 'Scheduled') && fields.project_size) {
-      autoFillAllocationsForNewProject(fields);
+      // ── Auto-fill allocations for new Active/Scheduled projects ─────────
+      if (isProject && (fields.status === 'Active' || fields.status === 'Scheduled') && fields.project_size) {
+        autoFillAllocationsForNewProject(fields);
+      }
     }
+  } catch (saveErr) {
+    console.error('[Save] Failed:', saveErr);
+    showToast('Save failed: ' + saveErr.message, 'error');
+    return; // Don't close the form — let the user try again
   }
 
   closeFormModal();
