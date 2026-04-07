@@ -2260,6 +2260,16 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .md-content pre { background:#F3F4F6; padding:10px; border-radius:8px; overflow-x:auto; font-size:12px; margin:0 0 8px; }
 .md-content pre code { background:none; padding:0; }
 .md-content blockquote { border-left:3px solid var(--navy); margin:0 0 8px; padding:4px 12px; color:var(--text-muted); }
+
+/* ── Markdown Editor Toolbar ─────────────────────── */
+.md-editor-wrap { border:1px solid #D1D5DB; border-radius:8px; overflow:hidden; background:#fff; }
+.md-toolbar { display:flex; gap:2px; padding:4px 8px; background:#F9FAFB; border-bottom:1px solid #E5E7EB; }
+.md-tb-btn { padding:3px 7px; border:none; background:none; cursor:pointer; font-size:12px; color:#374151;
+  border-radius:4px; font-family:Lato,sans-serif; line-height:1; }
+.md-tb-btn:hover { background:#E5E7EB; }
+.md-tb-sep { width:1px; background:#E5E7EB; margin:2px 3px; }
+.md-textarea { border:none !important; border-radius:0 !important; outline:none; }
+.md-hint { font-size:10px; color:#9CA3AF; padding:4px 10px 6px; background:#F9FAFB; border-top:1px solid #E5E7EB; }
 .mywork-alloc-bar { height:8px; border-radius:4px; background:#E5E7EB; overflow:hidden; flex:0 0 80px; }
 .mywork-alloc-fill { height:100%; border-radius:4px; }
 .mywork-empty { padding:20px; text-align:center; color:var(--text-muted); font-size:13px; background:#F9FAFB; border-radius:10px; }
@@ -3254,7 +3264,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0041';
+const APP_VERSION = '0.10.0.0042';
 
 // ── Markdown rendering config ────────────────────────────────────────
 if (typeof marked !== 'undefined') {
@@ -7273,6 +7283,108 @@ function fmTextarea(id, value, placeholder, rows) {
     (placeholder||'') + '">' + (value ? esc(value) : '') + '</textarea>';
 }
 
+function fmMdTextarea(id, value, placeholder, rows) {
+  rows = rows || 3;
+  return '<div class="md-editor-wrap">' +
+    '<div class="md-toolbar">' +
+      '<button type="button" onclick="mdInsert(\'' + id + '\',\'bold\')" title="Bold" class="md-tb-btn" style="font-weight:700;">B</button>' +
+      '<button type="button" onclick="mdInsert(\'' + id + '\',\'italic\')" title="Italic" class="md-tb-btn" style="font-style:italic;">I</button>' +
+      '<span class="md-tb-sep"></span>' +
+      '<button type="button" onclick="mdInsert(\'' + id + '\',\'heading\')" title="Heading" class="md-tb-btn">H</button>' +
+      '<button type="button" onclick="mdInsert(\'' + id + '\',\'ul\')" title="Bullet list" class="md-tb-btn">\u2022 List</button>' +
+      '<button type="button" onclick="mdInsert(\'' + id + '\',\'ol\')" title="Numbered list" class="md-tb-btn">1. List</button>' +
+      '<span class="md-tb-sep"></span>' +
+      '<button type="button" onclick="mdInsert(\'' + id + '\',\'code\')" title="Code" class="md-tb-btn" style="font-family:monospace;">&lt;/&gt;</button>' +
+      '<button type="button" onclick="mdInsert(\'' + id + '\',\'link\')" title="Link" class="md-tb-btn">Link</button>' +
+    '</div>' +
+    '<textarea id="' + id + '" class="fm-textarea md-textarea" rows="' + rows + '" placeholder="' +
+      (placeholder||'') + '">' + (value ? esc(value) : '') + '</textarea>' +
+    '<div class="md-hint">Supports markdown: **bold**, *italic*, ## heading, - bullet list, 1. numbered list, `code`, [link](url)</div>' +
+  '</div>';
+}
+
+function mdInsert(textareaId, action) {
+  var ta = document.getElementById(textareaId);
+  if (!ta) return;
+  var start = ta.selectionStart;
+  var end = ta.selectionEnd;
+  var text = ta.value;
+  var sel = text.substring(start, end);
+  var before = text.substring(0, start);
+  var after = text.substring(end);
+  var insert = '';
+  var cursorOffset = 0;
+
+  switch(action) {
+    case 'bold':
+      insert = '**' + (sel || 'bold text') + '**';
+      cursorOffset = sel ? insert.length : 2;
+      break;
+    case 'italic':
+      insert = '*' + (sel || 'italic text') + '*';
+      cursorOffset = sel ? insert.length : 1;
+      break;
+    case 'heading':
+      var lineStart = before.lastIndexOf('\n') + 1;
+      var prefix = before.substring(lineStart);
+      if (prefix.startsWith('## ')) {
+        before = before.substring(0, lineStart) + prefix.substring(3);
+        insert = sel;
+        cursorOffset = (sel || '').length;
+      } else {
+        var needNewline = before.length > 0 && !before.endsWith('\n') && lineStart === before.length ? '\n' : '';
+        before = before.substring(0, lineStart);
+        insert = needNewline + '## ' + prefix + sel;
+        cursorOffset = insert.length;
+      }
+      break;
+    case 'ul':
+      if (sel) {
+        insert = sel.split('\n').map(function(l) { return '- ' + l; }).join('\n');
+      } else {
+        var nlPre = before.length > 0 && !before.endsWith('\n') ? '\n' : '';
+        insert = nlPre + '- ';
+      }
+      cursorOffset = insert.length;
+      break;
+    case 'ol':
+      if (sel) {
+        insert = sel.split('\n').map(function(l, i) { return (i+1) + '. ' + l; }).join('\n');
+      } else {
+        var nlPre2 = before.length > 0 && !before.endsWith('\n') ? '\n' : '';
+        insert = nlPre2 + '1. ';
+      }
+      cursorOffset = insert.length;
+      break;
+    case 'code':
+      insert = '`' + (sel || 'code') + '`';
+      cursorOffset = sel ? insert.length : 1;
+      break;
+    case 'link':
+      if (sel) {
+        insert = '[' + sel + '](url)';
+        cursorOffset = insert.length - 4;
+      } else {
+        insert = '[link text](url)';
+        cursorOffset = 1;
+      }
+      break;
+  }
+
+  ta.value = before + insert + after;
+  ta.focus();
+  var newPos = before.length + cursorOffset;
+  if (!sel && (action === 'bold' || action === 'italic' || action === 'code')) {
+    ta.selectionStart = before.length + (action === 'bold' ? 2 : 1);
+    ta.selectionEnd = before.length + insert.length - (action === 'bold' ? 2 : 1);
+  } else if (!sel && action === 'link') {
+    ta.selectionStart = before.length + 1;
+    ta.selectionEnd = before.length + 10;
+  } else {
+    ta.selectionStart = ta.selectionEnd = newPos;
+  }
+}
+
 const FM_DELIVERABLE_OPTIONS = [
   'Dashboard', 'Dataset', 'Web Application', 'Report', 'Map / Web Map',
   'ETL Pipeline', 'API / Service', 'Documentation', 'Training', 'Analysis / Study',
@@ -7860,12 +7972,12 @@ function buildProjectForm(p) {
     '</div>' +
     '<div class="fm-section-label">Details</div>' +
     '<div class="fm-grid">' +
-      fmField('Problem Statement', fmTextarea('fm-problem', v('problem_statement'), 'Describe the problem this project solves…', 3), false, true) +
-      fmField('Description', fmTextarea('fm-description', v('description'), 'Project description…', 3), false, true) +
+      fmField('Problem Statement', fmMdTextarea('fm-problem', v('problem_statement'), 'Describe the problem this project solves…', 3), false, true) +
+      fmField('Description', fmMdTextarea('fm-description', v('description'), 'Project description…', 3), false, true) +
       fmField('Deliverables', fmDeliverables('fm-deliverables', v('deliverables')), false, true,
         'What will this project produce?') +
-      fmField('Data Sources', fmTextarea('fm-data-sources', v('data_sources'), 'e.g. Hansen, Accela, ArcGIS Enterprise, CSV from partner dept…', 2), false, true) +
-      fmField('Technical Requirements', fmTextarea('fm-tech-reqs', v('technical_requirements'), 'e.g. Must integrate with existing system, ADA compliant, real-time updates…', 2), false, true) +
+      fmField('Data Sources', fmMdTextarea('fm-data-sources', v('data_sources'), 'e.g. Hansen, Accela, ArcGIS Enterprise, CSV from partner dept…', 2), false, true) +
+      fmField('Technical Requirements', fmMdTextarea('fm-tech-reqs', v('technical_requirements'), 'e.g. Must integrate with existing system, ADA compliant, real-time updates…', 2), false, true) +
     '</div>';
 }
 
@@ -7883,7 +7995,7 @@ function buildTaskForm(t) {
     '</div>' +
     '<div class="fm-section-label">Details</div>' +
     '<div class="fm-grid">' +
-      fmField('Description', fmTextarea('fm-description', v('description'), 'Task description…', 3), false, true) +
+      fmField('Description', fmMdTextarea('fm-description', v('description'), 'Task description…', 3), false, true) +
     '</div>' +
     '<div class="fm-section-label">Classification</div>' +
     '<div class="fm-grid">' +
