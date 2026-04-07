@@ -3254,7 +3254,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0040';
+const APP_VERSION = '0.10.0.0041';
 
 // ── Markdown rendering config ────────────────────────────────────────
 if (typeof marked !== 'undefined') {
@@ -5797,7 +5797,7 @@ function agolAuthorizeUrl() {
     client_id:     ARCGIS_CONFIG.clientId,
     response_type: 'token',
     redirect_uri:  getRedirectUri(),
-    expiration:    120,  // token lifetime in minutes (2 hours)
+    expiration:    600,  // token lifetime in minutes (10 hours)
   });
   return ARCGIS_CONFIG.portalUrl + '/sharing/rest/oauth2/authorize?' + params.toString();
 }
