@@ -3236,7 +3236,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0037';
+const APP_VERSION = '0.10.0.0038';
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -7826,6 +7826,7 @@ function buildProjectForm(p) {
       fmField('Start Date', fmInput('fm-start', v('start'), '', 'date')) +
       fmField('Original End Date', endDateField) +
       fmField('Working Due Date', fmInput('fm-working-due', v('working_due'), '', 'date')) +
+      (p && p.status === 'Complete' ? fmField('Completion Date', fmInput('fm-actual-end', v('actual_end'), '', 'date'), false, false, 'When this project was actually completed') : '') +
     '</div>' +
     '<div class="fm-section-label">Details</div>' +
     '<div class="fm-grid">' +
@@ -7865,6 +7866,7 @@ function buildTaskForm(t) {
       fmField('Start Date', fmInput('fm-start', v('start'), '', 'date')) +
       fmField('Original Due Date', fmInput('fm-due', v('due'), '', 'date')) +
       fmField('Working Due Date', fmInput('fm-working-due', v('working_due'), '', 'date')) +
+      (t && t.status === 'Complete' ? fmField('Completion Date', fmInput('fm-actual-end', v('actual_end'), '', 'date'), false, false, 'When this task was actually completed') : '') +
     '</div>';
 }
 
@@ -7974,6 +7976,7 @@ function collectProjectFields() {
     deliverables:      deliverables,
     data_sources:      getVal('fm-data-sources') || null,
     technical_requirements: getVal('fm-tech-reqs') || null,
+    actual_end:        getVal('fm-actual-end')   || null,
   };
 }
 
@@ -7996,6 +7999,7 @@ function collectTaskFields() {
     due:         getVal('fm-due')        || null,
     working_due: getVal('fm-working-due')|| null,
     description: getVal('fm-description')|| null,
+    actual_end:  getVal('fm-actual-end') || null,
   };
 }
 
