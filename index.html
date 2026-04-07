@@ -4,6 +4,7 @@
 <title>Analytics Project Tracker — City of Tucson</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&amp;family=Cardo:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <!-- ArcGIS REST API integration (no external auth library needed) -->
 <style>
 :root {
@@ -2242,6 +2243,23 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .mywork-compact-badge { font-size:11px; font-weight:600; padding:3px 10px; border-radius:12px; white-space:nowrap; }
 .mw-status-select { font-size:10px; font-weight:700; padding:2px 4px; border-radius:8px; border:1px solid;
   font-family:Lato,sans-serif; cursor:pointer; flex-shrink:0; appearance:auto; min-width:70px; }
+
+/* ── Rendered Markdown ───────────────────────────── */
+.md-content { font-size:13px; line-height:1.7; color:var(--text-body); }
+.md-content p { margin:0 0 8px; }
+.md-content p:last-child { margin-bottom:0; }
+.md-content ul, .md-content ol { margin:0 0 8px; padding-left:20px; }
+.md-content li { margin-bottom:2px; }
+.md-content h1, .md-content h2, .md-content h3 { font-family:Lato,sans-serif; color:var(--navy); margin:12px 0 4px; }
+.md-content h1 { font-size:16px; font-weight:800; }
+.md-content h2 { font-size:15px; font-weight:700; }
+.md-content h3 { font-size:14px; font-weight:700; }
+.md-content strong { font-weight:700; }
+.md-content a { color:var(--sky); text-decoration:underline; }
+.md-content code { background:#F3F4F6; padding:1px 5px; border-radius:4px; font-size:12px; font-family:monospace; }
+.md-content pre { background:#F3F4F6; padding:10px; border-radius:8px; overflow-x:auto; font-size:12px; margin:0 0 8px; }
+.md-content pre code { background:none; padding:0; }
+.md-content blockquote { border-left:3px solid var(--navy); margin:0 0 8px; padding:4px 12px; color:var(--text-muted); }
 .mywork-alloc-bar { height:8px; border-radius:4px; background:#E5E7EB; overflow:hidden; flex:0 0 80px; }
 .mywork-alloc-fill { height:100%; border-radius:4px; }
 .mywork-empty { padding:20px; text-align:center; color:var(--text-muted); font-size:13px; background:#F9FAFB; border-radius:10px; }
@@ -3236,7 +3254,12 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0038';
+const APP_VERSION = '0.10.0.0040';
+
+// ── Markdown rendering config ────────────────────────────────────────
+if (typeof marked !== 'undefined') {
+  marked.setOptions({ breaks: true, gfm: true });
+}
 
 // ── Auth State ──────────────────────────────────────────────────────
 const Auth = {
@@ -4529,6 +4552,13 @@ function closeModalDirect() { document.getElementById('modal-backdrop').classLis
 function esc(s) {
   if (!s) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderMd(s) {
+  if (!s) return '';
+  if (typeof marked === 'undefined' || !marked.parse) return esc(s).replace(/\n/g, '<br>');
+  try { return '<div class="md-content">' + marked.parse(String(s)) + '</div>'; }
+  catch(e) { return esc(s).replace(/\n/g, '<br>'); }
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -8495,12 +8525,12 @@ function renderProjectDetail(id) {
 
       ${p.problem_statement ? `<div class="detail-section">
         <div class="detail-section-label">Problem Statement</div>
-        <div class="detail-prose">${esc(p.problem_statement)}</div>
+        <div class="detail-prose">${renderMd(p.problem_statement)}</div>
       </div>` : ''}
 
       ${p.description ? `<div class="detail-section">
         <div class="detail-section-label">Description</div>
-        <div class="detail-prose">${esc(p.description)}</div>
+        <div class="detail-prose">${renderMd(p.description)}</div>
       </div>` : ''}
 
       ${p.deliverables ? `<div class="detail-section">
@@ -8512,12 +8542,12 @@ function renderProjectDetail(id) {
 
       ${p.data_sources ? `<div class="detail-section">
         <div class="detail-section-label">Data Sources</div>
-        <div class="detail-prose">${esc(p.data_sources)}</div>
+        <div class="detail-prose">${renderMd(p.data_sources)}</div>
       </div>` : ''}
 
       ${p.technical_requirements ? `<div class="detail-section">
         <div class="detail-section-label">Technical Requirements</div>
-        <div class="detail-prose">${esc(p.technical_requirements)}</div>
+        <div class="detail-prose">${renderMd(p.technical_requirements)}</div>
       </div>` : ''}
 
       ${p.urgency_notes ? `<div class="detail-section">
@@ -8659,7 +8689,7 @@ function renderTaskDetail(idx) {
 
       ${t.description ? `<div class="detail-section">
         <div class="detail-section-label">Description</div>
-        <div class="detail-prose task-prose">${esc(t.description)}</div>
+        <div class="detail-prose task-prose">${renderMd(t.description)}</div>
       </div>` : ''}
 
       ${proj ? `<div class="detail-section">
