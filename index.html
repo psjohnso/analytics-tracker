@@ -3300,7 +3300,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0007';
+const APP_VERSION = '0.11.0.0008';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -4113,7 +4113,7 @@ async function suggestTasksForProject(projectObjectId) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 8000,
+        max_tokens: 16000,
         messages: [{ role: 'user', content: prompt }]
       })
     });
@@ -4134,11 +4134,40 @@ async function suggestTasksForProject(projectObjectId) {
     // Find the first [ and last ] to extract the JSON array
     var arrayStart = clean.indexOf('[');
     var arrayEnd = clean.lastIndexOf(']');
-    if (arrayStart === -1 || arrayEnd === -1 || arrayEnd <= arrayStart) {
+    var jsonStr;
+    if (arrayStart === -1) {
       throw new Error('Could not find task list in AI response. Raw: ' + text.slice(0, 200));
     }
-    var jsonStr = clean.substring(arrayStart, arrayEnd + 1);
-    _suggestedTasks = JSON.parse(jsonStr);
+    if (arrayEnd === -1 || arrayEnd <= arrayStart) {
+      // Response was truncated — try to repair
+      jsonStr = clean.substring(arrayStart);
+    } else {
+      jsonStr = clean.substring(arrayStart, arrayEnd + 1);
+    }
+
+    // Attempt to repair truncated JSON
+    try {
+      _suggestedTasks = JSON.parse(jsonStr);
+    } catch (parseErr) {
+      console.warn('[TaskSuggest] JSON parse failed, attempting repair…', parseErr.message);
+      // Remove trailing incomplete object (find last complete },)
+      var lastComplete = jsonStr.lastIndexOf('}');
+      if (lastComplete > 0) {
+        var repaired = jsonStr.substring(0, lastComplete + 1);
+        // Remove trailing comma and close array
+        repaired = repaired.replace(/,\s*$/, '') + ']';
+        // Ensure it starts with [
+        if (repaired[0] !== '[') repaired = '[' + repaired;
+        try {
+          _suggestedTasks = JSON.parse(repaired);
+          console.log('[TaskSuggest] Repaired JSON successfully, got ' + _suggestedTasks.length + ' tasks');
+        } catch (repairErr) {
+          throw new Error('Could not parse AI response as JSON. ' + parseErr.message);
+        }
+      } else {
+        throw new Error('Could not parse AI response as JSON. ' + parseErr.message);
+      }
+    }
 
     if (!Array.isArray(_suggestedTasks) || _suggestedTasks.length === 0) {
       throw new Error('AI returned an empty or invalid task list.');
