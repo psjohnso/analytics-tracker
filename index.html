@@ -3270,7 +3270,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0049';
+const APP_VERSION = '0.10.0.0050';
 
 // ── Markdown rendering config ────────────────────────────────────────
 if (typeof marked !== 'undefined') {
@@ -8871,8 +8871,14 @@ function renderTaskDetail(idx) {
   const taskReturnTab = currentDetail._returnTab || 'tasks';
   const taskFromProject = currentDetail._fromProject;
   const taskBackLabels = { mywork: '← Back to My Work', resources: '← Back to Resources', projects: '← Back to Projects', forecast: '← Back to Forecast' };
-  const taskBackLabel = taskFromProject ? '← Back to Project'
+  // If task has a parent project, always offer to go back to it
+  const taskBackLabel = (taskFromProject || proj) ? '← Back to Project'
     : taskBackLabels[taskReturnTab] || '← Back';
+
+  // Ensure _fromProject is set for goBackFromDetail if we have a parent project
+  if (proj && !taskFromProject) {
+    currentDetail._fromProject = proj.objectId;
+  }
 
   const isCompletable = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
 
