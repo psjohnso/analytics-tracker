@@ -2206,7 +2206,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 /* ── Settings Tab ───────────────────────────────── */
 
 /* ── My Work Tab ───────────────────────────────── */
-.mywork-page { padding:16px 0 20px; max-width:1100px; }
+.mywork-page { padding:16px 0 20px; max-width:1400px; }
 .mywork-greeting { font-size:20px; font-weight:800; color:var(--navy); margin-bottom:2px; line-height:1.3; }
 .mywork-subtitle { font-size:13px; color:var(--text-muted); margin-bottom:0; }
 .mywork-kpis { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; }
@@ -3270,7 +3270,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0047';
+const APP_VERSION = '0.10.0.0048';
 
 // ── Markdown rendering config ────────────────────────────────────────
 if (typeof marked !== 'undefined') {
@@ -12141,6 +12141,34 @@ function renderMyWork(area) {
     startTimerTick();
   }
 
+  // ── Attention Needed — spans both columns ───────────────────
+  html += '<div class="mywork-section mywork-full-width" id="mw-attention">';
+  html += '<div class="mywork-section-header">⚡ Attention Needed <span class="badge-count">' + alerts.length + '</span></div>';
+  if (alerts.length === 0) {
+    html += '<div class="mywork-empty">All caught up! No items need your attention right now.</div>';
+  } else {
+    html += '<div class="mywork-alert-grid">';
+    alerts.forEach(function(a, idx) {
+      const onclick = a.type === 'project' ? 'openProject(' + a.id + ')' : 'openTask(' + a.id + ')';
+      const hiddenStyle = idx >= 15 ? ' style="display:none;"' : '';
+      const extraClass = idx >= 15 ? ' attention-overflow' : '';
+      html += '<div class="mywork-alert-card' + extraClass + '"' + hiddenStyle + ' onclick="' + onclick + '">';
+      html += '<div class="mywork-alert-icon">' + a.icon + '</div>';
+      html += '<div class="mywork-alert-body">';
+      const typeLabel = a.type === 'project' ? 'Project: ' : 'Task: ';
+      html += '<div class="mywork-alert-title"><span style="font-weight:700;color:var(--text-muted);">' + typeLabel + '</span>' + esc(a.title) + '</div>';
+      html += '<div class="mywork-alert-meta">' + esc(a.meta) + '</div>';
+      html += '<div class="mywork-alert-reason">' + esc(a.reason) + '</div>';
+      html += '</div></div>';
+    });
+    html += '</div>';
+    if (alerts.length > 15) {
+      const remaining = alerts.length - 15;
+      html += '<button class="mywork-expand-btn" id="attention-more-toggle" onclick="toggleAttentionMore()">Show ' + remaining + ' more item' + (remaining !== 1 ? 's' : '') + '</button>';
+    }
+  }
+  html += '</div>';
+
   // ── My Week — spans both columns ───────────────────────────
   html += '<div class="mywork-section mywork-full-width" id="mw-my-week">';
   html += '<div class="mywork-section-header">📅 My Week</div>';
@@ -12214,152 +12242,6 @@ function renderMyWork(area) {
   } // close else (has RESOURCES_DATA)
   html += '</div>';
 
-  // ── Attention Needed — spans both columns ───────────────────
-  html += '<div class="mywork-section mywork-full-width" id="mw-attention">';
-  html += '<div class="mywork-section-header">⚡ Attention Needed <span class="badge-count">' + alerts.length + '</span></div>';
-  if (alerts.length === 0) {
-    html += '<div class="mywork-empty">All caught up! No items need your attention right now.</div>';
-  } else {
-    html += '<div class="mywork-alert-grid">';
-    alerts.forEach(function(a, idx) {
-      const onclick = a.type === 'project' ? 'openProject(' + a.id + ')' : 'openTask(' + a.id + ')';
-      const hiddenStyle = idx >= 15 ? ' style="display:none;"' : '';
-      const extraClass = idx >= 15 ? ' attention-overflow' : '';
-      html += '<div class="mywork-alert-card' + extraClass + '"' + hiddenStyle + ' onclick="' + onclick + '">';
-      html += '<div class="mywork-alert-icon">' + a.icon + '</div>';
-      html += '<div class="mywork-alert-body">';
-      const typeLabel = a.type === 'project' ? 'Project: ' : 'Task: ';
-      html += '<div class="mywork-alert-title"><span style="font-weight:700;color:var(--text-muted);">' + typeLabel + '</span>' + esc(a.title) + '</div>';
-      html += '<div class="mywork-alert-meta">' + esc(a.meta) + '</div>';
-      html += '<div class="mywork-alert-reason">' + esc(a.reason) + '</div>';
-      html += '</div></div>';
-    });
-    html += '</div>';
-    if (alerts.length > 15) {
-      const remaining = alerts.length - 15;
-      html += '<button class="mywork-expand-btn" id="attention-more-toggle" onclick="toggleAttentionMore()">Show ' + remaining + ' more item' + (remaining !== 1 ? 's' : '') + '</button>';
-    }
-  }
-  html += '</div>';
-
-  // ── GANTT CHART — spans both columns ──────────────────────────
-  const ganttItems = [];
-  // Gather active/on-hold projects with date ranges
-  myProjects.filter(function(p) {
-    return ['Active', 'On Hold', 'Scheduled'].indexOf(p.status) >= 0;
-  }).forEach(function(p) {
-    const pStart = p.start || null;
-    const pEnd = p.actual_end || p.working_due || p.end || null;
-    if (!pStart && !pEnd) return;
-    // Get tasks for this project
-    const projTasks = myTasks.filter(function(t) {
-      return (t.project === p.title) && t.status !== 'Complete' && t.status !== 'Canceled';
-    });
-    ganttItems.push({
-      type: 'project', id: p.objectId, title: p.title, status: p.status,
-      start: pStart, end: pEnd, tasks: projTasks
-    });
-  });
-
-  if (ganttItems.length > 0) {
-    // Initialize filter: default all ON if _ganttFilter is empty or has stale keys
-    const hasAnyFilter = Object.keys(_ganttFilter).length > 0;
-    ganttItems.forEach(function(g) {
-      if (!hasAnyFilter || _ganttFilter[g.title] === undefined) _ganttFilter[g.title] = true;
-    });
-
-    // Store globally for rebuildGanttChart
-    window._ganttItemsAll = ganttItems;
-    window._ganttTodayStr = todayStr;
-
-    // Compute timeline range from ALL items (not just visible) so bars stay stable when toggling
-    const allDates = [];
-    ganttItems.forEach(function(g) {
-      if (g.start) allDates.push(g.start);
-      if (g.end) allDates.push(g.end);
-      g.tasks.forEach(function(t) {
-        if (t.start) allDates.push(t.start);
-        const tEnd = t.working_due || t.due;
-        if (tEnd) allDates.push(tEnd);
-      });
-    });
-    allDates.push(todayStr);
-    allDates.sort();
-    const ganttStart = new Date(allDates[0] + 'T00:00:00');
-    const ganttEnd = new Date(allDates[allDates.length - 1] + 'T00:00:00');
-    ganttStart.setDate(ganttStart.getDate() - 7);
-    ganttEnd.setDate(ganttEnd.getDate() + 14);
-    window._ganttStartMs = ganttStart.getTime();
-    window._ganttTotalDays = Math.max(1, Math.ceil((ganttEnd - ganttStart) / (1000 * 60 * 60 * 24)));
-
-    // Month labels
-    const monthLabels = [];
-    const cursor = new Date(ganttStart);
-    cursor.setDate(1);
-    if (cursor < ganttStart) cursor.setMonth(cursor.getMonth() + 1);
-    while (cursor <= ganttEnd) {
-      const dayOff = (cursor - ganttStart) / (1000 * 60 * 60 * 24);
-      const mPct = Math.max(0, Math.min(100, (dayOff / window._ganttTotalDays) * 100));
-      if (mPct >= 0 && mPct <= 98) {
-        monthLabels.push({ label: cursor.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }), pct: mPct });
-      }
-      cursor.setMonth(cursor.getMonth() + 1);
-    }
-    window._ganttMonthLabels = monthLabels;
-
-    const visibleCount = ganttItems.filter(function(g) { return _ganttFilter[g.title]; }).length;
-
-    html += '<div class="mywork-section mywork-full-width" id="mw-timeline">';
-    html += '<div class="mywork-section-header" style="cursor:pointer;user-select:none;" onclick="toggleGantt()"><span id="gantt-arrow">▶</span> 📊 Timeline <span style="font-size:11px;font-weight:400;color:var(--text-muted);">(' + visibleCount + ' of ' + ganttItems.length + ' projects)</span></div>';
-    html += '<div id="mywork-gantt" style="display:none;">';
-
-    // Toolbar: dropdown filter + legend
-    html += '<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:10px;padding:8px 0;border-bottom:1px solid var(--border);">';
-
-    // Dropdown project picker
-    html += '<div style="position:relative;display:inline-block;" id="gantt-filter-wrap">';
-    html += '<button onclick="toggleGanttDropdown()" style="font-size:11px;padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-weight:600;color:var(--navy);display:flex;align-items:center;gap:6px;">';
-    html += '📁 Projects (' + visibleCount + '/' + ganttItems.length + ') <span style="font-size:9px;">▼</span></button>';
-    html += '<div id="gantt-filter-dropdown" style="display:none;position:absolute;top:100%;left:0;z-index:100;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:8px 0;min-width:260px;max-height:300px;overflow-y:auto;margin-top:4px;">';
-    html += '<div style="display:flex;gap:6px;padding:4px 12px 8px;border-bottom:1px solid var(--border);">';
-    html += '<button onclick="ganttSelectAll(true)" style="font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:#F3F4F6;cursor:pointer;font-weight:700;">All</button>';
-    html += '<button onclick="ganttSelectAll(false)" style="font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:#F3F4F6;cursor:pointer;font-weight:700;">None</button>';
-    html += '</div>';
-    ganttItems.forEach(function(g) {
-      const sc = STATUS_COLOR(g.status) || '#3B82F6';
-      const checked = _ganttFilter[g.title] ? ' checked' : '';
-      html += '<label style="display:flex;align-items:center;gap:8px;padding:5px 12px;font-size:11px;cursor:pointer;white-space:nowrap;" onmouseenter="this.style.background=\'#F3F4F6\'" onmouseleave="this.style.background=\'#fff\'">';
-      html += '<input type="checkbox" class="gantt-proj-check" value="' + esc(g.title) + '"' + checked + ' onchange="toggleGanttProject(\'' + esc(g.title).replace(/'/g, "\\'") + '\')">';
-      html += '<span style="width:10px;height:10px;border-radius:2px;background:' + sc + ';flex-shrink:0;"></span>';
-      html += '<span style="overflow:hidden;text-overflow:ellipsis;">' + esc(g.title) + '</span>';
-      html += '<span style="font-size:9px;color:var(--text-muted);margin-left:auto;">' + esc(g.status) + '</span>';
-      html += '</label>';
-    });
-    html += '</div></div>';
-
-    // Legend
-    html += '<span style="width:1px;height:16px;background:var(--border);"></span>';
-    const legendStatuses = ['Active', 'On Hold', 'Scheduled', 'Waiting for Response'];
-    legendStatuses.forEach(function(s) {
-      const c = STATUS_COLOR(s);
-      if (!c) return;
-      html += '<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted);white-space:nowrap;">';
-      html += '<span style="width:10px;height:6px;border-radius:2px;background:' + c + ';opacity:0.85;"></span>' + s + '</span>';
-    });
-    html += '<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted);white-space:nowrap;">';
-    html += '<span style="width:10px;height:6px;border-radius:2px;background:#ccc;outline:2px solid #EF4444;outline-offset:1px;"></span>Overdue</span>';
-
-    html += '</div>';
-
-    // Chart area
-    html += '<div id="gantt-chart-body">';
-    html += buildGanttBars();
-    html += '</div>';
-
-    html += '</div>'; // #mywork-gantt
-    html += '</div>'; // section
-  }
-
   // ── LEFT COLUMN: My Projects ────────────────────────────────
   html += '<div>';
   html += '<div class="mywork-section" id="mw-projects">';
@@ -12427,6 +12309,115 @@ function renderMyWork(area) {
 
   // ── RIGHT COLUMN: My Tasks ──────────────────────────────────
   html += buildMyWorkTasksSection(myTasks, todayStr, viewUserTaskHrs);
+
+  // ── GANTT CHART — spans both columns ──────────────────────────
+  const ganttItems = [];
+  myProjects.filter(function(p) {
+    return ['Active', 'On Hold', 'Scheduled'].indexOf(p.status) >= 0;
+  }).forEach(function(p) {
+    const pStart = p.start || null;
+    const pEnd = p.actual_end || p.working_due || p.end || null;
+    if (!pStart && !pEnd) return;
+    const projTasks = myTasks.filter(function(t) {
+      return (t.project === p.title) && t.status !== 'Complete' && t.status !== 'Canceled';
+    });
+    ganttItems.push({
+      type: 'project', id: p.objectId, title: p.title, status: p.status,
+      start: pStart, end: pEnd, tasks: projTasks
+    });
+  });
+
+  if (ganttItems.length > 0) {
+    const hasAnyFilter = Object.keys(_ganttFilter).length > 0;
+    ganttItems.forEach(function(g) {
+      if (!hasAnyFilter || _ganttFilter[g.title] === undefined) _ganttFilter[g.title] = true;
+    });
+
+    window._ganttItemsAll = ganttItems;
+    window._ganttTodayStr = todayStr;
+
+    const allDates = [];
+    ganttItems.forEach(function(g) {
+      if (g.start) allDates.push(g.start);
+      if (g.end) allDates.push(g.end);
+      g.tasks.forEach(function(t) {
+        if (t.start) allDates.push(t.start);
+        const tEnd = t.working_due || t.due;
+        if (tEnd) allDates.push(tEnd);
+      });
+    });
+    allDates.push(todayStr);
+    allDates.sort();
+    const ganttStart = new Date(allDates[0] + 'T00:00:00');
+    const ganttEnd = new Date(allDates[allDates.length - 1] + 'T00:00:00');
+    ganttStart.setDate(ganttStart.getDate() - 7);
+    ganttEnd.setDate(ganttEnd.getDate() + 14);
+    window._ganttStartMs = ganttStart.getTime();
+    window._ganttTotalDays = Math.max(1, Math.ceil((ganttEnd - ganttStart) / (1000 * 60 * 60 * 24)));
+
+    const monthLabels = [];
+    const cursor = new Date(ganttStart);
+    cursor.setDate(1);
+    if (cursor < ganttStart) cursor.setMonth(cursor.getMonth() + 1);
+    while (cursor <= ganttEnd) {
+      const dayOff = (cursor - ganttStart) / (1000 * 60 * 60 * 24);
+      const mPct = Math.max(0, Math.min(100, (dayOff / window._ganttTotalDays) * 100));
+      if (mPct >= 0 && mPct <= 98) {
+        monthLabels.push({ label: cursor.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }), pct: mPct });
+      }
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+    window._ganttMonthLabels = monthLabels;
+
+    const visibleCount = ganttItems.filter(function(g) { return _ganttFilter[g.title]; }).length;
+
+    html += '<div class="mywork-section mywork-full-width" id="mw-timeline">';
+    html += '<div class="mywork-section-header" style="cursor:pointer;user-select:none;" onclick="toggleGantt()"><span id="gantt-arrow">▶</span> 📊 Timeline <span style="font-size:11px;font-weight:400;color:var(--text-muted);">(' + visibleCount + ' of ' + ganttItems.length + ' projects)</span></div>';
+    html += '<div id="mywork-gantt" style="display:none;">';
+
+    html += '<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:10px;padding:8px 0;border-bottom:1px solid var(--border);">';
+
+    html += '<div style="position:relative;display:inline-block;" id="gantt-filter-wrap">';
+    html += '<button onclick="toggleGanttDropdown()" style="font-size:11px;padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-weight:600;color:var(--navy);display:flex;align-items:center;gap:6px;">';
+    html += '📁 Projects (' + visibleCount + '/' + ganttItems.length + ') <span style="font-size:9px;">▼</span></button>';
+    html += '<div id="gantt-filter-dropdown" style="display:none;position:absolute;top:100%;left:0;z-index:100;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);padding:8px 0;min-width:260px;max-height:300px;overflow-y:auto;margin-top:4px;">';
+    html += '<div style="display:flex;gap:6px;padding:4px 12px 8px;border-bottom:1px solid var(--border);">';
+    html += '<button onclick="ganttSelectAll(true)" style="font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:#F3F4F6;cursor:pointer;font-weight:700;">All</button>';
+    html += '<button onclick="ganttSelectAll(false)" style="font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:#F3F4F6;cursor:pointer;font-weight:700;">None</button>';
+    html += '</div>';
+    ganttItems.forEach(function(g) {
+      const sc = STATUS_COLOR(g.status) || '#3B82F6';
+      const checked = _ganttFilter[g.title] ? ' checked' : '';
+      html += '<label style="display:flex;align-items:center;gap:8px;padding:5px 12px;font-size:11px;cursor:pointer;white-space:nowrap;" onmouseenter="this.style.background=\'#F3F4F6\'" onmouseleave="this.style.background=\'#fff\'">';
+      html += '<input type="checkbox" class="gantt-proj-check" value="' + esc(g.title) + '"' + checked + ' onchange="toggleGanttProject(\'' + esc(g.title).replace(/'/g, "\\'") + '\')">';
+      html += '<span style="width:10px;height:10px;border-radius:2px;background:' + sc + ';flex-shrink:0;"></span>';
+      html += '<span style="overflow:hidden;text-overflow:ellipsis;">' + esc(g.title) + '</span>';
+      html += '<span style="font-size:9px;color:var(--text-muted);margin-left:auto;">' + esc(g.status) + '</span>';
+      html += '</label>';
+    });
+    html += '</div></div>';
+
+    html += '<span style="width:1px;height:16px;background:var(--border);"></span>';
+    const legendStatuses = ['Active', 'On Hold', 'Scheduled', 'Waiting for Response'];
+    legendStatuses.forEach(function(s) {
+      const c = STATUS_COLOR(s);
+      if (!c) return;
+      html += '<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted);white-space:nowrap;">';
+      html += '<span style="width:10px;height:6px;border-radius:2px;background:' + c + ';opacity:0.85;"></span>' + s + '</span>';
+    });
+    html += '<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--text-muted);white-space:nowrap;">';
+    html += '<span style="width:10px;height:6px;border-radius:2px;background:#ccc;outline:2px solid #EF4444;outline-offset:1px;"></span>Overdue</span>';
+
+    html += '</div>';
+
+    html += '<div id="gantt-chart-body">';
+    html += buildGanttBars();
+    html += '</div>';
+
+    html += '</div>'; // #mywork-gantt
+    html += '</div>'; // section
+  }
+
   html += '</div>'; // close mywork-columns
 
   html += '</div>'; // close mywork-page
