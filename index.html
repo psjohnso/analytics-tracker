@@ -3300,7 +3300,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0002';
+const APP_VERSION = '0.11.0.0003';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -9322,6 +9322,7 @@ function renderTaskDetail(idx) {
         <span class="priority-badge priority-${t.priority||'null'}">${t.priority||'—'}</span>
         ${t.assignee ? `<span class="detail-hero-chip">${esc(t.assignee)}</span>` : ''}
         ${getTaskHours(t.idx) > 0 ? `<span class="detail-hero-chip">⏱ ${hoursLabel(getTaskHours(t.idx), getMyTaskHours(t.idx))}</span>` : ''}
+        ${parsePhaseReqs(t).length > 0 ? `<span class="detail-hero-chip" style="background:rgba(34,197,94,0.25);border:1px solid rgba(34,197,94,0.4);">✓ Required Task</span>` : `<span class="detail-hero-chip" style="background:rgba(255,255,255,0.08);opacity:0.6;">Optional Task</span>`}
       </div>
     </div>
 
