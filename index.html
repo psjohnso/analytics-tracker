@@ -3300,7 +3300,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0008';
+const APP_VERSION = '0.11.0.0009';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -4063,8 +4063,8 @@ async function suggestTasksForProject(projectObjectId) {
 
   // Build the prompt
   var phaseReqList = LIFECYCLE_PHASES.map(function(phase) {
-    return 'Phase ' + phase.id + ' (' + phase.name + '):\n' +
-      phase.requirements.map(function(r) { return '  - ' + r.id + ': ' + r.label; }).join('\n');
+    var reqs = phase.requirements.map(function(r) { return r.id; }).join(', ');
+    return 'P' + phase.id + ' ' + phase.name + ': ' + reqs + ' (+ P' + phase.id + '_TASK for optional work)';
   }).join('\n');
 
   var prompt = 'You are a project management assistant for a City of Tucson government GIS/Data Analytics team. ' +
@@ -4113,7 +4113,7 @@ async function suggestTasksForProject(projectObjectId) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 16000,
+        max_tokens: 12000,
         messages: [{ role: 'user', content: prompt }]
       })
     });
