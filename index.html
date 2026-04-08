@@ -258,7 +258,7 @@ body {
   font-size: 13px;
   cursor: default;
   transition: background 0.1s ease;
-  align-items: center;
+  align-items: start;
   background: var(--white);
 }
 
@@ -267,7 +267,7 @@ body {
 .detail-task-row:nth-child(even):hover { background: #F0F4FF; }
 
 .detail-task-title { font-weight: 600; color: var(--text-dark); }
-.detail-task-cell { color: var(--text-body); font-size: 12px; }
+.detail-task-cell { color: var(--text-body); font-size: 12px; padding-top: 2px; }
 
 /* Task detail page - orange variant */
 .detail-hero.task-hero { /* orange gradient set inline */ }
@@ -3300,7 +3300,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0010';
+const APP_VERSION = '0.11.0.0011';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
