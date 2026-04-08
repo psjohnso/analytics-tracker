@@ -3270,7 +3270,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0048';
+const APP_VERSION = '0.10.0.0049';
 
 // ── Markdown rendering config ────────────────────────────────────────
 if (typeof marked !== 'undefined') {
@@ -8116,6 +8116,8 @@ function openFormModal(mode, id) {
                                                                  : (isProject ? 'New Project'  : 'New Task');
   document.getElementById('fm-delete-btn').style.display = isEdit ? 'inline-block' : 'none';
   document.getElementById('fm-save-btn').textContent     = isEdit ? 'Save Changes' : 'Create';
+  document.getElementById('fm-save-btn').disabled         = false;
+  document.getElementById('fm-save-btn').style.opacity    = '1';
   document.getElementById('fm-body').innerHTML           = isProject ? buildProjectForm(record) : buildTaskForm(record);
   // Lock original due date for tasks on edit (project lock is handled in buildProjectForm based on status)
   if (isEdit && !isProject) {
@@ -8170,6 +8172,8 @@ function openFormModal(mode, id) {
 
 function closeFormModal() {
   document.getElementById('form-modal-backdrop').classList.remove('open');
+  var btn = document.getElementById('fm-save-btn');
+  if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
 }
 
 function getVal(id) {
