@@ -2269,7 +2269,13 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .md-tb-btn:hover { background:#E5E7EB; }
 .md-tb-sep { width:1px; background:#E5E7EB; margin:2px 3px; }
 .md-textarea { border:none !important; border-radius:0 !important; outline:none; }
-.md-hint { font-size:10px; color:#9CA3AF; padding:4px 10px 6px; background:#F9FAFB; border-top:1px solid #E5E7EB; }
+.md-footer { display:flex; justify-content:space-between; align-items:center; padding:4px 10px 6px; background:#F9FAFB; border-top:1px solid #E5E7EB; }
+.md-hint { font-size:10px; color:#9CA3AF; }
+.md-counter { font-size:10px; font-weight:700; color:#9CA3AF; white-space:nowrap; }
+.md-over-limit { border-color:#EF4444 !important; }
+.md-over-limit .md-footer { background:#FEF2F2; border-top-color:#FECACA; }
+.md-over-limit .md-hint { color:#991B1B; font-weight:700; }
+.md-over-limit .md-hint::before { content:'Over limit! Shorten this field to save. '; }
 .mywork-alloc-bar { height:8px; border-radius:4px; background:#E5E7EB; overflow:hidden; flex:0 0 80px; }
 .mywork-alloc-fill { height:100%; border-radius:4px; }
 .mywork-empty { padding:20px; text-align:center; color:var(--text-muted); font-size:13px; background:#F9FAFB; border-radius:10px; }
@@ -3264,7 +3270,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0045';
+const APP_VERSION = '0.10.0.0046';
 
 // ── Markdown rendering config ────────────────────────────────────────
 if (typeof marked !== 'undefined') {
@@ -7318,9 +7324,12 @@ function fmTextarea(id, value, placeholder, rows) {
     (placeholder||'') + '">' + (value ? esc(value) : '') + '</textarea>';
 }
 
-function fmMdTextarea(id, value, placeholder, rows) {
+function fmMdTextarea(id, value, placeholder, rows, maxLen) {
   rows = rows || 3;
-  return '<div class="md-editor-wrap">' +
+  maxLen = maxLen || 0;
+  var curLen = (value || '').length;
+  var counterHtml = maxLen > 0 ? '<span class="md-counter" id="counter-' + id + '" data-max="' + maxLen + '">' + curLen.toLocaleString() + ' / ' + maxLen.toLocaleString() + '</span>' : '';
+  return '<div class="md-editor-wrap" id="wrap-' + id + '">' +
     '<div class="md-toolbar">' +
       '<button type="button" onclick="mdInsert(\'' + id + '\',\'bold\')" title="Bold" class="md-tb-btn" style="font-weight:700;">B</button>' +
       '<button type="button" onclick="mdInsert(\'' + id + '\',\'italic\')" title="Italic" class="md-tb-btn" style="font-style:italic;">I</button>' +
@@ -7333,8 +7342,11 @@ function fmMdTextarea(id, value, placeholder, rows) {
       '<button type="button" onclick="mdInsert(\'' + id + '\',\'link\')" title="Link" class="md-tb-btn">Link</button>' +
     '</div>' +
     '<textarea id="' + id + '" class="fm-textarea md-textarea" rows="' + rows + '" placeholder="' +
-      (placeholder||'') + '">' + (value ? esc(value) : '') + '</textarea>' +
-    '<div class="md-hint">Supports markdown: **bold**, *italic*, ## heading, - bullet list, 1. numbered list, `code`, [link](url)</div>' +
+      (placeholder||'') + '"' + (maxLen > 0 ? ' oninput="mdUpdateCounter(\'' + id + '\')"' : '') + '>' + (value ? esc(value) : '') + '</textarea>' +
+    '<div class="md-footer">' +
+      '<span class="md-hint">Supports markdown: **bold**, *italic*, ## heading, - bullet list, 1. numbered list, `code`, [link](url)</span>' +
+      counterHtml +
+    '</div>' +
   '</div>';
 }
 
@@ -7418,6 +7430,49 @@ function mdInsert(textareaId, action) {
   } else {
     ta.selectionStart = ta.selectionEnd = newPos;
   }
+  mdUpdateCounter(textareaId);
+}
+
+function mdUpdateCounter(textareaId) {
+  var ta = document.getElementById(textareaId);
+  var counter = document.getElementById('counter-' + textareaId);
+  var wrap = document.getElementById('wrap-' + textareaId);
+  if (!ta || !counter) return;
+  var max = parseInt(counter.dataset.max) || 0;
+  if (!max) return;
+  var len = ta.value.length;
+  counter.textContent = len.toLocaleString() + ' / ' + max.toLocaleString();
+  if (len > max) {
+    counter.style.color = '#EF4444';
+    if (wrap) wrap.classList.add('md-over-limit');
+  } else if (len > max * 0.9) {
+    counter.style.color = '#F59E0B';
+    if (wrap) wrap.classList.remove('md-over-limit');
+  } else {
+    counter.style.color = '#9CA3AF';
+    if (wrap) wrap.classList.remove('md-over-limit');
+  }
+}
+
+function fmCheckCharLimits() {
+  var counters = document.querySelectorAll('.md-counter');
+  var overLimit = [];
+  counters.forEach(function(el) {
+    var max = parseInt(el.dataset.max) || 0;
+    var textareaId = el.id.replace('counter-', '');
+    var ta = document.getElementById(textareaId);
+    if (ta && max && ta.value.length > max) {
+      var label = ta.closest('.fm-field');
+      var fieldName = label ? (label.querySelector('.fm-label') || {}).textContent || textareaId : textareaId;
+      overLimit.push(fieldName.trim() + ' (' + ta.value.length.toLocaleString() + '/' + max.toLocaleString() + ')');
+    }
+  });
+  // Also check title
+  var titleEl = document.getElementById('fm-title-val');
+  if (titleEl && titleEl.value.length > 500) {
+    overLimit.push('Title (' + titleEl.value.length + '/500)');
+  }
+  return overLimit;
 }
 
 const FM_DELIVERABLE_OPTIONS = [
@@ -8007,12 +8062,12 @@ function buildProjectForm(p) {
     '</div>' +
     '<div class="fm-section-label">Details</div>' +
     '<div class="fm-grid">' +
-      fmField('Problem Statement', fmMdTextarea('fm-problem', v('problem_statement'), 'Describe the problem this project solves…', 3), false, true) +
-      fmField('Description', fmMdTextarea('fm-description', v('description'), 'Project description…', 3), false, true) +
+      fmField('Problem Statement', fmMdTextarea('fm-problem', v('problem_statement'), 'Describe the problem this project solves…', 3, 4000), false, true) +
+      fmField('Description', fmMdTextarea('fm-description', v('description'), 'Project description…', 3, 4000), false, true) +
       fmField('Deliverables', fmDeliverables('fm-deliverables', v('deliverables')), false, true,
         'What will this project produce?') +
-      fmField('Data Sources', fmMdTextarea('fm-data-sources', v('data_sources'), 'e.g. Hansen, Accela, ArcGIS Enterprise, CSV from partner dept…', 2), false, true) +
-      fmField('Technical Requirements', fmMdTextarea('fm-tech-reqs', v('technical_requirements'), 'e.g. Must integrate with existing system, ADA compliant, real-time updates…', 2), false, true) +
+      fmField('Data Sources', fmMdTextarea('fm-data-sources', v('data_sources'), 'e.g. Hansen, Accela, ArcGIS Enterprise, CSV from partner dept…', 2, 2000), false, true) +
+      fmField('Technical Requirements', fmMdTextarea('fm-tech-reqs', v('technical_requirements'), 'e.g. Must integrate with existing system, ADA compliant, real-time updates…', 2, 4000), false, true) +
     '</div>';
 }
 
@@ -8030,7 +8085,7 @@ function buildTaskForm(t) {
     '</div>' +
     '<div class="fm-section-label">Details</div>' +
     '<div class="fm-grid">' +
-      fmField('Description', fmMdTextarea('fm-description', v('description'), 'Task description…', 3), false, true) +
+      fmField('Description', fmMdTextarea('fm-description', v('description'), 'Task description…', 3, 4000), false, true) +
     '</div>' +
     '<div class="fm-section-label">Classification</div>' +
     '<div class="fm-grid">' +
@@ -8220,6 +8275,13 @@ async function handleFormSubmit(andDownload) {
         return;
       }
     }
+  }
+
+  // ── Validate character limits ──
+  var overLimit = fmCheckCharLimits();
+  if (overLimit.length > 0) {
+    showToast('Fields over character limit: ' + overLimit.join(', '), 'error');
+    return;
   }
 
   // Show saving state
