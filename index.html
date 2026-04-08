@@ -3300,7 +3300,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0006';
+const APP_VERSION = '0.11.0.0007';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -4081,7 +4081,7 @@ async function suggestTasksForProject(projectObjectId) {
     '- description: 1-2 sentences explaining the work\n' +
     '- category: choose from: ' + categories + '\n' +
     '- tool: choose the primary tool from: ' + tools + '\n' +
-    '- priority: High, Medium, or Low\n' +
+    '- priority: High, Medium, or Low. Use High sparingly — only for tasks that are blocking or critical path. Most tasks should be Medium. Low is for nice-to-haves or tasks with flexible timing. Aim for roughly 15-20% High, 60-70% Medium, 15-20% Low.\n' +
     '- suggested_assignee: choose from the team members listed, or leave blank\n' +
     '- phase_requirements: an array of requirement IDs this task satisfies (a task can satisfy requirements from multiple phases)\n\n' +
     'LIFECYCLE PHASE REQUIREMENTS (use these exact IDs):\n' + phaseReqList + '\n\n' +
