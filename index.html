@@ -3300,7 +3300,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0004';
+const APP_VERSION = '0.11.0.0005';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -4046,9 +4046,11 @@ async function suggestTasksForProject(projectObjectId) {
 
   var prompt = 'You are a project management assistant for a City of Tucson government GIS/Data Analytics team. ' +
     detailInstructions[_suggestDetail] + '\n\n' +
-    'IMPORTANT: Each task MUST be linked to one or more lifecycle phase requirements. ' +
-    'Tasks should be organized to cover ALL phases of the project lifecycle (phases 0-9). ' +
-    'Every requirement across all phases should have at least one task that satisfies it.\n\n' +
+    'IMPORTANT: This project follows a 10-phase lifecycle with formal advancement requirements. ' +
+    'Suggest a mix of REQUIRED tasks (linked to phase requirements) and OPTIONAL tasks (practical work that needs to happen but does not map to a formal gate check). ' +
+    'Every requirement across all phases should have at least one task that satisfies it. ' +
+    'Additionally, include tasks for hands-on project work that fall outside the formal requirements — things like data processing, building specific features, creating visualizations, writing scripts, etc. ' +
+    'For required tasks, set phase_requirements to an array of requirement IDs. For optional tasks, set phase_requirements to an empty array [].\n\n' +
     'For each task, provide:\n' +
     '- title: a clear, specific task name (not generic like "Research" but specific like "Extract crime incident data from Hansen API")\n' +
     '- description: 1-2 sentences explaining the work\n' +
