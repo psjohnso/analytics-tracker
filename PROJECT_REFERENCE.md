@@ -1369,6 +1369,7 @@ Each requirement has a unique ID like `P3_DEMOS` (Phase 3, Demos conducted). Ful
 | 0.10.0.0027 | Issues tab — bug tracker and improvement requests with Submitted→Accepted→In Progress→Done workflow |
 | 0.10.0.0049 | Fix save button disabled state when adding second task after first |
 | 0.11.0.0000 | Active project lifecycle: 10-phase system (0–9) with 39 requirements, phase stepper on project detail, task-linked gate checks, phase-grouped task list, lifecycle requirements multi-select on task form, phase-aware AI task suggestions, phase column on projects list |
+| 0.11.0.0001 | Auto re-render project detail after all suggested tasks are accepted (individual or bulk) |
 
 ---
 
