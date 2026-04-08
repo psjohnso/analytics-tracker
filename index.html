@@ -266,8 +266,8 @@ body {
 .detail-task-row:nth-child(even) { background: #FAFBFF; }
 .detail-task-row:nth-child(even):hover { background: #F0F4FF; }
 
-.detail-task-title { font-weight: 600; color: var(--text-dark); }
-.detail-task-cell { color: var(--text-body); font-size: 12px; padding-top: 2px; }
+.detail-task-title { font-weight: 600; color: var(--text-dark); min-width: 0; overflow: hidden; }
+.detail-task-cell { color: var(--text-body); font-size: 12px; padding-top: 2px; white-space: nowrap; }
 
 /* Task detail page - orange variant */
 .detail-hero.task-hero { /* orange gradient set inline */ }
@@ -1841,7 +1841,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .phase-section-progress { font-size:11px; margin-left:auto; font-weight:600; }
 .phase-section-chevron { font-size:11px; color:#9CA3AF; transition:transform 0.2s; }
 .phase-section-chevron.open { transform:rotate(90deg); }
-.phase-req-chip { font-size:10px; font-weight:600; padding:1px 6px; border-radius:4px; background:#F3F4F6; color:#374151; white-space:nowrap; flex-shrink:0; }
+.phase-req-chip { font-size:10px; font-weight:600; padding:1px 6px; border-radius:4px; background:#F3F4F6; color:#374151; white-space:nowrap; flex-shrink:0; max-width:160px; overflow:hidden; text-overflow:ellipsis; display:inline-block; }
 .phase-req-dropdown { border:1px solid #E5E7EB; border-radius:8px; padding:8px; max-height:200px; overflow-y:auto; }
 .phase-req-group-label { font-size:10px; font-weight:700; color:#6B7280; margin:6px 0 3px; }
 .phase-req-group-label:first-child { margin-top:0; }
@@ -3300,7 +3300,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0011';
+const APP_VERSION = '0.11.0.0012';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
