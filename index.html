@@ -3300,7 +3300,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0003';
+const APP_VERSION = '0.11.0.0004';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -4251,6 +4251,7 @@ async function acceptAllSuggestedTasks() {
       category: task.category || null,
       tool: task.tool || null,
       assignee: assignee || null,
+      phase_requirements: Array.isArray(task.phase_requirements) ? task.phase_requirements.join(',') : (task.phase_requirements || null),
     };
     try {
       await DataStore.createTask(fields);
