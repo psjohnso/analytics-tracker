@@ -3300,7 +3300,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0009';
+const APP_VERSION = '0.11.0.0010';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -4081,10 +4081,12 @@ async function suggestTasksForProject(projectObjectId) {
     '- description: 1-2 sentences explaining the work\n' +
     '- category: choose from: ' + categories + '\n' +
     '- tool: choose the primary tool from: ' + tools + '\n' +
-    '- priority: High, Medium, or Low. Use High sparingly — only for tasks that are blocking or critical path. Most tasks should be Medium. Low is for nice-to-haves or tasks with flexible timing. Aim for roughly 15-20% High, 60-70% Medium, 15-20% Low.\n' +
+    '- priority: High, Medium, or Low\n' +
     '- suggested_assignee: choose from the team members listed, or leave blank\n' +
     '- phase_requirements: an array of requirement IDs this task satisfies (a task can satisfy requirements from multiple phases)\n\n' +
     'LIFECYCLE PHASE REQUIREMENTS (use these exact IDs):\n' + phaseReqList + '\n\n' +
+    'STRICT PRIORITY RULE: No more than 3 tasks may be High priority. The majority must be Medium. At least 20% should be Low. ' +
+    'High is ONLY for tasks where delay would block the entire project. Gate check requirements are NOT automatically High.\n\n' +
     'PROJECT DETAILS:\n' +
     'Title: ' + p.title + '\n' +
     'Category: ' + (p.category || 'Not set') + '\n' +
