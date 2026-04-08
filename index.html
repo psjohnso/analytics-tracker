@@ -2239,7 +2239,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .mywork-compact-row { background:#fff; border:1px solid #E5E7EB; border-radius:8px; padding:10px 16px;
   margin-bottom:6px; display:flex; align-items:center; gap:12px; cursor:pointer; transition:all 0.15s; }
 .mywork-compact-row:hover { border-color:var(--navy); background:#F0F4FF; }
-.mywork-compact-title { flex:1; font-size:13px; font-weight:600; color:var(--text); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mywork-compact-title { flex:1; font-size:13px; font-weight:600; color:var(--text); min-width:0; overflow:hidden; }
 .mywork-compact-badge { font-size:11px; font-weight:600; padding:3px 10px; border-radius:12px; white-space:nowrap; }
 .mw-status-select { font-size:10px; font-weight:700; padding:2px 4px; border-radius:8px; border:1px solid;
   font-family:Lato,sans-serif; cursor:pointer; flex-shrink:0; appearance:auto; min-width:70px; }
@@ -3270,7 +3270,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0046';
+const APP_VERSION = '0.10.0.0047';
 
 // ── Markdown rendering config ────────────────────────────────────────
 if (typeof marked !== 'undefined') {
@@ -11737,7 +11737,6 @@ function buildMyWorkTaskRow(t, statusColor, status, todayStr, hrsLabelFn) {
   const isOverdue = eDue && eDue < todayStr;
   const tHrs = getTaskHours(t.idx);
   const mHrs = hrsLabelFn ? hrsLabelFn(t.idx) : getMyTaskHours(t.idx);
-  const canComplete = t.status && t.status !== 'Complete' && t.status !== 'Canceled';
   let out = '<div class="mywork-compact-row">';
   // Inline status dropdown
   out += '<select class="mw-status-select" data-type="task" data-id="' + t.objectId + '" onchange="mwQuickStatus(this)" onclick="event.stopPropagation()" style="background:' + statusColor + '18;color:' + statusColor + ';border-color:' + statusColor + '44;">';
@@ -11745,15 +11744,14 @@ function buildMyWorkTaskRow(t, statusColor, status, todayStr, hrsLabelFn) {
     out += '<option value="' + s + '"' + (t.status === s ? ' selected' : '') + '>' + s + '</option>';
   });
   out += '</select>';
-  out += '<span class="mywork-compact-title" onclick="openTask(' + t.objectId + ')" style="cursor:pointer;">' + esc(t.title) + '</span>';
+  out += '<span class="mywork-compact-title" onclick="openTask(' + t.objectId + ')" style="cursor:pointer;">' + esc(t.title);
+  if (t.project) out += '<span style="display:block;font-size:11px;font-weight:400;color:var(--text-muted);margin-top:1px;">' + esc(t.project) + '</span>';
+  out += '</span>';
   if (tHrs > 0) {
     out += '<span class="mywork-hrs-badge">\u23f1 ' + hoursLabel(tHrs, mHrs) + '</span>';
   }
   if (eDue) {
     out += '<span style="font-size:11px;font-weight:600;white-space:nowrap;color:' + (isOverdue ? '#EF4444' : 'var(--text-muted)') + ';">' + (isOverdue ? '\u26a0 ' : '') + eDue + '</span>';
-  }
-  if (canComplete) {
-    out += '<button onclick="event.stopPropagation();markTaskComplete(' + t.objectId + ')" class="btn-complete-sm" title="Mark as Complete">\u2713</button>';
   }
   out += '</div>';
   return out;
