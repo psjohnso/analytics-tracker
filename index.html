@@ -728,7 +728,7 @@ body {
 /* Project list table: Title | Status | Priority | Contact | Start | Due */
 .task-table--projects .task-table-header,
 .task-table--projects .task-row {
-  grid-template-columns: 3fr 1fr 0.8fr 1.5fr 1fr 1fr;
+  grid-template-columns: 2.5fr 1fr 0.8fr 1fr 1.5fr 1fr 1fr;
 }
 
 .task-row:hover { background: #F0F4FF; }
@@ -1821,6 +1821,36 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .suggest-accept-all { padding:8px 18px; background:#002669; color:#fff; border:none; border-radius:8px;
   font-size:12px; font-weight:700; font-family:Lato,sans-serif; cursor:pointer; }
 .suggest-accept-all:hover { background:#1a3a7c; }
+
+/* ── Lifecycle Phase Stepper ──────────────────────── */
+.phase-stepper { display:flex; align-items:flex-start; gap:0; margin:0; position:relative; padding:0 4px; }
+.phase-stepper-track { position:absolute; top:11px; left:16px; right:16px; height:2px; background:#E5E7EB; z-index:0; }
+.phase-stepper-fill { position:absolute; top:11px; left:16px; height:2px; background:var(--navy); z-index:1; transition:width 0.3s ease; }
+.phase-step { flex:1; display:flex; flex-direction:column; align-items:center; z-index:2; cursor:pointer; }
+.phase-dot { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; transition:all 0.2s; flex-shrink:0; }
+.phase-dot.done { background:var(--navy); color:#fff; }
+.phase-dot.current { background:var(--navy); color:#fff; box-shadow:0 0 0 3px rgba(0,38,105,0.2); }
+.phase-dot.future { background:#fff; border:2px solid #D1D5DB; color:#9CA3AF; }
+.phase-dot.gate { border-color:#FFDB22; }
+.phase-label { font-size:9px; color:#6B7280; margin-top:3px; text-align:center; line-height:1.2; max-width:64px; }
+.phase-label.current { color:var(--navy); font-weight:700; }
+.phase-section-header { display:flex; align-items:center; gap:8px; padding:10px 0 6px; cursor:pointer; user-select:none; }
+.phase-section-header:hover { opacity:0.8; }
+.phase-section-pill { font-size:10px; font-weight:700; padding:2px 8px; border-radius:6px; white-space:nowrap; }
+.phase-section-name { font-size:13px; font-weight:700; color:var(--navy); }
+.phase-section-progress { font-size:11px; margin-left:auto; font-weight:600; }
+.phase-section-chevron { font-size:11px; color:#9CA3AF; transition:transform 0.2s; }
+.phase-section-chevron.open { transform:rotate(90deg); }
+.phase-req-chip { font-size:10px; font-weight:600; padding:1px 6px; border-radius:4px; background:#F3F4F6; color:#374151; white-space:nowrap; flex-shrink:0; }
+.phase-req-dropdown { border:1px solid #E5E7EB; border-radius:8px; padding:8px; max-height:200px; overflow-y:auto; }
+.phase-req-group-label { font-size:10px; font-weight:700; color:#6B7280; margin:6px 0 3px; }
+.phase-req-group-label:first-child { margin-top:0; }
+.phase-req-option { display:flex; align-items:center; gap:6px; padding:3px 4px; font-size:12px; cursor:pointer; border-radius:4px; }
+.phase-req-option:hover { background:#F0F4FF; }
+.phase-req-option.selected { background:#EEF2FF; }
+.phase-req-tag { display:inline-flex; align-items:center; gap:4px; background:#EEF2FF; color:var(--navy); padding:2px 8px; border-radius:6px; font-size:11px; font-weight:600; }
+.phase-req-tag-x { cursor:pointer; opacity:0.6; font-size:13px; }
+.phase-req-tag-x:hover { opacity:1; }
 
 /* ── Issues Tab ──────────────────────────────────── */
 .issues-page { padding:28px 32px; }
@@ -3270,7 +3300,291 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0050';
+const APP_VERSION = '0.11.0.0000';
+
+// ══════════════════════════════════════════════════════════════════════
+//  ACTIVE PROJECT LIFECYCLE PHASES
+// ══════════════════════════════════════════════════════════════════════
+const LIFECYCLE_PHASES = [
+  { id: 0, name: 'Not started', shortName: 'Not started', defaultDuration: '—', requirements: [
+    { id: 'P0_SPONSOR', label: 'Sponsor approval received' },
+    { id: 'P0_RESOURCES', label: 'Resources identified and available' },
+    { id: 'P0_TIMELINE', label: 'Timeline and milestones defined' }
+  ]},
+  { id: 1, name: 'Kickoff & discovery', shortName: 'Kickoff', defaultDuration: '2 days', requirements: [
+    { id: 'P1_GOALS', label: 'Goals and success criteria documented' },
+    { id: 'P1_STAKEHOLDERS', label: 'Stakeholders, sponsor, and data owners identified' },
+    { id: 'P1_BACKLOG', label: 'Requirements/backlog created and prioritized' }
+  ]},
+  { id: 2, name: 'Data readiness & preparation', shortName: 'Data prep', defaultDuration: '3 weeks', requirements: [
+    { id: 'P2_DATA_ACCESS', label: 'Data sources located and access secured' },
+    { id: 'P2_QUALITY', label: 'Data quality assessed and approved' },
+    { id: 'P2_MODEL', label: 'Initial data model/structure created' },
+    { id: 'P2_VALIDATED', label: 'Stakeholders validated the data foundation' }
+  ]},
+  { id: 3, name: 'Iterative build & development', shortName: 'Build', defaultDuration: '2 weeks', requirements: [
+    { id: 'P3_PROTOTYPE', label: 'Prototype or working version created' },
+    { id: 'P3_FEATURES', label: 'Prioritized features functional' },
+    { id: 'P3_DEMOS', label: 'Stakeholder demos conducted' },
+    { id: 'P3_FEEDBACK', label: 'Feedback incorporated into build' }
+  ]},
+  { id: 4, name: 'Pre-finalization & internal QA', shortName: 'QA', defaultDuration: '2 days', requirements: [
+    { id: 'P4_SCOPE_FROZEN', label: 'Scope and features frozen' },
+    { id: 'P4_QA', label: 'QA completed (accuracy, security, performance)' },
+    { id: 'P4_GOVERNANCE', label: 'Governance compliance confirmed' },
+    { id: 'P4_DOCS_DRAFT', label: 'Draft documentation prepared' }
+  ]},
+  { id: 5, name: 'Design review — gate check', shortName: 'Design review', defaultDuration: '2 weeks', isGateCheck: true, requirements: [
+    { id: 'P5_STANDARDS', label: 'Meets City standards for design, usability, accessibility (ADA)' },
+    { id: 'P5_DATA_VALID', label: 'Data outputs validated and governance compliant' },
+    { id: 'P5_SECURITY', label: 'Security and privacy addressed' },
+    { id: 'P5_AUDIENCE', label: 'Appropriate for intended audience' },
+    { id: 'P5_DOCS_CLEAR', label: 'Documentation clear for stakeholders' },
+    { id: 'P5_ISSUES', label: 'Outstanding issues minor and resolution plan in place' }
+  ]},
+  { id: 6, name: 'Partner final review', shortName: 'Partner review', defaultDuration: '1 week', requirements: [
+    { id: 'P6_STAKEHOLDERS', label: 'Stakeholders validated requirements are met' },
+    { id: 'P6_FEEDBACK', label: 'Feedback incorporated' },
+    { id: 'P6_DOCS_FINAL', label: 'Documentation finalized and approved' }
+  ]},
+  { id: 7, name: 'Launch & communication', shortName: 'Launch', defaultDuration: '2 days', requirements: [
+    { id: 'P7_DEPLOYED', label: 'Solution deployed to production' },
+    { id: 'P7_ACCESS', label: 'Access and security configured' },
+    { id: 'P7_MONITORING', label: 'Monitoring enabled' },
+    { id: 'P7_COMMS', label: 'Launch communications delivered' },
+    { id: 'P7_TRAINING', label: 'Training or usage guidance provided' }
+  ]},
+  { id: 8, name: 'User acceptance', shortName: 'Acceptance', defaultDuration: '1 week', requirements: [
+    { id: 'P8_EVAL', label: 'Evaluation period completed' },
+    { id: 'P8_TESTED', label: 'Users tested solution in real-world conditions' },
+    { id: 'P8_CAPABILITIES', label: 'All in-scope capabilities function as expected' },
+    { id: 'P8_ISSUES', label: 'Issues tracked and corrective actions defined' }
+  ]},
+  { id: 9, name: 'Closeout & continuous improvement', shortName: 'Closeout', defaultDuration: '2 days', requirements: [
+    { id: 'P9_LESSONS', label: 'Lessons learned documented' },
+    { id: 'P9_OWNERSHIP', label: 'Ongoing ownership and maintenance confirmed' },
+    { id: 'P9_FEEDBACK_LOOP', label: 'Feedback loop established' },
+    { id: 'P9_UPDATE_CYCLE', label: 'Update cycle/process defined' }
+  ]}
+];
+
+var REQUIREMENT_LOOKUP = {};
+LIFECYCLE_PHASES.forEach(function(phase) {
+  phase.requirements.forEach(function(req) {
+    REQUIREMENT_LOOKUP[req.id] = { phaseId: phase.id, phaseName: phase.name, label: req.label };
+  });
+});
+
+function parsePhaseReqs(task) {
+  if (!task || !task.phase_requirements) return [];
+  return task.phase_requirements.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+}
+
+function getProjectLifecycleStatus(projectTitle) {
+  var relTasks = TASKS.filter(function(t) { return t.project === projectTitle; });
+  var metReqs = {};
+  relTasks.forEach(function(t) {
+    if (t.status !== 'Complete') return;
+    parsePhaseReqs(t).forEach(function(rId) { metReqs[rId] = true; });
+  });
+  var phases = LIFECYCLE_PHASES.map(function(phase) {
+    var total = phase.requirements.length;
+    var met = phase.requirements.filter(function(r) { return metReqs[r.id]; }).length;
+    return { id: phase.id, name: phase.name, shortName: phase.shortName, total: total, met: met, complete: met === total, isGateCheck: phase.isGateCheck || false };
+  });
+  var currentPhase = 0;
+  for (var i = 0; i < phases.length; i++) {
+    if (!phases[i].complete) { currentPhase = i; break; }
+    if (i === phases.length - 1) currentPhase = i;
+  }
+  return { phases: phases, currentPhase: currentPhase, metReqs: metReqs };
+}
+
+function getTasksByPhase(projectTitle) {
+  var relTasks = TASKS.filter(function(t) { return t.project === projectTitle; });
+  var groups = {};
+  var ungrouped = [];
+  LIFECYCLE_PHASES.forEach(function(ph) { groups[ph.id] = []; });
+  relTasks.forEach(function(t) {
+    var reqs = parsePhaseReqs(t);
+    if (reqs.length === 0) { ungrouped.push(t); return; }
+    var minPhase = 99;
+    reqs.forEach(function(rId) {
+      var info = REQUIREMENT_LOOKUP[rId];
+      if (info && info.phaseId < minPhase) minPhase = info.phaseId;
+    });
+    if (minPhase < 99) groups[minPhase].push(t);
+    else ungrouped.push(t);
+  });
+  return { groups: groups, ungrouped: ungrouped };
+}
+
+function renderPhaseStepper(projectTitle) {
+  var lcs = getProjectLifecycleStatus(projectTitle);
+  var phases = lcs.phases;
+  var cur = lcs.currentPhase;
+  var fillPct = phases.length > 1 ? Math.round((cur / (phases.length - 1)) * 100) : 0;
+  var html = '<div class="detail-section">';
+  html += '<div class="detail-section-label">Project lifecycle</div>';
+  html += '<div style="background:#fff;border:1px solid #E5E7EB;border-radius:10px;padding:16px;">';
+  var cp = phases[cur];
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">';
+  html += '<div style="font-size:13px;font-weight:700;color:var(--navy);">Phase ' + cp.id + ' — ' + esc(LIFECYCLE_PHASES[cp.id].name) + '</div>';
+  html += '<div style="font-size:12px;color:#6B7280;">' + cp.met + '/' + cp.total + ' requirements met</div>';
+  html += '</div>';
+  html += '<div class="phase-stepper">';
+  html += '<div class="phase-stepper-track"></div>';
+  html += '<div class="phase-stepper-fill" style="width:' + fillPct + '%;"></div>';
+  phases.forEach(function(ph, i) {
+    var dotClass = 'phase-dot';
+    var labelClass = 'phase-label';
+    var dotContent = '';
+    if (i < cur) {
+      dotClass += ' done';
+      dotContent = '<svg width="10" height="8" viewBox="0 0 10 8"><polyline points="1,4 4,7 9,1" fill="none" stroke="white" stroke-width="1.5"/></svg>';
+    } else if (i === cur) {
+      dotClass += ' current';
+      dotContent = '<span>' + ph.id + '</span>';
+      labelClass += ' current';
+    } else {
+      dotClass += ' future';
+      if (ph.isGateCheck) dotClass += ' gate';
+      dotContent = '<span style="font-size:9px;">' + ph.id + '</span>';
+    }
+    html += '<div class="phase-step" onclick="togglePhaseDetail(' + i + ')" title="Phase ' + ph.id + ': ' + esc(LIFECYCLE_PHASES[ph.id].name) + ' (' + ph.met + '/' + ph.total + ')">';
+    html += '<div class="' + dotClass + '">' + dotContent + '</div>';
+    html += '<span class="' + labelClass + '">' + (ph.isGateCheck && i !== cur ? '⚑ ' : '') + esc(ph.shortName) + '</span>';
+    html += '</div>';
+  });
+  html += '</div>';
+  html += '<div id="phase-detail-panel" style="display:none;margin-top:14px;border-top:1px solid #E5E7EB;padding-top:12px;"></div>';
+  html += '</div></div>';
+  return html;
+}
+
+function togglePhaseDetail(phaseIndex) {
+  var panel = document.getElementById('phase-detail-panel');
+  if (!panel) return;
+  if (panel.style.display !== 'none' && panel.getAttribute('data-phase') === String(phaseIndex)) {
+    panel.style.display = 'none'; return;
+  }
+  panel.setAttribute('data-phase', String(phaseIndex));
+  panel.style.display = '';
+  var phase = LIFECYCLE_PHASES[phaseIndex];
+  if (!phase) return;
+  var p = PROJECTS.find(function(pr) { return pr.objectId == currentDetail.id; });
+  if (!p) return;
+  var lcs = getProjectLifecycleStatus(p.title);
+  var metReqs = lcs.metReqs;
+  var relTasks = TASKS.filter(function(t) { return t.project === p.title; });
+  var html = '<div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px;">Phase ' + phase.id + ' — ' + esc(phase.name) + '</div>';
+  html += '<div style="font-size:11px;color:#6B7280;margin-bottom:10px;">Default duration: ' + phase.defaultDuration + '</div>';
+  phase.requirements.forEach(function(req) {
+    var isMet = metReqs[req.id];
+    var linkedTasks = relTasks.filter(function(t) { return parsePhaseReqs(t).indexOf(req.id) !== -1; });
+    var icon = isMet ? '<span style="color:#22C55E;font-weight:700;">✓</span>' : '<span style="color:#D1D5DB;">○</span>';
+    var textStyle = isMet ? 'color:#6B7280;text-decoration:line-through;' : '';
+    html += '<div style="display:flex;align-items:flex-start;gap:8px;padding:4px 0;font-size:13px;">';
+    html += '<span style="flex-shrink:0;width:16px;text-align:center;">' + icon + '</span>';
+    html += '<div style="flex:1;' + textStyle + '">' + esc(req.label);
+    if (linkedTasks.length) {
+      html += '<div style="margin-top:2px;">';
+      linkedTasks.forEach(function(t) {
+        var sc = STATUS_COLOR(t.status) || '#9CA3AF';
+        html += '<span style="display:inline-block;font-size:10px;font-weight:600;padding:1px 6px;border-radius:4px;background:' + sc + '18;color:' + sc + ';margin-right:4px;">' + esc(t.title) + '</span>';
+      });
+      html += '</div>';
+    }
+    html += '</div></div>';
+  });
+  panel.innerHTML = html;
+}
+
+function renderPhaseGroupedTasks(projectTitle, relTasks) {
+  var grouped = getTasksByPhase(projectTitle);
+  var lcs = getProjectLifecycleStatus(projectTitle);
+  var hasAnyPhaseReqs = relTasks.some(function(t) { return t.phase_requirements; });
+  if (!hasAnyPhaseReqs) return '';
+  var html = '';
+  LIFECYCLE_PHASES.forEach(function(phase) {
+    var tasks = grouped.groups[phase.id];
+    var phStatus = lcs.phases[phase.id];
+    var pillBg = phStatus.complete ? '#DCFCE7' : (phase.id === lcs.currentPhase ? '#EEF2FF' : '#F3F4F6');
+    var pillColor = phStatus.complete ? '#166534' : (phase.id === lcs.currentPhase ? 'var(--navy)' : '#6B7280');
+    var progressColor = phStatus.complete ? '#22C55E' : (phStatus.met > 0 ? '#F59E0B' : '#9CA3AF');
+    html += '<div class="phase-section-header" onclick="togglePhaseSection(' + phase.id + ')">';
+    html += '<span class="phase-section-pill" style="background:' + pillBg + ';color:' + pillColor + ';">' + (phase.isGateCheck ? '⚑ ' : '') + 'Phase ' + phase.id + '</span>';
+    html += '<span class="phase-section-name">' + esc(phase.name) + '</span>';
+    html += '<span class="phase-section-progress" style="color:' + progressColor + ';">' + phStatus.met + '/' + phStatus.total + '</span>';
+    html += '<span class="phase-section-chevron" id="phase-chevron-' + phase.id + '">▸</span>';
+    html += '</div>';
+    html += '<div id="phase-tasks-' + phase.id + '" style="display:' + (tasks.length > 0 || phase.id === lcs.currentPhase ? '' : 'none') + ';margin-left:12px;margin-bottom:4px;">';
+    if (tasks.length > 0) {
+      tasks.forEach(function(t) {
+        var sc = STATUS_COLOR(t.status) || '#9CA3AF';
+        var taskHrs = getTaskHours(t.idx);
+        var myHrs = getMyTaskHours(t.idx);
+        var hrsDisplay = taskHrs > 0 ? hoursLabel(taskHrs, myHrs) : '—';
+        var reqChips = parsePhaseReqs(t).map(function(rId) {
+          var info = REQUIREMENT_LOOKUP[rId];
+          return info ? '<span class="phase-req-chip">' + esc(info.label).substring(0, 30) + '</span>' : '';
+        }).join('');
+        html += '<div class="detail-task-row">';
+        html += '<div style="text-align:center;" onclick="event.stopPropagation()"><input type="checkbox" class="batch-task-cb" data-task-id="' + t.objectId + '" onchange="updateBatchBar()" style="width:14px;height:14px;cursor:pointer;accent-color:var(--navy);"></div>';
+        html += '<div class="detail-task-title" onclick="openTaskFromProject(' + t.objectId + ')" style="cursor:pointer;">' + esc(t.title);
+        if (reqChips) html += '<div style="margin-top:2px;">' + reqChips + '</div>';
+        html += '</div>';
+        html += '<div onclick="event.stopPropagation()"><select class="mw-status-select" data-type="task" data-id="' + t.objectId + '" onchange="mwQuickStatus(this)" style="font-size:10px;padding:2px 4px;min-width:100px;background:' + sc + '18;color:' + sc + ';border-color:' + sc + '44;">';
+        ['Active','Pending','On Hold','Waiting for Response','Complete','Canceled'].forEach(function(s) { html += '<option value="' + s + '"' + (t.status === s ? ' selected' : '') + '>' + s + '</option>'; });
+        html += '</select></div>';
+        html += '<div class="detail-task-cell"><span class="priority-badge priority-' + (t.priority||'null') + '">' + (t.priority||'—') + '</span></div>';
+        html += '<div class="detail-task-cell" style="color:var(--text-muted);">' + esc(t.assignee||'—') + '</div>';
+        html += '<div class="detail-task-cell" style="color:var(--text-muted);">' + (t.working_due||t.due||'—') + '</div>';
+        html += '<div class="detail-task-cell" style="font-weight:700;color:var(--navy);">' + hrsDisplay + '</div>';
+        html += '</div>';
+      });
+    } else {
+      html += '<div style="padding:8px 0;font-size:12px;color:#9CA3AF;font-style:italic;">No tasks linked to this phase yet.</div>';
+    }
+    html += '</div>';
+  });
+  if (grouped.ungrouped.length > 0) {
+    html += '<div class="phase-section-header" onclick="togglePhaseSection(\'ungrouped\')">';
+    html += '<span class="phase-section-pill" style="background:#F3F4F6;color:#6B7280;">—</span>';
+    html += '<span class="phase-section-name">Unlinked tasks</span>';
+    html += '<span class="phase-section-progress" style="color:#9CA3AF;">' + grouped.ungrouped.length + '</span>';
+    html += '<span class="phase-section-chevron" id="phase-chevron-ungrouped">▸</span>';
+    html += '</div>';
+    html += '<div id="phase-tasks-ungrouped" style="margin-left:12px;margin-bottom:4px;">';
+    grouped.ungrouped.forEach(function(t) {
+      var sc = STATUS_COLOR(t.status) || '#9CA3AF';
+      var taskHrs = getTaskHours(t.idx);
+      var myHrs = getMyTaskHours(t.idx);
+      var hrsDisplay = taskHrs > 0 ? hoursLabel(taskHrs, myHrs) : '—';
+      html += '<div class="detail-task-row">';
+      html += '<div style="text-align:center;" onclick="event.stopPropagation()"><input type="checkbox" class="batch-task-cb" data-task-id="' + t.objectId + '" onchange="updateBatchBar()" style="width:14px;height:14px;cursor:pointer;accent-color:var(--navy);"></div>';
+      html += '<div class="detail-task-title" onclick="openTaskFromProject(' + t.objectId + ')" style="cursor:pointer;">' + esc(t.title) + '</div>';
+      html += '<div onclick="event.stopPropagation()"><select class="mw-status-select" data-type="task" data-id="' + t.objectId + '" onchange="mwQuickStatus(this)" style="font-size:10px;padding:2px 4px;min-width:100px;background:' + sc + '18;color:' + sc + ';border-color:' + sc + '44;">';
+      ['Active','Pending','On Hold','Waiting for Response','Complete','Canceled'].forEach(function(s) { html += '<option value="' + s + '"' + (t.status === s ? ' selected' : '') + '>' + s + '</option>'; });
+      html += '</select></div>';
+      html += '<div class="detail-task-cell"><span class="priority-badge priority-' + (t.priority||'null') + '">' + (t.priority||'—') + '</span></div>';
+      html += '<div class="detail-task-cell" style="color:var(--text-muted);">' + esc(t.assignee||'—') + '</div>';
+      html += '<div class="detail-task-cell" style="color:var(--text-muted);">' + (t.working_due||t.due||'—') + '</div>';
+      html += '<div class="detail-task-cell" style="font-weight:700;color:var(--navy);">' + hrsDisplay + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+  return html;
+}
+
+function togglePhaseSection(phaseId) {
+  var el = document.getElementById('phase-tasks-' + phaseId);
+  var chev = document.getElementById('phase-chevron-' + phaseId);
+  if (!el) return;
+  if (el.style.display === 'none') { el.style.display = ''; if (chev) chev.classList.add('open'); }
+  else { el.style.display = 'none'; if (chev) chev.classList.remove('open'); }
+}
 
 // ── Markdown rendering config ────────────────────────────────────────
 if (typeof marked !== 'undefined') {
@@ -3725,15 +4039,25 @@ async function suggestTasksForProject(projectObjectId) {
   };
 
   // Build the prompt
+  var phaseReqList = LIFECYCLE_PHASES.map(function(phase) {
+    return 'Phase ' + phase.id + ' (' + phase.name + '):\n' +
+      phase.requirements.map(function(r) { return '  - ' + r.id + ': ' + r.label; }).join('\n');
+  }).join('\n');
+
   var prompt = 'You are a project management assistant for a City of Tucson government GIS/Data Analytics team. ' +
     detailInstructions[_suggestDetail] + '\n\n' +
+    'IMPORTANT: Each task MUST be linked to one or more lifecycle phase requirements. ' +
+    'Tasks should be organized to cover ALL phases of the project lifecycle (phases 0-9). ' +
+    'Every requirement across all phases should have at least one task that satisfies it.\n\n' +
     'For each task, provide:\n' +
     '- title: a clear, specific task name (not generic like "Research" but specific like "Extract crime incident data from Hansen API")\n' +
     '- description: 1-2 sentences explaining the work\n' +
     '- category: choose from: ' + categories + '\n' +
     '- tool: choose the primary tool from: ' + tools + '\n' +
     '- priority: High, Medium, or Low\n' +
-    '- suggested_assignee: choose from the team members listed, or leave blank\n\n' +
+    '- suggested_assignee: choose from the team members listed, or leave blank\n' +
+    '- phase_requirements: an array of requirement IDs this task satisfies (a task can satisfy requirements from multiple phases)\n\n' +
+    'LIFECYCLE PHASE REQUIREMENTS (use these exact IDs):\n' + phaseReqList + '\n\n' +
     'PROJECT DETAILS:\n' +
     'Title: ' + p.title + '\n' +
     'Category: ' + (p.category || 'Not set') + '\n' +
@@ -3750,7 +4074,7 @@ async function suggestTasksForProject(projectObjectId) {
     prompt += '\nEXISTING TASKS (do not duplicate these):\n' + existingTasks.map(function(t) { return '- ' + t; }).join('\n') + '\n';
   }
 
-  prompt += '\nRespond ONLY with a JSON array (no markdown, no backticks, no preamble). Each element should have: title, description, category, tool, priority, suggested_assignee.';
+  prompt += '\nRespond ONLY with a JSON array (no markdown, no backticks, no preamble). Each element should have: title, description, category, tool, priority, suggested_assignee, phase_requirements (array of requirement ID strings).';
 
   try {
     if (AI_PROXY_URL.includes('YOUR_SUBDOMAIN')) {
@@ -3826,6 +4150,11 @@ function renderSuggestions(project) {
     if (task.category) html += '<span class="suggest-task-chip">' + esc(task.category) + '</span>';
     if (task.tool) html += '<span class="suggest-task-chip">' + esc(task.tool) + '</span>';
     if (task.priority) html += '<span class="suggest-task-chip">' + esc(task.priority) + '</span>';
+    var taskReqs = Array.isArray(task.phase_requirements) ? task.phase_requirements : [];
+    taskReqs.forEach(function(rId) {
+      var info = REQUIREMENT_LOOKUP[rId];
+      if (info) html += '<span class="suggest-task-chip" style="background:#EEF2FF;color:var(--navy);">P' + info.phaseId + ': ' + esc(info.label).substring(0, 30) + '</span>';
+    });
     // Editable assignee dropdown
     var members = RESOURCES_DATA ? Object.keys(RESOURCES_DATA.people).filter(function(n) { return RESOURCES_DATA.people[n].active !== false; }).sort() : (FM_ACTIVE_MEMBERS || FM_TASK_ASSIGNEES || []);
     html += '<select id="suggest-assignee-' + i + '" onchange="suggestAssigneeChange(' + i + ',this.value)" style="font-size:10px;font-weight:700;padding:2px 6px;border:1px solid #E5E7EB;border-radius:6px;font-family:Lato,sans-serif;color:var(--navy);background:#F9FAFB;cursor:pointer;">';
@@ -3884,6 +4213,7 @@ async function acceptSuggestedTask(index) {
     category: task.category || null,
     tool: task.tool || null,
     assignee: assignee || null,
+    phase_requirements: Array.isArray(task.phase_requirements) ? task.phase_requirements.join(',') : (task.phase_requirements || null),
   };
 
   try {
@@ -4341,10 +4671,21 @@ function renderProjectList(data) {
   const th = (label, key) => `<div class="th-sortable" onclick="setProjListSort('${key}')" style="cursor:pointer;user-select:none;">${label}<span style="opacity:${projListSortKey===key?'1':'0.35'};font-size:10px;">${arrow(key)}</span></div>`;
   const rows = data.map(p => {
     const statusColor = STATUS_COLOR(p.status) || '#9CA3AF';
+    var phaseCell = '—';
+    if (p.status === 'Active' || p.status === 'Scheduled') {
+      var lcs = getProjectLifecycleStatus(p.title);
+      var cp = lcs.phases[lcs.currentPhase];
+      var phaseBg = cp.complete ? '#DCFCE7' : '#EEF2FF';
+      var phaseColor = cp.complete ? '#166534' : 'var(--navy)';
+      phaseCell = '<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:' + phaseBg + ';color:' + phaseColor + ';white-space:nowrap;">' +
+        cp.id + ' · ' + esc(cp.shortName) + '</span>' +
+        '<span style="font-size:9px;color:#6B7280;margin-left:4px;">' + cp.met + '/' + cp.total + '</span>';
+    }
     return `<div class="task-row" onclick="openProject(${p.objectId})">
       <div class="task-title-cell">${esc(p.title)}</div>
       <div class="task-cell"><span class="status-pill" style="background:${statusColor}22;color:${statusColor};"><span style="width:5px;height:5px;border-radius:50%;background:${statusColor};display:inline-block;"></span>${p.status||'—'}</span></div>
       <div class="task-cell"><span class="priority-badge priority-${p.priority||'null'}">${p.priority||'—'}</span></div>
+      <div class="task-cell">${phaseCell}</div>
       <div class="task-cell">${esc(p.contact||'—')}</div>
       <div class="task-cell">${p.start||'—'}</div>
       <div class="task-cell">${p.working_due||p.end||'—'}</div>
@@ -4352,7 +4693,7 @@ function renderProjectList(data) {
   }).join('');
   return `<div class="task-table task-table--projects">
     <div class="task-table-header">
-      ${th('Title','title')}${th('Status','status')}${th('Priority','priority')}${th('Lead','contact')}${th('Start','start')}${th('Due','end')}
+      ${th('Title','title')}${th('Status','status')}${th('Priority','priority')}${th('Phase','phase')}${th('Lead','contact')}${th('Start','start')}${th('Due','end')}
     </div>
     ${rows}
   </div>`;
@@ -8028,6 +8369,62 @@ function fmRoleChange(name, role) {
   renderTeamAvailList(currentMembers, contact);
 }
 
+// ── Phase Requirements Multi-Select Widget ──────────────────────────
+function buildPhaseReqSelector(currentValue) {
+  var selected = currentValue ? currentValue.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];
+  var tagsHtml = selected.map(function(rId) {
+    var info = REQUIREMENT_LOOKUP[rId];
+    var label = info ? 'P' + info.phaseId + ': ' + info.label.substring(0, 35) : rId;
+    return '<span class="phase-req-tag" data-req="' + esc(rId) + '">' + esc(label) + '<span class="phase-req-tag-x" onclick="removePhaseReq(\'' + esc(rId) + '\')">&times;</span></span>';
+  }).join('');
+  return '<input type="hidden" id="fm-phase-reqs-val" value="' + esc(currentValue || '') + '">' +
+    '<div id="fm-phase-reqs-tags" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;">' + tagsHtml + '</div>' +
+    '<button type="button" onclick="togglePhaseReqDropdown()" style="font-size:12px;font-weight:600;padding:5px 12px;background:#EEF2FF;color:var(--navy);border:1px solid #C7D2FE;border-radius:6px;cursor:pointer;font-family:Lato,sans-serif;">+ Add requirements</button>' +
+    '<div id="fm-phase-reqs-dropdown" style="display:none;margin-top:6px;" class="phase-req-dropdown"></div>';
+}
+function togglePhaseReqDropdown() {
+  var dd = document.getElementById('fm-phase-reqs-dropdown');
+  if (!dd) return;
+  if (dd.style.display !== 'none') { dd.style.display = 'none'; return; }
+  dd.style.display = '';
+  renderPhaseReqDropdown();
+}
+function renderPhaseReqDropdown() {
+  var dd = document.getElementById('fm-phase-reqs-dropdown');
+  if (!dd) return;
+  var current = (document.getElementById('fm-phase-reqs-val') || {}).value || '';
+  var selected = current ? current.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];
+  var html = '';
+  LIFECYCLE_PHASES.forEach(function(phase) {
+    html += '<div class="phase-req-group-label">' + (phase.isGateCheck ? '⚑ ' : '') + 'Phase ' + phase.id + ' — ' + esc(phase.name) + '</div>';
+    phase.requirements.forEach(function(req) {
+      var isSelected = selected.indexOf(req.id) !== -1;
+      html += '<div class="phase-req-option' + (isSelected ? ' selected' : '') + '" onclick="togglePhaseReq(\'' + req.id + '\')">';
+      html += '<input type="checkbox"' + (isSelected ? ' checked' : '') + ' style="pointer-events:none;accent-color:var(--navy);">';
+      html += '<span>' + esc(req.label) + '</span></div>';
+    });
+  });
+  dd.innerHTML = html;
+}
+function togglePhaseReq(reqId) {
+  var hidden = document.getElementById('fm-phase-reqs-val');
+  if (!hidden) return;
+  var current = hidden.value ? hidden.value.split(',').map(function(s) { return s.trim(); }).filter(Boolean) : [];
+  var idx = current.indexOf(reqId);
+  if (idx !== -1) current.splice(idx, 1); else current.push(reqId);
+  hidden.value = current.join(',');
+  var tagsEl = document.getElementById('fm-phase-reqs-tags');
+  if (tagsEl) {
+    tagsEl.innerHTML = current.map(function(rId) {
+      var info = REQUIREMENT_LOOKUP[rId];
+      var label = info ? 'P' + info.phaseId + ': ' + info.label.substring(0, 35) : rId;
+      return '<span class="phase-req-tag" data-req="' + esc(rId) + '">' + esc(label) + '<span class="phase-req-tag-x" onclick="removePhaseReq(\'' + esc(rId) + '\')">&times;</span></span>';
+    }).join('');
+  }
+  renderPhaseReqDropdown();
+}
+function removePhaseReq(reqId) { togglePhaseReq(reqId); }
+
 function buildProjectForm(p) {
   const v = function(k) { return p ? (p[k] || '') : ''; };
   // Original End Date is locked once project reaches Active status
@@ -8092,6 +8489,11 @@ function buildTaskForm(t) {
       fmField('Project', fmSelect('fm-project', projTitles, v('project'), 'Select project…'), false, true) +
       fmTaskToolField(v('tool'), false) +
       fmTaskCategoryField(v('category'), false) +
+    '</div>' +
+    '<div class="fm-section-label">Lifecycle Requirements</div>' +
+    '<div class="fm-grid">' +
+      fmField('Satisfies Requirement(s)', buildPhaseReqSelector(v('phase_requirements')), false, true,
+        'Link this task to lifecycle phase requirements. Completing this task will count toward satisfying the selected requirements.') +
     '</div>' +
     '<div class="fm-section-label">Timeline</div>' +
     '<div class="fm-grid">' +
@@ -8236,6 +8638,7 @@ function collectTaskFields() {
     working_due: getVal('fm-working-due')|| null,
     description: getVal('fm-description')|| null,
     actual_end:  getVal('fm-actual-end') || null,
+    phase_requirements: getVal('fm-phase-reqs-val') || null,
   };
 }
 
@@ -8751,6 +9154,8 @@ function renderProjectDetail(id) {
 
       ${buildProjectTimeline(p)}
 
+      ${(p.status === 'Active' || p.status === 'Scheduled') ? renderPhaseStepper(p.title) : ''}
+
       ${p.problem_statement ? `<div class="detail-section">
         <div class="detail-section-label">Problem Statement</div>
         <div class="detail-prose">${renderMd(p.problem_statement)}</div>
@@ -8850,12 +9255,19 @@ function renderProjectDetail(id) {
           <button onclick="batchDeleteTasks()" style="padding:5px 14px;background:#FEE2E2;color:#991B1B;border:1px solid #FECACA;border-radius:6px;font-size:11px;font-weight:700;font-family:Lato,sans-serif;cursor:pointer;">Delete Selected</button>
         </div>
         <div class="detail-tasks-table">
-          ${relTasks.length ? `<div class="detail-tasks-header">
-            <div style="text-align:center;"><input type="checkbox" id="batch-select-all" onchange="toggleSelectAllTasks(this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:#fff;" title="Select all"></div>
-            <div>Task</div><div>Status</div><div>Priority</div><div>Assignee</div><div>Due Date</div><div>Hours</div>
-          </div>` : ''}
-          ${taskRows}
-          ${projHrsRow}
+          ${(() => {
+            var phaseHtml = (p.status === 'Active' || p.status === 'Scheduled') ? renderPhaseGroupedTasks(p.title, relTasks) : '';
+            if (phaseHtml) {
+              return `<div class="detail-tasks-header">
+                <div style="text-align:center;"><input type="checkbox" id="batch-select-all" onchange="toggleSelectAllTasks(this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:#fff;" title="Select all"></div>
+                <div>Task</div><div>Status</div><div>Priority</div><div>Assignee</div><div>Due Date</div><div>Hours</div>
+              </div>` + phaseHtml + projHrsRow;
+            }
+            return (relTasks.length ? `<div class="detail-tasks-header">
+              <div style="text-align:center;"><input type="checkbox" id="batch-select-all" onchange="toggleSelectAllTasks(this.checked)" style="width:14px;height:14px;cursor:pointer;accent-color:#fff;" title="Select all"></div>
+              <div>Task</div><div>Status</div><div>Priority</div><div>Assignee</div><div>Due Date</div><div>Hours</div>
+            </div>` : '') + taskRows + projHrsRow;
+          })()}
         </div>
       </div>
     </div>
@@ -8925,6 +9337,19 @@ function renderTaskDetail(idx) {
         <div class="detail-section-label">Description</div>
         <div class="detail-prose task-prose">${renderMd(t.description)}</div>
       </div>` : ''}
+
+      ${(() => {
+        var reqs = parsePhaseReqs(t);
+        if (!reqs.length) return '';
+        var chips = reqs.map(function(rId) {
+          var info = REQUIREMENT_LOOKUP[rId];
+          if (!info) return '';
+          return '<div style="display:flex;align-items:flex-start;gap:8px;padding:4px 0;font-size:13px;">' +
+            '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:#EEF2FF;color:var(--navy);white-space:nowrap;flex-shrink:0;">Phase ' + info.phaseId + '</span>' +
+            '<span>' + esc(info.label) + '</span></div>';
+        }).join('');
+        return '<div class="detail-section"><div class="detail-section-label">Lifecycle requirements</div>' + chips + '</div>';
+      })()}
 
       ${proj ? `<div class="detail-section">
         <div class="detail-section-label">Parent Project</div>

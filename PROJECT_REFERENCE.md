@@ -168,6 +168,7 @@ const PROJECT_AGOL_TO_LOCAL = { 'end_': 'end' };
 | `hours` | String | 20 | Yes | Estimated hours (**stored as string, not number**) |
 | `hours_worked` | Double | — | Yes | Actual hours worked |
 | `description` | String | 4000 | Yes | Task description |
+| `phase_requirements` | String | 500 | Yes | Comma-separated lifecycle requirement IDs (e.g., `"P3_DEMOS,P6_STAKEHOLDERS"`) |
 
 **Task field names are identical in ArcGIS and the app — no mapping needed.**
 
@@ -855,8 +856,8 @@ function fmTextarea(id, value, placeholder, rows) {
 1. **Basic Info:** Title*, Status, Priority, Assignee
 2. **Details:** Description (textarea, span2)
 3. **Classification:** Project (dropdown), Tool/Technology, Category (searchable with wizard)
-4. **Timeline:** Start Date, Due Date, Actual End Date
-5. **Effort:** Estimated Hours, Hours Worked
+4. **Lifecycle Requirements:** Multi-select dropdown linking task to phase requirements (grouped by phase)
+5. **Timeline:** Start Date, Due Date, Actual End Date
 
 ### Category Wizard
 - Inline 2-question decision tree below the category input
@@ -1275,7 +1276,58 @@ Step 1: "What best describes the primary nature of this project/task?"
 
 ---
 
-## 21. Version History
+## 21. Active Project Lifecycle
+
+### Overview
+Active and Scheduled projects follow a 10-phase lifecycle (phases 0–9). Each phase has specific advancement requirements. Phase progress is **derived from task completion** — there is no separate checklist. When a task linked to a requirement is marked Complete, that requirement is considered met.
+
+### Phases
+| Phase | Name | Default Duration | Requirements |
+|-------|------|-----------------|--------------|
+| 0 | Not started | — | 3 |
+| 1 | Kickoff & discovery | 2 days | 3 |
+| 2 | Data readiness & preparation | 3 weeks | 4 |
+| 3 | Iterative build & development | 2 weeks | 4 |
+| 4 | Pre-finalization & internal QA | 2 days | 4 |
+| 5 | Design review — gate check ⚑ | 2 weeks | 6 |
+| 6 | Partner final review | 1 week | 3 |
+| 7 | Launch & communication | 2 days | 5 |
+| 8 | User acceptance | 1 week | 4 |
+| 9 | Closeout & continuous improvement | 2 days | 4 |
+
+### Requirement IDs
+Each requirement has a unique ID like `P3_DEMOS` (Phase 3, Demos conducted). Full list defined in `LIFECYCLE_PHASES` constant. Tasks store linked requirements in `phase_requirements` field as comma-separated IDs.
+
+### How Phase Progress Works
+1. `getProjectLifecycleStatus(projectTitle)` scans all tasks for the project
+2. For each **completed** task, reads `phase_requirements` and marks those requirements as met
+3. Current phase = first phase where not all requirements are met
+4. Phase stepper renders this derived state — no manual phase advancement
+
+### Task–Requirement Linking
+- **AI suggestions:** Prompt includes all requirement IDs; AI tags each suggested task with `phase_requirements` array
+- **Manual tasks:** Task form has "Lifecycle Requirements" multi-select grouped by phase
+- A single task can satisfy requirements across multiple phases
+
+### UI Components
+- **Phase stepper** on project detail (Active/Scheduled only) — clickable dots showing progress
+- **Phase-grouped task list** — tasks organized under phase headers with requirement chips; falls back to flat list when no tasks have phase_requirements
+- **Phase column** on projects list — shows current phase pill with gate progress
+- **Lifecycle requirements** section on task detail — shows linked requirements
+
+### Key Functions
+- `LIFECYCLE_PHASES` — constant defining all phases and requirements
+- `REQUIREMENT_LOOKUP` — flat map: requirementId → { phaseId, label }
+- `parsePhaseReqs(task)` — parse comma-separated string to array
+- `getProjectLifecycleStatus(projectTitle)` — derive phase status from task completion
+- `getTasksByPhase(projectTitle)` — group tasks by their lowest linked phase
+- `renderPhaseStepper(projectTitle)` — render the visual stepper
+- `renderPhaseGroupedTasks(projectTitle, relTasks)` — render phase-organized task sections
+- `buildPhaseReqSelector(currentValue)` — multi-select widget for task form
+
+---
+
+## 22. Version History
 
 | Version | Description |
 |---------|-------------|
@@ -1315,6 +1367,8 @@ Step 1: "What best describes the primary nature of this project/task?"
 | 0.10.0.0018 | Add Deliverables/Data Sources/Technical Requirements fields; AI-powered task suggestion engine on project detail |
 | 0.10.0.0019-26 | AI proxy configuration, JSON parsing fixes, editable assignees, detail level picker, cascade deletion, atomic task ordering |
 | 0.10.0.0027 | Issues tab — bug tracker and improvement requests with Submitted→Accepted→In Progress→Done workflow |
+| 0.10.0.0049 | Fix save button disabled state when adding second task after first |
+| 0.11.0.0000 | Active project lifecycle: 10-phase system (0–9) with 39 requirements, phase stepper on project detail, task-linked gate checks, phase-grouped task list, lifecycle requirements multi-select on task form, phase-aware AI task suggestions, phase column on projects list |
 
 ---
 
