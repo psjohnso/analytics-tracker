@@ -3264,7 +3264,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.10.0.0044';
+const APP_VERSION = '0.10.0.0045';
 
 // ── Markdown rendering config ────────────────────────────────────────
 if (typeof marked !== 'undefined') {
@@ -6628,6 +6628,7 @@ const DataStore = {
     }
     const oldTitle = PROJECTS[i].title;
     const newTitle = fields.title;
+    const snapshot = Object.assign({}, PROJECTS[i]); // save snapshot for rollback
     Object.assign(PROJECTS[i], fields);
     if (newTitle && newTitle !== oldTitle) {
       TASKS.forEach(function(t) {
@@ -6686,7 +6687,13 @@ const DataStore = {
         }
       } catch (err) {
         console.error('ArcGIS updateProject failed:', err);
+        // Rollback local state
+        Object.assign(PROJECTS[i], snapshot);
+        if (newTitle && newTitle !== oldTitle) {
+          TASKS.forEach(function(t) { if (t.project === newTitle) t.project = oldTitle; });
+        }
         markDirty();
+        throw err;
       }
     } else {
       markDirty();
@@ -6816,6 +6823,7 @@ const DataStore = {
       const proj = PROJECTS.find(function(p) { return p.title === fields.project; });
       fields.project_id = proj ? proj.id : null;
     }
+    const snapshot = Object.assign({}, TASKS[i]);
     Object.assign(TASKS[i], fields);
     const objectId = TASKS[i].objectId;
     if (objectId) {
@@ -6828,7 +6836,9 @@ const DataStore = {
         markSynced('Task updated');
       } catch (err) {
         console.error('ArcGIS updateTask failed:', err);
+        Object.assign(TASKS[i], snapshot);
         markDirty();
+        throw err;
       }
     } else {
       markDirty();
