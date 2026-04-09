@@ -3300,7 +3300,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0012';
+const APP_VERSION = '0.11.0.0014';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -6553,7 +6553,7 @@ async function agolApplyEdits(serviceUrl, edits) {
 //  Tasks layer fields (ArcGIS):
 //    ObjectId, idx, id, title, status, priority, assignee,
 //    project_id, project, category, start, due,
-//    actual_end, tool, description, hours, Hours_Worked
+//    actual_end, tool, description, hours, Hours_Worked, resolution
 //
 //  KEY JOIN: Task.project_id = Project.id
 //
@@ -8574,7 +8574,13 @@ function buildTaskForm(t) {
       fmField('Original Due Date', fmInput('fm-due', v('due'), '', 'date')) +
       fmField('Working Due Date', fmInput('fm-working-due', v('working_due'), '', 'date')) +
       (t && t.status === 'Complete' ? fmField('Completion Date', fmInput('fm-actual-end', v('actual_end'), '', 'date'), false, false, 'When this task was actually completed') : '') +
-    '</div>';
+    '</div>' +
+    (t && (t.status === 'Complete' || t.status === 'Canceled') ?
+      '<div class="fm-section-label">Resolution</div>' +
+      '<div class="fm-grid">' +
+        fmField('What was done', fmMdTextarea('fm-resolution', v('resolution'), 'Summarize the work completed, decisions made, or deliverables produced…', 3, 4000), false, true,
+          'Visible to the team — describe what was accomplished or why this was canceled.') +
+      '</div>' : '');
 }
 
 function openFormModal(mode, id) {
@@ -8711,6 +8717,7 @@ function collectTaskFields() {
     working_due: getVal('fm-working-due')|| null,
     description: getVal('fm-description')|| null,
     actual_end:  getVal('fm-actual-end') || null,
+    resolution:  getVal('fm-resolution')|| null,
     phase_requirements: getVal('fm-phase-reqs-val') || null,
   };
 }
@@ -9164,7 +9171,7 @@ function renderProjectDetail(id) {
       <div style="text-align:center;" onclick="event.stopPropagation()">
         <input type="checkbox" class="batch-task-cb" data-task-id="${t.objectId}" onchange="updateBatchBar()" style="width:14px;height:14px;cursor:pointer;accent-color:var(--navy);">
       </div>
-      <div class="detail-task-title" onclick="openTaskFromProject(${t.objectId})" style="cursor:pointer;">${esc(t.title)}</div>
+      <div class="detail-task-title" onclick="openTaskFromProject(${t.objectId})" style="cursor:pointer;">${esc(t.title)}${t.resolution ? '<div style="font-size:11px;font-weight:400;color:var(--text-muted);margin-top:2px;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">' + esc(t.resolution.length > 150 ? t.resolution.slice(0, 150) + '…' : t.resolution) + '</div>' : ''}</div>
       <div onclick="event.stopPropagation()">
         <select class="mw-status-select" data-type="task" data-id="${t.objectId}" onchange="mwQuickStatus(this)" style="font-size:10px;padding:2px 4px;min-width:100px;background:${sc2}18;color:${sc2};border-color:${sc2}44;">
           ${['Active','Pending','On Hold','Waiting for Response','Complete','Canceled'].map(function(s) { return '<option value="' + s + '"' + (t.status === s ? ' selected' : '') + '>' + s + '</option>'; }).join('')}
@@ -9416,6 +9423,11 @@ function renderTaskDetail(idx) {
       ${t.description ? `<div class="detail-section">
         <div class="detail-section-label">Description</div>
         <div class="detail-prose task-prose">${renderMd(t.description)}</div>
+      </div>` : ''}
+
+      ${t.resolution ? `<div class="detail-section">
+        <div class="detail-section-label">Resolution</div>
+        <div class="detail-prose task-prose">${renderMd(t.resolution)}</div>
       </div>` : ''}
 
       ${(() => {
@@ -11990,7 +12002,9 @@ function toggleRecentEntries() {
 
 function toggleEditTimeEntry(oid) {
   const el = document.getElementById('te-edit-' + oid);
-  if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
+  if (!el) return;
+  const isHidden = getComputedStyle(el).display === 'none';
+  el.style.display = isHidden ? 'block' : 'none';
 }
 
 // ══════════════════════════════════════════════════════════════════════
