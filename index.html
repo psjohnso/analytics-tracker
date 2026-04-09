@@ -3300,7 +3300,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0019';
+const APP_VERSION = '0.11.0.0020';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -8992,6 +8992,105 @@ async function markProjectComplete(objectId) {
   render();
 }
 
+function copyProjectSummary(objectId) {
+  var p = PROJECTS.find(function(pr) { return pr.objectId == objectId; });
+  if (!p) { showToast('Project not found.', 'error'); return; }
+
+  var relTasks = TASKS.filter(function(t) { return t.project === p.title || (!t.project && t.project_id == p.id); });
+  relTasks.sort(function(a, b) { return (a.id || 0) - (b.id || 0); });
+
+  // Build team list
+  var team = [];
+  if (p.contact) team.push(p.contact + ' (Lead)');
+  if (p.other_members) {
+    p.other_members.split(',').map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(n) {
+      if (n !== p.contact) team.push(n);
+    });
+  }
+
+  // Header
+  var md = '# ' + (p.project_number || '') + (p.project_number ? ' — ' : '') + p.title + '\n\n';
+  md += '**Status:** ' + (p.status || '—') + ' | **Priority:** ' + (p.priority || '—');
+  if (p.project_size) md += ' | **Size:** ' + p.project_size;
+  md += '\n';
+  if (p.category) md += '**Category:** ' + p.category + '\n';
+  if (p.partner_dept) md += '**Partner:** ' + p.partner_dept + '\n';
+  if (p.itd_team) md += '**ITD Team:** ' + p.itd_team + '\n';
+  if (team.length) md += '**Team:** ' + team.join(', ') + '\n';
+
+  // Dates
+  var dates = [];
+  if (p.start) dates.push('**Start:** ' + p.start);
+  if (p.end) dates.push('**Original End:** ' + p.end);
+  if (p.working_due) dates.push('**Working Due:** ' + p.working_due);
+  if (p.actual_end) dates.push('**Completed:** ' + p.actual_end);
+  if (dates.length) md += dates.join(' | ') + '\n';
+
+  // Problem statement
+  if (p.problem_statement) md += '\n## Problem Statement\n' + p.problem_statement + '\n';
+
+  // Description
+  if (p.description) md += '\n## Description\n' + p.description + '\n';
+
+  // Deliverables
+  if (p.deliverables) md += '\n## Deliverables\n' + p.deliverables.split(',').map(function(d) { return '- ' + d.trim(); }).join('\n') + '\n';
+
+  // Data sources
+  if (p.data_sources) md += '\n## Data Sources\n' + p.data_sources + '\n';
+
+  // Technical requirements
+  if (p.technical_requirements) md += '\n## Technical Requirements\n' + p.technical_requirements + '\n';
+
+  // Tasks
+  if (relTasks.length > 0) {
+    var statusCounts = {};
+    relTasks.forEach(function(t) {
+      var s = t.status || 'Unknown';
+      statusCounts[s] = (statusCounts[s] || 0) + 1;
+    });
+    var countParts = Object.keys(statusCounts).map(function(s) { return statusCounts[s] + ' ' + s.toLowerCase(); });
+
+    md += '\n## Tasks (' + relTasks.length + ' total — ' + countParts.join(', ') + ')\n\n';
+    md += '| # | Task | Status | Assignee | Due | Hours |\n';
+    md += '|---|------|--------|----------|-----|-------|\n';
+    relTasks.forEach(function(t) {
+      var num = t.task_number || '—';
+      var due = t.working_due || t.due || '—';
+      var hrs = getTaskHours(t.idx);
+      var hrsStr = hrs > 0 ? hrs + 'h' : '—';
+      md += '| ' + num + ' | ' + (t.title || '—') + ' | ' + (t.status || '—') + ' | ' + (t.assignee || '—') + ' | ' + due + ' | ' + hrsStr + ' |\n';
+    });
+
+    // Hours summary
+    var totalHrs = 0;
+    var hrsByPerson = {};
+    relTasks.forEach(function(t) {
+      var h = getTaskHours(t.idx);
+      if (h > 0) {
+        totalHrs += h;
+        var who = t.assignee || 'Unassigned';
+        hrsByPerson[who] = (hrsByPerson[who] || 0) + h;
+      }
+    });
+    if (totalHrs > 0) {
+      var personParts = Object.keys(hrsByPerson).map(function(name) {
+        return name + ': ' + Math.round(hrsByPerson[name] * 100) / 100 + 'h';
+      });
+      md += '\n**Hours Summary:** Total: ' + Math.round(totalHrs * 100) / 100 + 'h | ' + personParts.join(' | ') + '\n';
+    }
+  } else {
+    md += '\n## Tasks\nNo tasks linked to this project.\n';
+  }
+
+  // Copy to clipboard
+  navigator.clipboard.writeText(md).then(function() {
+    showToast('Project summary copied to clipboard.', 'success');
+  }).catch(function(err) {
+    console.error('[CopySummary] Clipboard write failed:', err);
+    showToast('Failed to copy — check browser permissions.', 'error');
+  });
+}
+
 // ══════════════════════════════════════════════════════════════════════
 //  BATCH TASK UPDATES — select and update multiple tasks at once
 // ══════════════════════════════════════════════════════════════════════
@@ -9316,6 +9415,7 @@ function renderProjectDetail(id) {
       <div class="detail-hero-actions">
         ${p.status && p.status !== 'Complete' && p.status !== 'Canceled' ? `<button class="modal-edit-btn" style="background:rgba(34,197,94,0.25);border-color:rgba(34,197,94,0.5);" onclick="markProjectComplete(${p.objectId})">✓ Complete</button>` : ''}
         <button class="modal-edit-btn" onclick="openFormModal('edit-project',${p.objectId})">✏ Edit</button>
+        <button class="modal-edit-btn" style="background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.3);" onclick="copyProjectSummary(${p.objectId})">📋 Copy Summary</button>
         <button class="modal-del-btn" onclick="confirmDeleteProject(${p.objectId})">🗑 Delete</button>
       </div>
       <button class="detail-back-btn" onclick="goBackFromDetail()">${backLabel}</button>
