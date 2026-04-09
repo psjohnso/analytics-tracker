@@ -238,7 +238,7 @@ body {
 
 .detail-tasks-header {
   display: grid;
-  grid-template-columns: 32px 2.5fr 130px 0.8fr 1fr 0.9fr 0.6fr;
+  grid-template-columns: 32px 2.5fr 130px 0.8fr 1fr 110px 0.6fr;
   background: var(--navy);
   color: #fff;
   font-size: 10px;
@@ -251,7 +251,7 @@ body {
 
 .detail-task-row {
   display: grid;
-  grid-template-columns: 32px 2.5fr 130px 0.8fr 1fr 0.9fr 0.6fr;
+  grid-template-columns: 32px 2.5fr 130px 0.8fr 1fr 110px 0.6fr;
   padding: 6px 16px;
   gap: 10px;
   border-top: 1px solid var(--border);
@@ -3300,7 +3300,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0014';
+const APP_VERSION = '0.11.0.0015';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -9178,8 +9178,15 @@ function renderProjectDetail(id) {
         </select>
       </div>
       <div class="detail-task-cell"><span class="priority-badge priority-${t.priority||'null'}">${t.priority||'—'}</span></div>
-      <div class="detail-task-cell" style="color:var(--text-muted);">${esc(t.assignee||'—')}</div>
-      <div class="detail-task-cell" style="color:var(--text-muted);">${t.working_due||t.due||'—'}</div>
+      <div onclick="event.stopPropagation()">
+        <select class="dt-inline-select" data-task-id="${t.objectId}" onchange="inlineTaskAssignee(this)" style="font-size:11px;padding:2px 4px;border-radius:6px;border:1px solid #E5E7EB;color:${t.assignee ? '#374151' : '#9CA3AF'};font-family:Lato,sans-serif;cursor:pointer;width:100%;background:#fff;">
+          <option value=""${!t.assignee ? ' selected' : ''}>Unassigned</option>
+          ${(RESOURCES_DATA ? Object.keys(RESOURCES_DATA.people).filter(function(n) { return RESOURCES_DATA.people[n].active !== false; }).sort() : []).map(function(n) { return '<option value="' + esc(n) + '"' + (t.assignee === n ? ' selected' : '') + '>' + esc(n) + '</option>'; }).join('')}
+        </select>
+      </div>
+      <div onclick="event.stopPropagation()">
+        <input type="date" class="dt-inline-date" data-task-id="${t.objectId}" data-has-due="${t.due ? '1' : ''}" onchange="inlineTaskDueDate(this)" value="${t.working_due||t.due||''}" style="font-size:11px;padding:2px 4px;border-radius:6px;border:1px solid #E5E7EB;color:${(t.working_due||t.due) ? '#374151' : '#9CA3AF'};font-family:Lato,sans-serif;cursor:pointer;width:100%;">
+      </div>
       <div class="detail-task-cell" style="font-weight:700;color:var(--navy);">${hrsDisplay}</div>
     </div>`;
   }).join('') : `<div style="padding:32px;text-align:center;color:var(--text-muted);font-style:italic;">No tasks linked to this project.</div>`;
@@ -12099,6 +12106,50 @@ async function mwQuickStatus(selectEl) {
   }
   markDataDirty();
   render();
+}
+
+async function inlineTaskAssignee(selectEl) {
+  if (!Auth.loggedIn) { showToast('You must be signed in.', 'warn'); return; }
+  var taskId = parseInt(selectEl.dataset.taskId);
+  var newAssignee = selectEl.value || null;
+  try {
+    await DataStore.updateTask(taskId, { assignee: newAssignee });
+    showToast('Assignee updated.', 'success');
+    markDataDirty();
+    render();
+  } catch (err) {
+    showToast('Failed to update: ' + err.message, 'error');
+  }
+}
+
+async function inlineTaskDueDate(inputEl) {
+  if (!Auth.loggedIn) { showToast('You must be signed in.', 'warn'); return; }
+  var taskId = parseInt(inputEl.dataset.taskId);
+  var hasDue = inputEl.dataset.hasDue === '1';
+  var newDate = inputEl.value || null;
+  var fields = {};
+  if (hasDue) {
+    // Task already has an original due date — update the working due date
+    fields.working_due = newDate;
+  } else {
+    // No original due date — set it as the initial due date
+    fields.due = newDate;
+  }
+  try {
+    await DataStore.updateTask(taskId, fields);
+    showToast(hasDue ? 'Working due date updated.' : 'Due date set.', 'success');
+    markDataDirty();
+    render();
+  } catch (err) {
+    showToast('Failed to update: ' + err.message, 'error');
+  }
+}
+  const panel = document.getElementById('mywork-gantt');
+  const arrow = document.getElementById('gantt-arrow');
+  if (!panel) return;
+  const isHidden = panel.style.display === 'none';
+  panel.style.display = isHidden ? '' : 'none';
+  if (arrow) arrow.textContent = isHidden ? '▼' : '▶';
 }
 
 function toggleGantt() {
