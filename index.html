@@ -3300,7 +3300,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0016';
+const APP_VERSION = '0.11.0.0017';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -3561,8 +3561,11 @@ function renderPhaseGroupedTasks(projectTitle, relTasks) {
         ['Active','Pending','On Hold','Waiting for Response','Complete','Canceled'].forEach(function(s) { html += '<option value="' + s + '"' + (t.status === s ? ' selected' : '') + '>' + s + '</option>'; });
         html += '</select></div>';
         html += '<div class="detail-task-cell"><span class="priority-badge priority-' + (t.priority||'null') + '">' + (t.priority||'—') + '</span></div>';
-        html += '<div class="detail-task-cell" style="color:var(--text-muted);">' + esc(t.assignee||'—') + '</div>';
-        html += '<div class="detail-task-cell" style="color:var(--text-muted);">' + (t.working_due||t.due||'—') + '</div>';
+        html += '<div onclick="event.stopPropagation()"><select class="dt-inline-select" data-task-id="' + t.objectId + '" onchange="inlineTaskAssignee(this)" style="font-size:11px;padding:2px 4px;border-radius:6px;border:1px solid #E5E7EB;color:' + (t.assignee ? '#374151' : '#9CA3AF') + ';font-family:Lato,sans-serif;cursor:pointer;width:100%;background:#fff;"><option value=""' + (!t.assignee ? ' selected' : '') + '>Unassigned</option>';
+        var _members = RESOURCES_DATA ? Object.keys(RESOURCES_DATA.people).filter(function(n) { return RESOURCES_DATA.people[n].active !== false; }).sort() : [];
+        _members.forEach(function(n) { html += '<option value="' + esc(n) + '"' + (t.assignee === n ? ' selected' : '') + '>' + esc(n) + '</option>'; });
+        html += '</select></div>';
+        html += '<div onclick="event.stopPropagation()"><input type="date" class="dt-inline-date" data-task-id="' + t.objectId + '" data-has-due="' + (t.due ? '1' : '') + '" onchange="inlineTaskDueDate(this)" value="' + (t.working_due||t.due||'') + '" style="font-size:11px;padding:2px 4px;border-radius:6px;border:1px solid #E5E7EB;color:' + ((t.working_due||t.due) ? '#374151' : '#9CA3AF') + ';font-family:Lato,sans-serif;cursor:pointer;width:100%;"></div>';
         html += '<div class="detail-task-cell" style="font-weight:700;color:var(--navy);">' + hrsDisplay + '</div>';
         html += '</div>';
       });
@@ -3591,8 +3594,11 @@ function renderPhaseGroupedTasks(projectTitle, relTasks) {
       ['Active','Pending','On Hold','Waiting for Response','Complete','Canceled'].forEach(function(s) { html += '<option value="' + s + '"' + (t.status === s ? ' selected' : '') + '>' + s + '</option>'; });
       html += '</select></div>';
       html += '<div class="detail-task-cell"><span class="priority-badge priority-' + (t.priority||'null') + '">' + (t.priority||'—') + '</span></div>';
-      html += '<div class="detail-task-cell" style="color:var(--text-muted);">' + esc(t.assignee||'—') + '</div>';
-      html += '<div class="detail-task-cell" style="color:var(--text-muted);">' + (t.working_due||t.due||'—') + '</div>';
+      html += '<div onclick="event.stopPropagation()"><select class="dt-inline-select" data-task-id="' + t.objectId + '" onchange="inlineTaskAssignee(this)" style="font-size:11px;padding:2px 4px;border-radius:6px;border:1px solid #E5E7EB;color:' + (t.assignee ? '#374151' : '#9CA3AF') + ';font-family:Lato,sans-serif;cursor:pointer;width:100%;background:#fff;"><option value=""' + (!t.assignee ? ' selected' : '') + '>Unassigned</option>';
+      var _members2 = RESOURCES_DATA ? Object.keys(RESOURCES_DATA.people).filter(function(n) { return RESOURCES_DATA.people[n].active !== false; }).sort() : [];
+      _members2.forEach(function(n) { html += '<option value="' + esc(n) + '"' + (t.assignee === n ? ' selected' : '') + '>' + esc(n) + '</option>'; });
+      html += '</select></div>';
+      html += '<div onclick="event.stopPropagation()"><input type="date" class="dt-inline-date" data-task-id="' + t.objectId + '" data-has-due="' + (t.due ? '1' : '') + '" onchange="inlineTaskDueDate(this)" value="' + (t.working_due||t.due||'') + '" style="font-size:11px;padding:2px 4px;border-radius:6px;border:1px solid #E5E7EB;color:' + ((t.working_due||t.due) ? '#374151' : '#9CA3AF') + ';font-family:Lato,sans-serif;cursor:pointer;width:100%;"></div>';
       html += '<div class="detail-task-cell" style="font-weight:700;color:var(--navy);">' + hrsDisplay + '</div>';
       html += '</div>';
     });
