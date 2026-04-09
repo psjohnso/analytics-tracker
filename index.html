@@ -3300,7 +3300,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0018';
+const APP_VERSION = '0.11.0.0019';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -5026,6 +5026,63 @@ function getNextTaskNumber(projectNumber) {
 function projectNumChip(num) {
   if (!num) return '';
   return '<span style="font-family:monospace;font-size:10px;font-weight:700;color:var(--navy);background:#EEF2FF;padding:1px 6px;border-radius:4px;margin-right:4px;">' + esc(num) + '</span>';
+}
+
+async function backfillProjectTaskNumbers() {
+  if (!Auth.loggedIn) { showToast('You must be signed in.', 'warn'); return; }
+  if (!confirm('This will assign project numbers (P-001, P-002…) to all projects without one, and task numbers (P-XXX-001…) to all tasks without one.\n\nProjects are numbered by creation order. Continue?')) return;
+
+  var projCount = 0;
+  var taskCount = 0;
+
+  // Sort projects by id (creation order) to assign numbers sequentially
+  var unnumbered = PROJECTS.filter(function(p) { return !p.project_number; });
+  unnumbered.sort(function(a, b) { return (a.id || 0) - (b.id || 0); });
+
+  for (var i = 0; i < unnumbered.length; i++) {
+    var p = unnumbered[i];
+    var num = getNextProjectNumber();
+    p.project_number = num;
+    if (p.objectId) {
+      try {
+        await agolApplyEdits(ARCGIS_CONFIG.projectsUrl, {
+          updates: [{ attributes: { ObjectId: p.objectId, project_number: num } }]
+        });
+        projCount++;
+      } catch (err) {
+        console.error('[Backfill] Failed to number project:', p.title, err);
+      }
+    }
+  }
+
+  // Now number tasks — group by project, sort by id within each project
+  var unnumberedTasks = TASKS.filter(function(t) { return !t.task_number; });
+  unnumberedTasks.sort(function(a, b) { return (a.id || 0) - (b.id || 0); });
+
+  for (var j = 0; j < unnumberedTasks.length; j++) {
+    var t = unnumberedTasks[j];
+    var parentProj = t.project ? PROJECTS.find(function(p) { return p.title === t.project; }) : null;
+    if (!parentProj) parentProj = t.project_id ? PROJECTS.find(function(p) { return p.id == t.project_id; }) : null;
+    if (!parentProj || !parentProj.project_number) continue;
+
+    var tNum = getNextTaskNumber(parentProj.project_number);
+    t.task_number = tNum;
+    if (t.objectId) {
+      try {
+        await agolApplyEdits(ARCGIS_CONFIG.tasksUrl, {
+          updates: [{ attributes: { ObjectId: t.objectId, task_number: tNum } }]
+        });
+        taskCount++;
+      } catch (err) {
+        console.error('[Backfill] Failed to number task:', t.title, err);
+      }
+    }
+  }
+
+  showToast('Backfill complete: ' + projCount + ' projects and ' + taskCount + ' tasks numbered.', 'success');
+  console.log('[Backfill] Numbered', projCount, 'projects and', taskCount, 'tasks.');
+  markDataDirty();
+  render();
 }
 
 function renderMd(s) {
