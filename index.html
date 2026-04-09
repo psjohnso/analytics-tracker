@@ -3300,7 +3300,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0017';
+const APP_VERSION = '0.11.0.0018';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -3554,7 +3554,7 @@ function renderPhaseGroupedTasks(projectTitle, relTasks) {
         }).join('');
         html += '<div class="detail-task-row">';
         html += '<div style="text-align:center;" onclick="event.stopPropagation()"><input type="checkbox" class="batch-task-cb" data-task-id="' + t.objectId + '" onchange="updateBatchBar()" style="width:14px;height:14px;cursor:pointer;accent-color:var(--navy);"></div>';
-        html += '<div class="detail-task-title" onclick="openTaskFromProject(' + t.objectId + ')" style="cursor:pointer;">' + esc(t.title);
+        html += '<div class="detail-task-title" onclick="openTaskFromProject(' + t.objectId + ')" style="cursor:pointer;">' + projectNumChip(t.task_number) + esc(t.title);
         if (reqChips) html += '<div style="margin-top:2px;">' + reqChips + '</div>';
         html += '</div>';
         html += '<div onclick="event.stopPropagation()"><select class="mw-status-select" data-type="task" data-id="' + t.objectId + '" onchange="mwQuickStatus(this)" style="font-size:10px;padding:2px 4px;min-width:100px;background:' + sc + '18;color:' + sc + ';border-color:' + sc + '44;">';
@@ -3589,7 +3589,7 @@ function renderPhaseGroupedTasks(projectTitle, relTasks) {
       var hrsDisplay = taskHrs > 0 ? hoursLabel(taskHrs, myHrs) : '—';
       html += '<div class="detail-task-row">';
       html += '<div style="text-align:center;" onclick="event.stopPropagation()"><input type="checkbox" class="batch-task-cb" data-task-id="' + t.objectId + '" onchange="updateBatchBar()" style="width:14px;height:14px;cursor:pointer;accent-color:var(--navy);"></div>';
-      html += '<div class="detail-task-title" onclick="openTaskFromProject(' + t.objectId + ')" style="cursor:pointer;">' + esc(t.title) + '</div>';
+      html += '<div class="detail-task-title" onclick="openTaskFromProject(' + t.objectId + ')" style="cursor:pointer;">' + projectNumChip(t.task_number) + esc(t.title) + '</div>';
       html += '<div onclick="event.stopPropagation()"><select class="mw-status-select" data-type="task" data-id="' + t.objectId + '" onchange="mwQuickStatus(this)" style="font-size:10px;padding:2px 4px;min-width:100px;background:' + sc + '18;color:' + sc + ';border-color:' + sc + '44;">';
       ['Active','Pending','On Hold','Waiting for Response','Complete','Canceled'].forEach(function(s) { html += '<option value="' + s + '"' + (t.status === s ? ' selected' : '') + '>' + s + '</option>'; });
       html += '</select></div>';
@@ -4704,7 +4704,7 @@ function projectCard(p) {
     <div class="project-card-accent" style="background:var(--navy)"></div>
     <div class="project-card-body">
       <div class="project-card-header">
-        <div class="project-title">${esc(p.title)}</div>
+        <div class="project-title">${projectNumChip(p.project_number)}${esc(p.title)}</div>
         <span class="priority-badge priority-${p.priority || 'null'}">${p.priority || '—'}</span>
       </div>
       <div class="project-meta">
@@ -4988,6 +4988,44 @@ function closeModalDirect() { document.getElementById('modal-backdrop').classLis
 function esc(s) {
   if (!s) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Project & Task Numbering ─────────────────────────────────────────
+function getNextProjectNumber() {
+  var maxNum = 0;
+  PROJECTS.forEach(function(p) {
+    if (p.project_number) {
+      var match = p.project_number.match(/^P-(\d+)$/);
+      if (match) {
+        var n = parseInt(match[1], 10);
+        if (n > maxNum) maxNum = n;
+      }
+    }
+  });
+  var next = maxNum + 1;
+  return 'P-' + String(next).padStart(3, '0');
+}
+
+function getNextTaskNumber(projectNumber) {
+  if (!projectNumber) return null;
+  var maxNum = 0;
+  TASKS.forEach(function(t) {
+    if (t.task_number) {
+      var prefix = projectNumber + '-';
+      if (t.task_number.indexOf(prefix) === 0) {
+        var suffix = t.task_number.substring(prefix.length);
+        var n = parseInt(suffix, 10);
+        if (n > maxNum) maxNum = n;
+      }
+    }
+  });
+  var next = maxNum + 1;
+  return projectNumber + '-' + String(next).padStart(3, '0');
+}
+
+function projectNumChip(num) {
+  if (!num) return '';
+  return '<span style="font-family:monospace;font-size:10px;font-weight:700;color:var(--navy);background:#EEF2FF;padding:1px 6px;border-radius:4px;margin-right:4px;">' + esc(num) + '</span>';
 }
 
 function renderMd(s) {
@@ -6554,12 +6592,12 @@ async function agolApplyEdits(serviceUrl, edits) {
 //  Projects layer fields (ArcGIS):
 //    ObjectId, id, pid, title, status, priority, contact,
 //    other_members, partner_dept, category, start, end_ (alias: end),
-//    actual_end, description, problem_statement, itd_team
+//    actual_end, description, problem_statement, itd_team, project_number
 //
 //  Tasks layer fields (ArcGIS):
 //    ObjectId, idx, id, title, status, priority, assignee,
 //    project_id, project, category, start, due,
-//    actual_end, tool, description, hours, Hours_Worked, resolution
+//    actual_end, tool, description, hours, Hours_Worked, resolution, task_number
 //
 //  KEY JOIN: Task.project_id = Project.id
 //
@@ -7012,6 +7050,8 @@ const DataStore = {
     try {
       const id = Math.max(0, ...PROJECTS.map(function(p) { return p.id; })) + 1;
       fields.id = id;
+      // Auto-assign project number
+      if (!fields.project_number) fields.project_number = getNextProjectNumber();
       // Auto-set working_due to match original end date on creation
       if (fields.end && !fields.working_due) fields.working_due = fields.end;
       const attrs = localToAgolProject(fields);
@@ -7205,6 +7245,13 @@ const DataStore = {
       const taskIdx = Math.max(0, ...TASKS.map(function(t) { return t.idx; })) + 1;
       fields.id  = id;
       fields.idx = taskIdx;
+      // Auto-assign task number based on parent project
+      if (!fields.task_number && fields.project) {
+        var parentProj = PROJECTS.find(function(p) { return p.title === fields.project; });
+        if (parentProj && parentProj.project_number) {
+          fields.task_number = getNextTaskNumber(parentProj.project_number);
+        }
+      }
       // Auto-set working_due to match original due date on creation
       if (fields.due && !fields.working_due) fields.working_due = fields.due;
       if (fields.project) {
@@ -9177,7 +9224,7 @@ function renderProjectDetail(id) {
       <div style="text-align:center;" onclick="event.stopPropagation()">
         <input type="checkbox" class="batch-task-cb" data-task-id="${t.objectId}" onchange="updateBatchBar()" style="width:14px;height:14px;cursor:pointer;accent-color:var(--navy);">
       </div>
-      <div class="detail-task-title" onclick="openTaskFromProject(${t.objectId})" style="cursor:pointer;">${esc(t.title)}${t.resolution ? '<div style="font-size:11px;font-weight:400;color:var(--text-muted);margin-top:2px;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">' + esc(t.resolution.length > 150 ? t.resolution.slice(0, 150) + '…' : t.resolution) + '</div>' : ''}</div>
+      <div class="detail-task-title" onclick="openTaskFromProject(${t.objectId})" style="cursor:pointer;">${projectNumChip(t.task_number)}${esc(t.title)}${t.resolution ? '<div style="font-size:11px;font-weight:400;color:var(--text-muted);margin-top:2px;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">' + esc(t.resolution.length > 150 ? t.resolution.slice(0, 150) + '…' : t.resolution) + '</div>' : ''}</div>
       <div onclick="event.stopPropagation()">
         <select class="mw-status-select" data-type="task" data-id="${t.objectId}" onchange="mwQuickStatus(this)" style="font-size:10px;padding:2px 4px;min-width:100px;background:${sc2}18;color:${sc2};border-color:${sc2}44;">
           ${['Active','Pending','On Hold','Waiting for Response','Complete','Canceled'].map(function(s) { return '<option value="' + s + '"' + (t.status === s ? ' selected' : '') + '>' + s + '</option>'; }).join('')}
@@ -9215,7 +9262,7 @@ function renderProjectDetail(id) {
         <button class="modal-del-btn" onclick="confirmDeleteProject(${p.objectId})">🗑 Delete</button>
       </div>
       <button class="detail-back-btn" onclick="goBackFromDetail()">${backLabel}</button>
-      <div class="detail-hero-title">${esc(p.title)}</div>
+      <div class="detail-hero-title">${p.project_number ? '<span style="font-family:monospace;font-size:14px;font-weight:700;background:rgba(255,255,255,0.15);padding:3px 10px;border-radius:6px;margin-right:10px;">' + esc(p.project_number) + '</span>' : ''}${esc(p.title)}</div>
       <div class="detail-hero-badges">
         <span class="status-pill" style="background:rgba(255,255,255,0.15);color:white;font-size:12px;">
           <span style="width:7px;height:7px;border-radius:50%;background:${statusColor};display:inline-block;"></span>${p.status||'—'}
@@ -9396,7 +9443,7 @@ function renderTaskDetail(idx) {
       </div>
       <button class="detail-back-btn" onclick="goBackFromDetail()">${taskBackLabel}</button>
       <div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;opacity:0.7;margin-bottom:6px;">Task</div>
-      <div class="detail-hero-title">${esc(t.title)}</div>
+      <div class="detail-hero-title">${t.task_number ? '<span style="font-family:monospace;font-size:14px;font-weight:700;background:rgba(255,255,255,0.15);padding:3px 10px;border-radius:6px;margin-right:10px;">' + esc(t.task_number) + '</span>' : ''}${esc(t.title)}</div>
       <div class="detail-hero-badges">
         <span class="status-pill" style="background:rgba(255,255,255,0.15);color:white;font-size:12px;">
           <span style="width:7px;height:7px;border-radius:50%;background:${statusColor};display:inline-block;"></span>${t.status||'—'}
@@ -12325,7 +12372,7 @@ function buildMyWorkTaskRow(t, statusColor, status, todayStr, hrsLabelFn) {
     out += '<option value="' + s + '"' + (t.status === s ? ' selected' : '') + '>' + s + '</option>';
   });
   out += '</select>';
-  out += '<span class="mywork-compact-title" onclick="openTask(' + t.objectId + ')" style="cursor:pointer;">' + esc(t.title);
+  out += '<span class="mywork-compact-title" onclick="openTask(' + t.objectId + ')" style="cursor:pointer;">' + projectNumChip(t.task_number) + esc(t.title);
   if (t.project) out += '<span style="display:block;font-size:11px;font-weight:400;color:var(--text-muted);margin-top:1px;">' + esc(t.project) + '</span>';
   out += '</span>';
   if (tHrs > 0) {
