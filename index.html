@@ -3300,7 +3300,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0020';
+const APP_VERSION = '0.11.0.0021';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -13057,7 +13057,7 @@ function renderMyWork(area) {
         out += '<option value="' + s + '"' + (p.status === s ? ' selected' : '') + '>' + s + '</option>';
       });
       out += '</select>';
-      out += '<span class="mywork-compact-title" onclick="openProject(' + p.objectId + ')" style="cursor:pointer;">' + esc(p.title) + '</span>';
+      out += '<span class="mywork-compact-title" onclick="openProject(' + p.objectId + ')" style="cursor:pointer;">' + projectNumChip(p.project_number) + esc(p.title) + '</span>';
       out += '<span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">' + taskLabel + '</span>';
       if (isContact) out += '<span class="mywork-lead-badge">Lead</span>';
       out += '</div>';
