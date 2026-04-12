@@ -802,7 +802,7 @@ body {
 
 .modal {
   background: var(--white);
-  border-radius: 12px;
+  border-radius: var(--radius);
   max-width: 680px;
   width: 100%;
   max-height: 85vh;
@@ -814,12 +814,13 @@ body {
 .modal-header {
   background: var(--navy);
   padding: 20px 24px;
-  border-radius: 12px 12px 0 0;
+  border-radius: var(--radius) var(--radius) 0 0;
   position: sticky;
   top: 0;
 }
 
 .modal-header h2 {
+  font-family: 'Lato', sans-serif;
   font-size: 18px;
   font-weight: 900;
   color: white;
@@ -1110,7 +1111,7 @@ body {
 }
 #alloc-editor-backdrop.open { display:flex; }
 #alloc-editor {
-  background:#fff; border-radius:14px; width:100%; max-width:860px;
+  background:#fff; border-radius:var(--radius); width:100%; max-width:860px;
   max-height:90vh; display:flex; flex-direction:column;
   box-shadow:0 24px 80px rgba(0,38,105,0.3); overflow:hidden;
 }
@@ -1254,30 +1255,30 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 }
 #form-modal-backdrop.open { display:flex; }
 #form-modal {
-  background:#fff; border-radius:14px; width:100%; max-width:720px;
+  background:#fff; border-radius:var(--radius); width:100%; max-width:720px;
   max-height:90vh; display:flex; flex-direction:column;
   box-shadow:0 24px 64px rgba(0,38,105,0.22),0 4px 16px rgba(0,0,0,0.12);
   animation:fmSlideIn 0.2s cubic-bezier(0.34,1.56,0.64,1);
 }
 @keyframes fmSlideIn { from { opacity:0; transform:scale(0.96) translateY(8px); } to { opacity:1; transform:none; } }
 .fm-header { background:var(--navy); color:#fff; padding:20px 24px 16px;
-  border-radius:14px 14px 0 0; display:flex; align-items:center; gap:12px; }
-.fm-header h2 { margin:0; font-size:18px; font-weight:800; flex:1; letter-spacing:-0.02em; }
+  border-radius:var(--radius) var(--radius) 0 0; display:flex; align-items:center; gap:12px; }
+.fm-header h2 { margin:0; font-family:'Lato',sans-serif; font-size:18px; font-weight:800; flex:1; letter-spacing:-0.02em; }
 .fm-type-badge { background:rgba(255,255,255,0.18); font-size:10px; font-weight:700;
-  letter-spacing:0.08em; text-transform:uppercase; padding:3px 8px; border-radius:20px; }
+  letter-spacing:0.08em; text-transform:uppercase; padding:3px 8px; border-radius:var(--radius-btn); }
 .fm-close { background:rgba(255,255,255,0.15); border:none; color:#fff;
   width:32px; height:32px; border-radius:50%; cursor:pointer; font-size:16px;
   display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .fm-close:hover { background:rgba(255,255,255,0.3); }
 .fm-body { flex:1; overflow-y:auto; padding:24px; }
-.fm-section-label { font-size:10px; font-weight:800; letter-spacing:0.1em;
-  text-transform:uppercase; color:var(--navy); margin:22px 0 12px;
+.fm-section-label { font-family:'Lato',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.15em;
+  text-transform:uppercase; color:var(--orange); margin:22px 0 12px;
   padding-bottom:6px; border-bottom:1.5px solid #E8E6DF; }
 .fm-section-label:first-child { margin-top:0; }
 .fm-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
 .fm-field { display:flex; flex-direction:column; gap:5px; }
 .fm-field.span2 { grid-column:span 2; }
-.fm-label { font-size:11px; font-weight:700; color:var(--text-muted);
+.fm-label { font-family:'Lato',sans-serif; font-size:11px; font-weight:700; color:var(--text-muted);
   letter-spacing:0.04em; text-transform:uppercase; }
 .fm-label .req { color:#EF4444; margin-left:2px; }
 /* Multi-select member checkboxes */
@@ -1519,7 +1520,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .fc-panel {
   margin: 24px 0 0;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: var(--radius);
   background: var(--white);
   overflow: hidden;
   animation: fadeIn 0.25s ease;
@@ -1554,7 +1555,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 
 .fc-pill {
   padding: 5px 13px;
-  border-radius: 20px;
+  border-radius: var(--radius-btn);
   font-size: 11px;
   font-weight: 700;
   font-family: 'Lato', sans-serif;
@@ -1871,7 +1872,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .issues-header { display:flex; align-items:center; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
 .issues-title { font-size:22px; font-weight:800; color:var(--navy); }
 .issues-filters { display:flex; gap:4px; }
-.issues-pill { padding:5px 14px; border:1px solid #E8E6DF; border-radius:20px; font-size:12px; font-weight:700;
+.issues-pill { padding:5px 14px; border:1px solid #E8E6DF; border-radius:var(--radius-btn); font-size:12px; font-weight:700;
   font-family:Lato,sans-serif; cursor:pointer; background:#fff; color:var(--text-muted); transition:all 0.15s; }
 .issues-pill.active { background:var(--navy); color:#fff; border-color:var(--navy); }
 .issues-pill:hover:not(.active) { border-color:var(--navy); color:var(--navy); }
@@ -1879,7 +1880,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   border-radius:6px; font-size:12px; font-weight:800; font-family:Lato,sans-serif; cursor:pointer; }
 .issues-submit-btn:hover { background:#F0CC00; }
 .issues-list { display:flex; flex-direction:column; gap:10px; }
-.issue-card { background:#fff; border:1px solid #E8E6DF; border-radius:12px; padding:16px 20px;
+.issue-card { background:#fff; border:1px solid #E8E6DF; border-radius:var(--radius); padding:16px 20px;
   transition:border-color 0.15s; }
 .issue-card:hover { border-color:#CBD5E1; }
 .issue-card-top { display:flex; align-items:flex-start; gap:12px; }
@@ -1907,7 +1908,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .issue-form-backdrop { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9998;
   justify-content:center; align-items:center; }
 .issue-form-backdrop.open { display:flex; }
-.issue-form-modal { background:#fff; border-radius:14px; width:520px; max-width:92vw; max-height:85vh;
+.issue-form-modal { background:#fff; border-radius:var(--radius); width:520px; max-width:92vw; max-height:85vh;
   overflow-y:auto; padding:24px; }
 .issue-form-title { font-size:18px; font-weight:800; color:var(--navy); margin-bottom:16px; }
 .issue-form-field { margin-bottom:14px; }
@@ -1933,7 +1934,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 
 .idea-modal {
   background: var(--white);
-  border-radius: 14px;
+  border-radius: var(--radius);
   max-width: 580px;
   width: 100%;
   box-shadow: 0 20px 60px rgba(0,38,105,0.25);
@@ -2084,7 +2085,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   letter-spacing: 0.05em;
   text-transform: uppercase;
   padding: 6px 14px;
-  border-radius: 20px;
+  border-radius: var(--radius-btn);
   cursor: pointer;
   margin-bottom: 16px;
   transition: background 0.15s;
@@ -2219,7 +2220,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 
 .idea-promote-btn {
   padding: 6px 14px;
-  border-radius: 20px;
+  border-radius: var(--radius-btn);
   font-size: 11px;
   font-weight: 700;
   font-family: 'Lato', sans-serif;
@@ -2231,7 +2232,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .idea-edit-btn {
   margin-left: auto;
   padding: 6px 14px;
-  border-radius: 20px;
+  border-radius: var(--radius-btn);
   font-size: 11px;
   font-weight: 700;
   font-family: 'Lato', sans-serif;
@@ -2413,7 +2414,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
 .list-editor-note { font-size:11px; color:var(--text-muted); margin-top:10px; line-height:1.5;
   background:#FFFBEB; border:1px solid #FDE68A; border-radius:6px; padding:10px 14px; }
 #member-form-backdrop.open { display:flex; }
-#member-form-modal { background:#fff; border-radius:14px; padding:28px 32px; width:720px; max-width:95vw; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.25); }
+#member-form-modal { background:#fff; border-radius:var(--radius); padding:28px 32px; width:720px; max-width:95vw; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.25); }
 .mf-title { font-size:18px; font-weight:800; color:var(--navy); margin-bottom:18px; }
 .mf-label { font-size:12px; font-weight:700; color:#374151; margin-bottom:4px; display:block; text-transform:uppercase; letter-spacing:0.04em; }
 .mf-input { width:100%; padding:9px 12px; border:1.5px solid #E1E2DD; border-radius:7px; font-size:14px; font-family:Lato,sans-serif; margin-bottom:14px; box-sizing:border-box; }
@@ -2465,7 +2466,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   </div>
   <div class="header-title">
     <h1>Analytics Project Tracker</h1>
-    <p>GIS / Data Analytics — Information Technology <span id="app-version" style="opacity:0.5;font-size:11px;margin-left:8px;"></span></p>
+    <p>GIS / Data Analytics — Information Technology <span id="app-version" style="opacity:0.85;font-size:10px;margin-left:10px;background:rgba(255,255,255,0.15);padding:2px 8px;border-radius:4px;letter-spacing:0.04em;font-weight:600;"></span></p>
   </div>
   <div class="header-stats" id="header-stats">
     <div class="hstat">
@@ -3317,7 +3318,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0022';
+const APP_VERSION = '0.11.0.0023';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -9204,6 +9205,8 @@ async function batchDeleteTasks() {
   // Display version
   const versionEl = document.getElementById('app-version');
   if (versionEl) versionEl.textContent = 'v' + APP_VERSION;
+  const footerVersionEl = document.getElementById('footer-version');
+  if (footerVersionEl) footerVersionEl.textContent = 'v' + APP_VERSION;
 
   // Set initial sidebar filter order (projects on top for overview)
   reorderSidebarFilters(currentTab);
@@ -10143,12 +10146,12 @@ function buildInsightsPage() {
   html += '<div style="font-size:13px;color:var(--text-muted);">Retrospective data from completed projects. As you log more time, this becomes your reference library for future estimation.</div></div>';
   html += kpis;
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:28px;">';
-  html += '<div style="background:#fff;border:1px solid #E8E6DF;border-radius:12px;padding:16px 20px;"><div style="display:flex;align-items:center;margin-bottom:12px;"><div style="font-size:15px;font-weight:800;color:var(--navy);">Effort by project size</div>' + insToggleBtns('size') + '</div><div id="ins-size-chart" style="padding:8px 0;">' + sizeSvg + '</div><div id="ins-size-table" style="display:none;">' + bySizeTable + '</div></div>';
-  html += '<div style="background:#fff;border:1px solid #E8E6DF;border-radius:12px;padding:16px 20px;"><div style="display:flex;align-items:center;margin-bottom:12px;"><div style="font-size:15px;font-weight:800;color:var(--navy);">Effort by category</div>' + insToggleBtns('cat') + '</div><div id="ins-cat-chart" style="padding:8px 0;">' + catSvg + '</div><div id="ins-cat-table" style="display:none;">' + byCatTable + '</div></div>';
+  html += '<div style="background:#fff;border:1px solid #E8E6DF;border-radius:16px;padding:16px 20px;"><div style="display:flex;align-items:center;margin-bottom:12px;"><div style="font-size:15px;font-weight:800;color:var(--navy);">Effort by project size</div>' + insToggleBtns('size') + '</div><div id="ins-size-chart" style="padding:8px 0;">' + sizeSvg + '</div><div id="ins-size-table" style="display:none;">' + bySizeTable + '</div></div>';
+  html += '<div style="background:#fff;border:1px solid #E8E6DF;border-radius:16px;padding:16px 20px;"><div style="display:flex;align-items:center;margin-bottom:12px;"><div style="font-size:15px;font-weight:800;color:var(--navy);">Effort by category</div>' + insToggleBtns('cat') + '</div><div id="ins-cat-chart" style="padding:8px 0;">' + catSvg + '</div><div id="ins-cat-table" style="display:none;">' + byCatTable + '</div></div>';
   html += '</div>';
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:28px;">';
-  html += '<div style="background:#fff;border:1px solid #E8E6DF;border-radius:12px;padding:16px 20px;"><div style="display:flex;align-items:center;margin-bottom:12px;"><div style="font-size:15px;font-weight:800;color:var(--navy);">Completion timeline</div>' + insToggleBtns('timeline') + '</div><div id="ins-timeline-chart" style="padding:8px 0;">' + (tlSvg || '<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:12px;">Not enough date data yet</div>') + '</div><div id="ins-timeline-table" style="display:none;">' + projTable + '</div></div>';
-  html += '<div style="background:#fff;border:1px solid #E8E6DF;border-radius:12px;padding:16px 20px;"><div style="display:flex;align-items:center;margin-bottom:12px;"><div style="font-size:15px;font-weight:800;color:var(--navy);">Hours by team member</div>' + insToggleBtns('team') + '</div><div id="ins-team-chart" style="padding:8px 0;">' + (donutSvg || '<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:12px;">No time entries recorded yet</div>') + '</div><div id="ins-team-table" style="display:none;">' + (teamTable || '') + '</div></div>';
+  html += '<div style="background:#fff;border:1px solid #E8E6DF;border-radius:16px;padding:16px 20px;"><div style="display:flex;align-items:center;margin-bottom:12px;"><div style="font-size:15px;font-weight:800;color:var(--navy);">Completion timeline</div>' + insToggleBtns('timeline') + '</div><div id="ins-timeline-chart" style="padding:8px 0;">' + (tlSvg || '<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:12px;">Not enough date data yet</div>') + '</div><div id="ins-timeline-table" style="display:none;">' + projTable + '</div></div>';
+  html += '<div style="background:#fff;border:1px solid #E8E6DF;border-radius:16px;padding:16px 20px;"><div style="display:flex;align-items:center;margin-bottom:12px;"><div style="font-size:15px;font-weight:800;color:var(--navy);">Hours by team member</div>' + insToggleBtns('team') + '</div><div id="ins-team-chart" style="padding:8px 0;">' + (donutSvg || '<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:12px;">No time entries recorded yet</div>') + '</div><div id="ins-team-table" style="display:none;">' + (teamTable || '') + '</div></div>';
   html += '</div></div>';
   return html;
 }
@@ -14537,14 +14540,15 @@ async function deleteIssue(issueId) {
 
 
 <!-- Desert Editorial Footer -->
-<footer style="background:#140233;color:rgba(255,255,255,0.7);padding:24px 48px;display:flex;align-items:center;justify-content:space-between;font-family:'Lato',sans-serif;font-size:12px;letter-spacing:0.03em;">
-  <div style="display:flex;align-items:center;gap:10px;">
-    <img src="data:image/png;base64,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" alt="Tucson DATA" style="height:28px;width:auto;display:block;flex-shrink:0;opacity:0.9;">
-    <span style="color:rgba(255,255,255,0.85);font-weight:600;">Analytics Project Tracker</span>
+<footer style="background:#140233;color:rgba(255,255,255,0.7);padding:28px 48px;display:flex;align-items:center;justify-content:space-between;font-family:'Lato',sans-serif;font-size:13px;letter-spacing:0.03em;">
+  <div style="display:flex;align-items:center;gap:14px;">
+    <img src="data:image/png;base64,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" alt="Tucson DATA" style="height:44px;width:auto;display:block;flex-shrink:0;opacity:0.9;">
+    <span style="color:rgba(255,255,255,0.9);font-weight:700;font-size:16px;">Analytics Project Tracker</span>
   </div>
   <div style="text-align:right;line-height:1.6;">
     <span>City of Tucson &middot; Tucson Data Team</span><br>
-    <span style="font-size:11px;opacity:0.6;">GIS / Data Analytics &mdash; Information Technology Department</span>
+    <span style="font-size:11px;opacity:0.6;">GIS / Data Analytics &mdash; Information Technology Department</span><br>
+    <span id="footer-version" style="font-size:10px;opacity:0.4;letter-spacing:0.05em;"></span>
   </div>
 </footer>
 </body></html>
