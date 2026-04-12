@@ -2583,7 +2583,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
       <div class="sidebar-label">Search</div>
       <div class="search-box">
         <span class="search-icon">⌕</span>
-        <input type="text" id="search-input" placeholder="Search projects &amp; tasks…" oninput="onSearch()">
+        <input type="text" id="search-input" placeholder="Search by name, number (P-001), or keyword…" oninput="onSearch()">
       </div>
     </div>
 
@@ -3318,7 +3318,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0024';
+const APP_VERSION = '0.11.0.0025';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -4479,7 +4479,8 @@ function filterProjects() {
     (p.description || '').toLowerCase().includes(activeFilters.search) ||
     (p.contact || '').toLowerCase().includes(activeFilters.search) ||
     (p.other_members || '').toLowerCase().includes(activeFilters.search) ||
-    (p.partner_dept || '').toLowerCase().includes(activeFilters.search)
+    (p.partner_dept || '').toLowerCase().includes(activeFilters.search) ||
+    (p.project_number || '').toLowerCase().includes(activeFilters.search)
   );
   return data;
 }
@@ -4494,7 +4495,8 @@ function filterTasks() {
   if (activeFilters.search) data = data.filter(t =>
     (t.title || '').toLowerCase().includes(activeFilters.search) ||
     resolveProjectTitle(t).toLowerCase().includes(activeFilters.search) ||
-    (t.assignee || '').toLowerCase().includes(activeFilters.search)
+    (t.assignee || '').toLowerCase().includes(activeFilters.search) ||
+    (t.task_number || '').toLowerCase().includes(activeFilters.search)
   );
   return data;
 }
