@@ -3347,7 +3347,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0031';
+const APP_VERSION = '0.11.0.0032';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -8760,7 +8760,13 @@ function buildProjectForm(p) {
         '<span style="font-size:13px;font-weight:600;color:#9A3412;">Data Program project</span></label>' +
       '<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Reviewed by the full data team — Snowflake, DBAs, data architects, and data intelligence</div>' +
     '</div>') +
-  fmSec('Strategic Alignment', '<div class="fm-grid">' +
+  fmSec('Strategic Alignment',
+    '<div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">' +
+      '<div style="font-size:11px;color:var(--text-muted);">Tag this project with the strategic initiatives, goals, and criteria it supports.</div>' +
+      '<button type="button" onclick="suggestAlignment()" style="font-size:11px;font-weight:700;font-family:Lato,sans-serif;padding:5px 12px;border-radius:6px;border:1px solid #FDE68A;background:#FFFBEB;color:#92400E;cursor:pointer;white-space:nowrap;">✨ Suggest</button>' +
+    '</div>' +
+    '<div id="alignment-suggest-panel" style="display:none;"></div>' +
+    '<div class="fm-grid">' +
       fmField('IT Initiative', fmCheckboxGroup('fm-it-initiative', FM_IT_INITIATIVES, v('it_initiative')), false, true) +
       fmField('City Initiative', fmCheckboxGroup('fm-city-initiative', FM_CITY_INITIATIVES, v('city_initiative')), false, true) +
       fmField('IT Priority Project', fmCheckboxGroup('fm-it-priority', FM_IT_PRIORITY_PROJECTS, v('it_priority_project')), false, true) +
@@ -8823,6 +8829,188 @@ function fmWwcCriteriaGrouped(currentVal) {
     html += '</div></div></div>';
   });
   return html;
+}
+
+// ── AI Strategic Alignment Suggestions ──────────────────────────────
+var _alignmentSuggestions = null;
+
+async function suggestAlignment() {
+  var panel = document.getElementById('alignment-suggest-panel');
+  if (!panel) return;
+
+  // Read current form values
+  var title = (document.getElementById('fm-title-val') || {}).value || '';
+  var desc = (document.getElementById('fm-description') || {}).value || '';
+  var problem = (document.getElementById('fm-problem') || {}).value || '';
+  var category = (document.getElementById('fm-category') || {}).value || '';
+  var partnerDept = (document.getElementById('fm-partner-dept') || {}).value || '';
+  var delivBoxes = document.querySelectorAll('input[name="fm-deliverables"]:checked');
+  var deliverables = [...delivBoxes].map(function(cb) { return cb.value; }).join(', ');
+  var dataSources = (document.getElementById('fm-data-sources') || {}).value || '';
+  var techReqs = (document.getElementById('fm-tech-reqs') || {}).value || '';
+
+  if (!title) { showToast('Enter a project title first so AI can make recommendations.', 'warn'); return; }
+
+  panel.style.display = '';
+  panel.innerHTML = '<div style="text-align:center;padding:16px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;">' +
+    '<div style="font-size:20px;margin-bottom:6px;">🤔</div>' +
+    '<div style="font-size:12px;color:#92400E;font-weight:600;">Analyzing project for strategic alignment…</div>' +
+    '<div style="font-size:11px;color:#92400E;opacity:0.7;margin-top:4px;">This may take 10-15 seconds.</div></div>';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  var allFields = {
+    it_initiative: { label: 'IT Initiative', options: FM_IT_INITIATIVES },
+    city_initiative: { label: 'City Initiative', options: FM_CITY_INITIATIVES },
+    it_priority_project: { label: 'IT Priority Project', options: FM_IT_PRIORITY_PROJECTS },
+    dp_goal: { label: 'Data Program Goal', options: FM_DP_GOALS },
+    wwc_practice: { label: 'WWC Foundational Practice', options: FM_WWC_PRACTICES },
+    wwc_criteria: { label: 'WWC Criteria', options: FM_WWC_CRITERIA }
+  };
+
+  var optionsDesc = Object.keys(allFields).map(function(key) {
+    var f = allFields[key];
+    return f.label + ':\n' + f.options.map(function(o) { return '  - ' + o; }).join('\n');
+  }).join('\n\n');
+
+  var prompt = 'You are a strategic alignment advisor for the City of Tucson\'s Data Team. ' +
+    'Analyze the following project and recommend which strategic alignment checkboxes should be checked.\n\n' +
+    'PROJECT DETAILS:\n' +
+    'Title: ' + title + '\n' +
+    'Category: ' + (category || 'Not set') + '\n' +
+    'Partner Department: ' + (partnerDept || 'Not set') + '\n' +
+    'Problem Statement: ' + (problem || 'Not provided') + '\n' +
+    'Description: ' + (desc || 'Not provided') + '\n' +
+    'Deliverables: ' + (deliverables || 'Not specified') + '\n' +
+    'Data Sources: ' + (dataSources || 'Not specified') + '\n' +
+    'Technical Requirements: ' + (techReqs || 'Not specified') + '\n\n' +
+    'AVAILABLE ALIGNMENT OPTIONS:\n' + optionsDesc + '\n\n' +
+    'For each field, recommend ONLY the options that clearly apply to this project. Be selective — do not check everything. ' +
+    'For WWC Criteria, consider the specific work involved and only recommend criteria the project directly advances. ' +
+    'For IT Initiative, the options are numbered sections from the City\'s IT strategic plan (3.3.1 through 3.3.5). Only recommend if the project clearly falls under that section.\n\n' +
+    'Respond ONLY with a JSON object (no markdown, no backticks). Format:\n' +
+    '{\n' +
+    '  "it_initiative": [{"value": "3.3.1", "reason": "brief reason"}],\n' +
+    '  "city_initiative": [{"value": "CMO Dashboard", "reason": "brief reason"}],\n' +
+    '  "it_priority_project": [],\n' +
+    '  "dp_goal": [{"value": "Establish Data Governance", "reason": "brief reason"}],\n' +
+    '  "wwc_practice": [{"value": "Data Management", "reason": "brief reason"}],\n' +
+    '  "wwc_criteria": [{"value": "DM1 Implementing Data Strategy and Governance", "reason": "brief reason"}]\n' +
+    '}\n\n' +
+    'Empty arrays mean nothing applies for that field. Every "value" must EXACTLY match one of the available options listed above.';
+
+  try {
+    if (AI_PROXY_URL.includes('YOUR_SUBDOMAIN')) {
+      throw new Error('AI proxy not configured.');
+    }
+    var response = await fetch(AI_PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 4000, messages: [{ role: 'user', content: prompt }] })
+    });
+    var data = await response.json();
+    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+
+    var text = (data.content || []).map(function(c) { return c.text || ''; }).join('');
+    var clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    var objStart = clean.indexOf('{');
+    var objEnd = clean.lastIndexOf('}');
+    if (objStart === -1 || objEnd === -1) throw new Error('Could not find JSON in response.');
+    _alignmentSuggestions = JSON.parse(clean.substring(objStart, objEnd + 1));
+    renderAlignmentSuggestions();
+  } catch (err) {
+    console.error('[AlignSuggest] Failed:', err);
+    panel.innerHTML = '<div style="text-align:center;padding:16px;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;">' +
+      '<div style="font-size:14px;margin-bottom:4px;">⚠️</div>' +
+      '<div style="font-size:12px;color:#991B1B;">' + esc(err.message) + '</div>' +
+      '<button onclick="suggestAlignment()" style="margin-top:8px;padding:4px 12px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;font-family:Lato,sans-serif;cursor:pointer;">Try Again</button>' +
+      ' <button onclick="document.getElementById(\'alignment-suggest-panel\').style.display=\'none\'" style="margin-top:8px;padding:4px 12px;background:#E5E7EB;color:#374151;border:none;border-radius:6px;font-size:11px;font-weight:700;font-family:Lato,sans-serif;cursor:pointer;">Dismiss</button></div>';
+  }
+}
+
+function renderAlignmentSuggestions() {
+  var panel = document.getElementById('alignment-suggest-panel');
+  if (!panel || !_alignmentSuggestions) return;
+
+  var fieldMeta = {
+    it_initiative: { label: 'IT Initiative', color: '#EEF2FF', textColor: '#002669' },
+    city_initiative: { label: 'City Initiative', color: '#FFF7ED', textColor: '#9A3412' },
+    it_priority_project: { label: 'IT Priority Project', color: '#F0FDF4', textColor: '#166534' },
+    dp_goal: { label: 'Data Program Goal', color: '#FDF4FF', textColor: '#86198F' },
+    wwc_practice: { label: 'WWC Foundational Practice', color: '#FFFBEB', textColor: '#92400E' },
+    wwc_criteria: { label: 'WWC Criteria', color: '#F0F9FF', textColor: '#0C4A6E' }
+  };
+
+  var totalCount = 0;
+  var html = '<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:14px;margin-bottom:4px;">';
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
+  html += '<span style="font-size:12px;font-weight:700;color:#92400E;">✨ AI Alignment Suggestions</span>';
+  html += '<button onclick="document.getElementById(\'alignment-suggest-panel\').style.display=\'none\'" style="background:none;border:none;cursor:pointer;font-size:14px;color:#92400E;padding:0 4px;">✕</button>';
+  html += '</div>';
+
+  Object.keys(fieldMeta).forEach(function(key) {
+    var items = _alignmentSuggestions[key];
+    if (!items || !items.length) return;
+    var fm = fieldMeta[key];
+    html += '<div style="margin-bottom:8px;">';
+    html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:' + fm.textColor + ';margin-bottom:4px;">' + fm.label + '</div>';
+    items.forEach(function(item, i) {
+      totalCount++;
+      var cbId = 'align-sug-' + key + '-' + i;
+      html += '<label style="display:flex;align-items:flex-start;gap:6px;padding:4px 8px;border-radius:6px;cursor:pointer;background:' + fm.color + ';margin-bottom:3px;">';
+      html += '<input type="checkbox" checked class="align-sug-cb" data-field="' + key + '" data-value="' + esc(item.value) + '" id="' + cbId + '" style="margin-top:2px;width:13px;height:13px;accent-color:var(--navy);flex-shrink:0;">';
+      html += '<div><div style="font-size:12px;font-weight:600;color:' + fm.textColor + ';">' + esc(item.value) + '</div>';
+      if (item.reason) html += '<div style="font-size:11px;color:' + fm.textColor + ';opacity:0.7;">' + esc(item.reason) + '</div>';
+      html += '</div></label>';
+    });
+    html += '</div>';
+  });
+
+  if (totalCount === 0) {
+    html += '<div style="text-align:center;padding:8px;font-size:12px;color:#92400E;">No specific alignment recommendations for this project.</div>';
+  } else {
+    html += '<div style="display:flex;gap:8px;margin-top:10px;">';
+    html += '<button onclick="applyAlignmentSuggestions()" style="padding:5px 14px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;font-family:Lato,sans-serif;cursor:pointer;">Apply Selected</button>';
+    html += '<button onclick="document.getElementById(\'alignment-suggest-panel\').style.display=\'none\'" style="padding:5px 14px;background:#E5E7EB;color:#374151;border:none;border-radius:6px;font-size:11px;font-weight:700;font-family:Lato,sans-serif;cursor:pointer;">Dismiss</button>';
+    html += '<span style="font-size:10px;color:#92400E;opacity:0.7;align-self:center;margin-left:auto;">' + totalCount + ' suggestions · uncheck any to skip</span>';
+    html += '</div>';
+  }
+  html += '</div>';
+  panel.innerHTML = html;
+}
+
+function applyAlignmentSuggestions() {
+  var checkboxes = document.querySelectorAll('.align-sug-cb:checked');
+  var applied = 0;
+  checkboxes.forEach(function(cb) {
+    var field = cb.getAttribute('data-field');
+    var value = cb.getAttribute('data-value');
+    // Map field key to form checkbox name
+    var nameMap = {
+      it_initiative: 'fm-it-initiative',
+      city_initiative: 'fm-city-initiative',
+      it_priority_project: 'fm-it-priority',
+      dp_goal: 'fm-dp-goal',
+      wwc_practice: 'fm-wwc-practice',
+      wwc_criteria: 'fm-wwc-criteria'
+    };
+    var formName = nameMap[field];
+    if (!formName) return;
+    // Find the matching form checkbox and check it
+    var formCbs = document.querySelectorAll('input[name="' + formName + '"]');
+    formCbs.forEach(function(formCb) {
+      if (formCb.value === value) {
+        formCb.checked = true;
+        applied++;
+        // For WWC criteria, expand the parent group if collapsed
+        var group = formCb.closest('.wwc-group');
+        if (group && group.classList.contains('collapsed')) {
+          group.classList.remove('collapsed');
+        }
+      }
+    });
+  });
+  document.getElementById('alignment-suggest-panel').style.display = 'none';
+  showToast(applied + ' alignment' + (applied !== 1 ? 's' : '') + ' applied. Review and save when ready.', 'success');
 }
 
 function buildTaskForm(t) {

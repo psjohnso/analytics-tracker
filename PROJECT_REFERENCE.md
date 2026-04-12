@@ -5,7 +5,7 @@
 > **Update Rule:** This document MUST be updated after every application change. When working on this application, always check if this document needs updating.
 >
 > **Last Updated:** April 2026
-> **Current Version:** 0.11.0.0031 (see Version History at bottom)
+> **Current Version:** 0.11.0.0032 (see Version History at bottom)
 
 ---
 
@@ -1424,6 +1424,7 @@ Each requirement has a unique ID like `P3_DEMOS` (Phase 3, Demos conducted). Ful
 | 0.11.0.0029 | Project form UX redesign: collapsible sections (fmSec), conditional Strategic Alignment visibility (shown only when Data Program checked), WWC Criteria grouped by 8 practice areas with collapsible sub-headers, Details section starts collapsed on edit |
 | 0.11.0.0030 | Fix Strategic Alignment toggle: add scrollIntoView and visual flash when Data Program checkbox is checked |
 | 0.11.0.0031 | Strategic Alignment always visible (not conditional on Data Program); removed fmToggleDP wrapper |
+| 0.11.0.0032 | AI-powered Strategic Alignment suggestions: "Suggest" button analyzes project details and recommends IT Initiative, City Initiative, IT Priority Project, DP Goal, WWC Practice, and WWC Criteria with rationale; reviewable checklist with apply/dismiss |
 
 ---
 
