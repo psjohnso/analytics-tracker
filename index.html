@@ -2642,6 +2642,11 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
         <div class="sidebar-label">ITD Team</div>
         <div class="filter-group" id="team-filters"></div>
       </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Data Program</div>
+        <div class="filter-group" id="dp-filter"></div>
+      </div>
     </div>
   </aside>
 
@@ -3318,7 +3323,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0025';
+const APP_VERSION = '0.11.0.0026';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -3758,6 +3763,7 @@ let activeFilters = {
   taskTool: [],
   partnerDept: [],
   itdTeam: [],
+  dataProgram: false,
   search: '',
 };
 
@@ -3859,6 +3865,16 @@ function buildSidebarFilters() {
 
   renderFilterGroup('dept-filters', Object.fromEntries(Object.entries(depts).sort((a,b) => a[0].localeCompare(b[0]))), 'partnerDept');
   renderFilterGroup('team-filters', Object.fromEntries(Object.entries(teams).sort((a,b) => a[0].localeCompare(b[0]))), 'itdTeam');
+
+  // Data Program toggle filter
+  const dpCount = PROJECTS.filter(p => p.is_data_program).length;
+  const dpEl = document.getElementById('dp-filter');
+  if (dpEl) {
+    dpEl.innerHTML = '<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:2px 0;color:var(--text-body);">' +
+      '<input type="checkbox" id="dp-filter-cb" ' + (activeFilters.dataProgram ? 'checked' : '') +
+      ' onchange="activeFilters.dataProgram=this.checked;render();" style="width:14px;height:14px;cursor:pointer;accent-color:var(--navy);">' +
+      ' Data Program only <span style="font-size:10px;color:var(--text-muted);">(' + dpCount + ')</span></label>';
+  }
 }
 
 function renderFilterGroup(id, items, filterType) {
@@ -4474,6 +4490,7 @@ function filterProjects() {
   if (activeFilters.member.length)   data = data.filter(p => activeFilters.member.includes(p.contact) || (p.other_members && activeFilters.member.some(m => p.other_members.includes(m))));
   if (activeFilters.partnerDept.length) data = data.filter(p => activeFilters.partnerDept.includes(p.partner_dept));
   if (activeFilters.itdTeam.length)  data = data.filter(p => activeFilters.itdTeam.includes(p.itd_team));
+  if (activeFilters.dataProgram) data = data.filter(p => p.is_data_program);
   if (activeFilters.search) data = data.filter(p =>
     (p.title || '').toLowerCase().includes(activeFilters.search) ||
     (p.description || '').toLowerCase().includes(activeFilters.search) ||
@@ -4733,6 +4750,7 @@ function projectCard(p) {
         </span>
         ${p.category ? `<span class="meta-tag">${esc(p.category)}</span>` : ''}
         ${p.project_size ? `<span class="meta-tag" style="background:#F3E8FF;border-color:#D8B4FE;color:#6B21A8;">${esc(p.project_size)}</span>` : ''}
+        ${p.is_data_program ? '<span class="meta-tag" style="background:#FFF7ED;border-color:#FED7AA;color:#9A3412;">Data Program</span>' : ''}
         ${p.partner_dept ? `<span class="meta-tag">${esc(p.partner_dept.length > 22 ? p.partner_dept.slice(0,22)+'…' : p.partner_dept)}</span>` : ''}
       </div>
       ${p.description ? `<div class="project-desc">${esc(p.description)}</div>` : '<div class="project-desc" style="color:#E1E2DD;font-style:italic;">No description available</div>'}
@@ -6669,7 +6687,8 @@ async function agolApplyEdits(serviceUrl, edits) {
 //  Projects layer fields (ArcGIS):
 //    ObjectId, id, pid, title, status, priority, contact,
 //    other_members, partner_dept, category, start, end_ (alias: end),
-//    actual_end, description, problem_statement, itd_team, project_number
+//    actual_end, description, problem_statement, itd_team, project_number,
+//    is_data_program
 //
 //  Tasks layer fields (ArcGIS):
 //    ObjectId, idx, id, title, status, priority, assignee,
@@ -6707,6 +6726,8 @@ function agolProjectToLocal(feature) {
   if (!local.pid) {
     local.pid = (local.title || '').replace(/\s+/g, '').slice(0, 40) + local.id;
   }
+  // Normalize boolean fields from ArcGIS Short Integer (0/1) to JS truthy
+  local.is_data_program = local.is_data_program ? 1 : 0;
   return local;
 }
 
@@ -8652,6 +8673,11 @@ function buildProjectForm(p) {
       fmCategoryField(v('category'), true) +
       fmField('Partner Department', fmSelect('fm-partner-dept', FM_PARTNER_DEPTS, v('partner_dept'), 'Select department…')) +
       fmField('ITD Team', fmSelect('fm-itd-team', FM_ITD_TEAMS, v('itd_team'), 'Select team…')) +
+      fmField('Data Program', '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 0;">' +
+        '<input type="checkbox" id="fm-data-program" ' + (p && p.is_data_program ? 'checked' : '') +
+        ' style="width:16px;height:16px;accent-color:var(--navy);cursor:pointer;">' +
+        '<span style="font-size:13px;">Data Program project</span></label>' +
+        '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Reviewed by the full data team — Snowflake, DBAs, data architects, and data intelligence</div>') +
     '</div>' +
     '<div class="fm-section-label">Timeline</div>' +
     '<div class="fm-grid">' +
@@ -8824,6 +8850,7 @@ function collectProjectFields() {
     data_sources:      getVal('fm-data-sources') || null,
     technical_requirements: getVal('fm-tech-reqs') || null,
     actual_end:        getVal('fm-actual-end')   || null,
+    is_data_program:   document.getElementById('fm-data-program') && document.getElementById('fm-data-program').checked ? 1 : 0,
   };
 }
 
@@ -8938,7 +8965,7 @@ async function handleFormSubmit(andDownload) {
   // opening the form — e.g. a status or search filter — can cause the
   // just-edited record to vanish if the edit changed the filtered field.)
   if (isEdit) {
-    activeFilters = { status: [], priority: [], category: [], member: [], taskStatus: [], taskCategory: [], taskTool: [], partnerDept: [], itdTeam: [], search: '' };
+    activeFilters = { status: [], priority: [], category: [], member: [], taskStatus: [], taskCategory: [], taskTool: [], partnerDept: [], itdTeam: [], dataProgram: false, search: '' };
     const si = document.getElementById('search-input');
     if (si) si.value = '';
     buildSidebarFilters();
@@ -9036,6 +9063,7 @@ function copyProjectSummary(objectId) {
   if (p.category) md += '**Category:** ' + p.category + '\n';
   if (p.partner_dept) md += '**Partner:** ' + p.partner_dept + '\n';
   if (p.itd_team) md += '**ITD Team:** ' + p.itd_team + '\n';
+  if (p.is_data_program) md += '**Data Program:** Yes\n';
   if (team.length) md += '**Team:** ' + team.join(', ') + '\n';
 
   // Dates
@@ -9450,6 +9478,7 @@ function renderProjectDetail(id) {
         ${p.category ? `<span class="detail-hero-chip">${esc(p.category)}</span>` : ''}
         ${p.project_size ? `<span class="detail-hero-chip">Size: ${esc(p.project_size)}</span>` : ''}
         ${p.itd_team ? `<span class="detail-hero-chip">${esc(p.itd_team)}</span>` : ''}
+        ${p.is_data_program ? '<span class="detail-hero-chip" style="background:rgba(255,165,0,0.25);border:1px solid rgba(255,165,0,0.4);">Data Program</span>' : ''}
         ${projTotalHrs > 0 ? `<span class="detail-hero-chip">⏱ ${hoursLabel(projTotalHrs, projMyHrs)}</span>` : ''}
         ${p.actual_end ? `<span class="detail-hero-chip">✓ Completed ${p.actual_end}</span>` : ''}
       </div>
@@ -9465,6 +9494,7 @@ function renderProjectDetail(id) {
           <div class="detail-meta-item"><label>ITD Team</label><p>${esc(p.itd_team||'—')}</p></div>
           <div class="detail-meta-item"><label>Category</label><p>${esc(p.category||'—')}</p></div>
           <div class="detail-meta-item"><label>Project Size</label><p>${esc(p.project_size||'—')}</p></div>
+          <div class="detail-meta-item"><label>Data Program</label><p>${p.is_data_program ? '<span style="font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;background:#FFF7ED;color:#9A3412;">Yes</span>' : '—'}</p></div>
           <div class="detail-meta-item"><label>Start Date</label><p>${p.start||'—'}</p></div>
           <div class="detail-meta-item"><label>Working Due Date</label><p>${p.working_due || p.end || '—'}</p></div>
           ${p.actual_end ? `<div class="detail-meta-item"><label>Actual End</label><p>${p.actual_end}</p></div>` : ''}
