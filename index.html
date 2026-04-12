@@ -3347,7 +3347,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0035';
+const APP_VERSION = '0.11.0.0036';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -9629,7 +9629,7 @@ async function batchDeleteTasks() {
 function buildStrategicAlignmentSection(p) {
   var chipStyle = 'display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:6px;margin:2px;';
   var noneStyle = 'font-size:12px;color:var(--text-muted);font-style:italic;';
-  function buildCell(label, val, bg, color) {
+  function cell(label, val, bg, color) {
     var content;
     if (!val) {
       content = '<span style="' + noneStyle + '">Does not apply</span>';
@@ -9640,24 +9640,21 @@ function buildStrategicAlignmentSection(p) {
     }
     return '<div><div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">' + label + '</div>' + content + '</div>';
   }
-  // Always show IT Initiative & City Initiative; others only when set
-  var topRow = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px;">' +
-    buildCell('IT Initiative', p.it_initiative, '#EEF2FF', '#002669') +
-    buildCell('City Initiative', p.city_initiative, '#FFF7ED', '#9A3412') +
-  '</div>';
-  var midCells = [];
-  if (p.it_priority_project) midCells.push(buildCell('IT Priority Project', p.it_priority_project, '#F0FDF4', '#166534'));
-  if (p.dp_goal) midCells.push(buildCell('Data Program Goal', p.dp_goal, '#FDF4FF', '#86198F'));
-  if (p.wwc_practice) midCells.push(buildCell('WWC Foundational Practice', p.wwc_practice, '#FFFBEB', '#92400E'));
-  var midRow = '';
-  if (midCells.length) {
-    midRow = '<div style="display:grid;grid-template-columns:' + (midCells.length === 1 ? '1fr' : midCells.length === 2 ? '1fr 1fr' : '1fr 1fr 1fr') + ';gap:16px;margin-bottom:12px;">' + midCells.join('') + '</div>';
+  var row = function(cells) { return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px;">' + cells + '</div>'; };
+
+  var html = '<div class="detail-section"><div class="detail-section-label">Strategic Alignment</div>';
+  // Row 1: IT Initiative | City Initiative (always shown)
+  html += row(cell('IT Initiative', p.it_initiative, '#EEF2FF', '#002669') + cell('City Initiative', p.city_initiative, '#FFF7ED', '#9A3412'));
+  // Row 2: IT Priority Project | Data Program Goal (only if either set)
+  if (p.it_priority_project || p.dp_goal) {
+    html += row(cell('IT Priority Project', p.it_priority_project, '#F0FDF4', '#166534') + cell('Data Program Goal', p.dp_goal, '#FDF4FF', '#86198F'));
   }
-  var wwcRow = '';
-  if (p.wwc_criteria) {
-    wwcRow = '<div>' + buildCell('WWC Criteria', p.wwc_criteria, '#F0F9FF', '#0C4A6E') + '</div>';
+  // Row 3: WWC Practice | WWC Criteria (together, only if either set)
+  if (p.wwc_practice || p.wwc_criteria) {
+    html += row(cell('WWC Foundational Practice', p.wwc_practice, '#FFFBEB', '#92400E') + cell('WWC Criteria', p.wwc_criteria, '#F0F9FF', '#0C4A6E'));
   }
-  return '<div class="detail-section"><div class="detail-section-label">Strategic Alignment</div>' + topRow + midRow + wwcRow + '</div>';
+  html += '</div>';
+  return html;
 }
 
 function buildProjectTimeline(p) {
