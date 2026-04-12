@@ -4,8 +4,8 @@
 >
 > **Update Rule:** This document MUST be updated after every application change. When working on this application, always check if this document needs updating.
 >
-> **Last Updated:** March 2026
-> **Current Version:** 0.10.0.0027 (see Version History at bottom)
+> **Last Updated:** April 2026
+> **Current Version:** 0.11.0.0024 (see Version History at bottom)
 
 ---
 
@@ -375,42 +375,64 @@ The sidebar is hidden (display:none) on Overview, My Work, Resources, Forecast, 
 
 ```css
 :root {
-  --navy: #002669;        /* Primary — header, buttons, text */
-  --orange: #C24200;      /* Accent — subheadings, alerts */
-  --yellow: #FFDB22;      /* Highlights, warnings */
-  --green: #83AC16;       /* Success, completed */
-  --sky-blue: #0088FF;    /* Links, active states */
-  --night-sky: #140233;   /* Dark alternative */
-  --cactus-fruit: #9E0059;/* Department accent */
-  --monsoon-gray: #E1E2DD;/* Borders */
-  --text: #1F2937;        /* Body text */
+  --navy: #002669;        /* Innovation Blue — header, buttons, headings */
+  --orange: #C24200;      /* Sunset Orange — section labels, accents, CTAs */
+  --yellow: #FFDB22;      /* Sun Yellow — active tab, highlights */
+  --green: #83AC16;       /* Saguaro Green — success, completed */
+  --night: #140233;       /* Night Sky — footer background */
+  --gray-light: #E1E2DD;  /* Monsoon Gray — borders, dividers */
+  --sand: #E5D086;        /* Sonoran Sand — decorative accents */
+  --sky: #0088FF;         /* Sky Blue — links, interactive */
+  --cactus: #9E0059;      /* Cactus Fruit — department accent */
+  --white: #FFFFFF;
+  --surface: #F7F5EF;     /* Desert Editorial warm cream (NOT white) */
+  --border: #E1E2DD;      /* Monsoon Gray */
+  --text-dark: #002855;   /* Brand Black (deep navy) */
+  --text-body: #002855;   /* All body text */
   --text-muted: #6B7280;  /* Secondary text */
-  --card-bg: #FFFFFF;     /* Card backgrounds */
-  --bg: #F9FAFB;          /* Page background */
-  --border: #E5E7EB;      /* Default border */
+  --sidebar-w: 280px;
+  --header-h: 64px;
+  --radius: 16px;         /* Card border-radius */
+  --radius-btn: 6px;      /* Button border-radius (NOT pill-shaped) */
+  --card-padding: 28px;
 }
 ```
+
+### Desert Editorial Style System
+
+The application follows the **Desert Editorial** design system from the City of Tucson Data Team brand:
+
+- **Page background:** `#F7F5EF` warm cream (never white)
+- **Body font:** `'Cardo', Georgia, serif` for body copy
+- **Heading font:** `'Lato', sans-serif` for all headings, labels, stats, nav elements
+- **Section labels:** Sunset Orange (`#C24200`), uppercase, letter-spacing 0.15–0.2em
+- **Tab bar active state:** Sun Yellow (`#FFDB22`) background with Innovation Blue text
+- **Accent bar:** 4-color gradient (Orange → Yellow → Green → Blue) below tab bar
+- **Cards:** 16px border-radius, warm hover background (`#FDFCF8`)
+- **Buttons:** 6px border-radius (not pill-shaped)
+- **Footer:** Night Sky (`#140233`) background with processed mosaic icon
+- **Warm grays throughout:** `#F3F1EB`, `#FDFCF8`, `#E8E6DF` replace cool Tailwind grays
 
 ### Key Layout Patterns
 
 **App layout (header + sidebar + content):**
 ```css
-body { margin:0; padding-top:56px; background:var(--bg); font-family:'Lato',sans-serif; }
-#app-layout { display:flex; min-height:calc(100vh - 56px); }
-#sidebar { width:280px; flex-shrink:0; background:#fff; border-right:1px solid var(--border);
-  overflow-y:auto; position:sticky; top:56px; height:calc(100vh - 56px); }
-#content-area { flex:1; padding:24px 32px; min-width:0; overflow-x:hidden; }
+body { margin:0; padding-top:64px; background:var(--surface); font-family:'Cardo',Georgia,serif; color:var(--text-body); }
+.app-header { position:fixed; top:0; height:64px; background:var(--navy); z-index:100; }
+.sidebar { width:280px; flex-shrink:0; background:#fff; border-right:1px solid var(--border);
+  overflow-y:auto; position:sticky; top:calc(64px + 49px); height:calc(100vh - 64px - 49px); }
+.content-area { flex:1; padding:20px 24px; min-width:0; }
 ```
 
 **Cards (grid view):**
 ```css
-.card-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:16px; }
-.project-card, .task-card {
-  background:#fff; border:1px solid #E5E7EB; border-radius:12px;
-  padding:20px; cursor:pointer; transition:all 0.15s;
-  border-left:4px solid var(--navy); /* Color varies by status */
+.projects-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:16px; }
+.project-card {
+  background:#fff; border:1px solid var(--border); border-radius:var(--radius);
+  overflow:hidden; cursor:pointer; transition:transform 0.15s, box-shadow 0.15s;
 }
-.project-card:hover { border-color:var(--navy); box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+.project-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,38,105,0.1);
+  border-color:var(--navy); background:#FDFCF8; }
 ```
 
 **Status badge colors:**
@@ -1130,25 +1152,47 @@ Scoring-based 4-question wizard for project sizing. Used in project form via "�
 
 ## 16. Branding & Design Specifications
 
-### City of Tucson Brand
+### City of Tucson Brand — Desert Editorial Style
 
-Follows the City of Tucson Brand Guide (02.15.22). See `COT_Brand_Guide_1.pdf` in project files.
+Follows the City of Tucson Brand Guide (02.15.22). See `COT_Brand_Guide_1.pdf` in project files. The application uses the **Desert Editorial** design system maintained in the `desert-editorial` skill.
+
+### Brand Hierarchy (non-DKC standalone product)
+
+| Location | Element | Details |
+|----------|---------|---------|
+| Nav/Header | City of Tucson logo | White 1-color reverse, 120×29px, processed transparent bg |
+| Nav/Header | Pipe separator + title | "Analytics Project Tracker" in Lato 700, uppercase |
+| Below tab bar | Accent bar | 4-color gradient: Orange → Yellow → Green → Blue, 4px height |
+| Footer | Tucson DATA mosaic | 60px height, white text, processed transparent bg |
+| Footer | Product name | "Analytics Project Tracker" in Lato 800, 20px |
+| Footer | Attribution | "City of Tucson · Tucson Data Team" |
+
+### Logo Processing
+
+Both the City logo reverse and Tucson DATA mosaic have **baked-in black backgrounds**. They must be processed with Python/Pillow before embedding:
+- Remove black pixels (`r < 40 and g < 40 and b < 40` → transparent)
+- For mosaic: also convert dark blue text to white (`b > r and b > g and r < 80 and g < 80 and b < 180` → white)
+- See the `desert-editorial` skill `SKILL.md` for full processing code
 
 ### Colors
 | Name | Hex | CSS Variable | Usage |
 |------|-----|-------------|-------|
-| Innovation Blue | #002669 | --navy | Header, buttons, primary text |
-| Sunset Orange | #C24200 | --orange | Accents, subheadings |
-| Sun Yellow | #FFDB22 | --yellow | Highlights, warnings |
+| Innovation Blue | #002669 | --navy | Header, buttons, headings |
+| Sunset Orange | #C24200 | --orange | Section labels, accents, CTAs |
+| Sun Yellow | #FFDB22 | --yellow | Active tab, highlights |
 | Saguaro Green | #83AC16 | --green | Success, completed |
-| Sky Blue | #0088FF | --sky-blue | Links, active |
-| Cactus Fruit | #9E0059 | --cactus-fruit | Department accent |
+| Sky Blue | #0088FF | --sky | Links, interactive elements |
+| Night Sky | #140233 | --night | Footer background |
+| Monsoon Gray | #E1E2DD | --border | Borders, dividers |
+| Brand Black | #002855 | --text-body | All body text |
+| Warm Cream | #F7F5EF | --surface | Page background (NOT white) |
+| Cactus Fruit | #9E0059 | --cactus | Department accent |
 
 ### Typography
 | Typeface | Source | Usage |
 |----------|--------|-------|
-| Lato (300, 400, 700, 900) | Google Fonts | Headings, UI, navigation |
-| Cardo (400, 700, italic) | Google Fonts | Body copy, descriptions |
+| Lato (300, 400, 700, 800, 900) | Google Fonts | Headings, UI, navigation, section labels, stat numbers |
+| Cardo (400, 700, italic) | Google Fonts | Body copy, descriptions, form fields |
 | Arial | System | Email/fallback |
 
 ### Google Fonts Import
@@ -1369,7 +1413,10 @@ Each requirement has a unique ID like `P3_DEMOS` (Phase 3, Demos conducted). Ful
 | 0.10.0.0027 | Issues tab — bug tracker and improvement requests with Submitted→Accepted→In Progress→Done workflow |
 | 0.10.0.0049 | Fix save button disabled state when adding second task after first |
 | 0.11.0.0000 | Active project lifecycle: 10-phase system (0–9) with 39 requirements, phase stepper on project detail, task-linked gate checks, phase-grouped task list, lifecycle requirements multi-select on task form, phase-aware AI task suggestions, phase column on projects list |
-| 0.11.0.0001 | Auto re-render project detail after all suggested tasks are accepted (individual or bulk) |
+| 0.11.0.0012 | Project & task numbering system (P-001, P-001-001 format), copy project summary, inline assignee/due date editing on project detail tasks |
+| 0.11.0.0013 | Resolution field (String 4000) on tasks with markdown textarea and rendered display |
+| 0.11.0.0014–0021 | Time entry edit toggle fix, inline assignee & due date on project detail (3 rendering paths), project number on My Work tab |
+| 0.11.0.0022–0024 | **Desert Editorial styling:** warm cream surface (#F7F5EF), Cardo body font, Lato headings, processed City logo (white, transparent bg) in header, 4-color accent bar, Sun Yellow active tabs, Sunset Orange section labels, 16px card radius, 6px button radius, Night Sky footer with 60px mosaic icon, ~160+ warm color replacements, version display in header pill + footer |
 
 ---
 
