@@ -1275,6 +1275,30 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   text-transform:uppercase; color:var(--orange); margin:22px 0 12px;
   padding-bottom:6px; border-bottom:1.5px solid #E8E6DF; }
 .fm-section-label:first-child { margin-top:0; }
+/* Collapsible form sections */
+.fm-sec { border:1px solid #E8E6DF; border-radius:10px; margin-bottom:10px; overflow:hidden; }
+.fm-sec:first-child { margin-top:0; }
+.fm-sec-hd { display:flex; align-items:center; justify-content:space-between; padding:10px 16px;
+  cursor:pointer; user-select:none; transition:background 0.1s; }
+.fm-sec-hd:hover { background:#FDFCF8; }
+.fm-sec-hd-label { font-family:'Lato',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.15em;
+  text-transform:uppercase; color:var(--orange); }
+.fm-sec-hd-badge { font-size:10px; color:var(--text-muted); font-weight:400; letter-spacing:0; text-transform:none; margin-left:6px; }
+.fm-sec-chev { font-size:12px; color:var(--text-muted); transition:transform 0.2s; }
+.fm-sec.collapsed .fm-sec-chev { transform:rotate(-90deg); }
+.fm-sec.collapsed .fm-sec-body { display:none; }
+.fm-sec-body { padding:0 16px 14px; }
+.fm-sec-cond { border-left:3px solid #FED7AA; }
+/* WWC criteria sub-groups */
+.wwc-group { margin-bottom:8px; border:1px solid #E8E6DF; border-radius:8px; overflow:hidden; }
+.wwc-group-hd { display:flex; align-items:center; gap:6px; padding:6px 10px; cursor:pointer;
+  user-select:none; font-size:12px; font-weight:600; color:var(--navy); transition:background 0.1s; }
+.wwc-group-hd:hover { background:#F8FAFC; }
+.wwc-group-hd .wwc-chev { font-size:10px; color:var(--text-muted); transition:transform 0.15s; }
+.wwc-group.collapsed .wwc-chev { transform:rotate(-90deg); }
+.wwc-group.collapsed .wwc-group-body { display:none; }
+.wwc-group-body { padding:4px 10px 8px; }
+.wwc-group-count { font-size:10px; color:var(--text-muted); font-weight:400; margin-left:auto; }
 .fm-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
 .fm-field { display:flex; flex-direction:column; gap:5px; }
 .fm-field.span2 { grid-column:span 2; }
@@ -3323,7 +3347,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0027';
+const APP_VERSION = '0.11.0.0029';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -8065,7 +8089,18 @@ const FM_WWC_CRITERIA = [
   'DM1 Implementing Data Strategy and Governance', 'DM2 Maintaining a Comprehensive Data Inventory', 'DM3 Sharing Data',
   'DM4 Improving Data Quality', 'DM5 Protecting Data Privacy and Confidentiality', 'DM6 Managing Data Security',
   'DM7 Qualitative Data Practices', 'DM8 Disaggregated Data Decision-Making', 'DM9 Data Service Standard',
-  'BF1 Data-Driven Budget and Financial Processes', 'BF2 Data-Driven Budget and Financial Decisions', 'BF3 Leveraging Funds for Outcomes'
+  'BF1 Data-Driven Budget and Financial Processes', 'BF2 Data-Driven Budget and Financial Decisions', 'BF3 Leveraging Funds for Outcomes',
+  'EVAL1 Establishing City-Wide Evaluation Commitments', 'EVAL2 Launching Rigorous Evaluations',
+  'EVAL3 Using Rigorous Evaluation Results to Make Decisions', 'EVAL4 Adapting Evidence-Based Programs',
+  'LC1 Executive Commitment to Data Informed Government', 'LC2 Use of Public Communications',
+  'LC3 Data Workforce Culture and Trainings', 'LC4 Performance Management Leadership',
+  'LC5 Data Leadership', 'LC6 Rigorous Evaluation Leadership & Expertise', 'LC7 Results-Driven Contracting Leadership',
+  'OD1 Open Data Policy', 'OD2 User Guidance for Open and Shared Data', 'OD3 Open Data Portal', 'OD4 User Insights About Open and Shared Data',
+  'PA1 Selecting and Using Performance Metrics for Strategic Goals and Priorities', 'PA2 Implementing Performance Management',
+  'PA3 Sharing Goals and Progress', 'PA4 Evaluating Disparate Impact of Automated Decisions', 'PA5 Using Analysis in Decisions',
+  'RDC1 Defining Goals for Key Procurements', 'RDC2 Measuring Outcomes for Key Procurements', 'RDC3 Assessing Vendor Performance',
+  'RDC4 Structuring Procurements to Support Strategic Goals', 'RDC5 Using Data to Manage Contracts and Improve Outcomes and Performance',
+  'RDC6 Making Informed Contracting Decisions', 'RDC7 Open and Shared Procurement Data', 'RDC8 Supporting Vendor Participation and Competition'
 ];
 
 function fmCheckboxGroup(name, options, currentVal) {
@@ -8689,36 +8724,44 @@ function removePhaseReq(reqId) { togglePhaseReq(reqId); }
 
 function buildProjectForm(p) {
   const v = function(k) { return p ? (p[k] || '') : ''; };
+  const isEdit = !!p;
   // Original End Date is locked once project reaches Active status
   const isActive = p && (p.status === 'Active' || p.status === 'Complete' || p.status === 'On Hold' || p.status === 'Canceled');
   const endDateField = isActive
     ? '<input id="fm-end" type="date" class="fm-input" value="' + esc(v('end')) + '" readonly style="background:#F3F1EB;color:var(--text-muted);cursor:not-allowed;">' +
       '<div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Locked — set when project was created</div>'
     : '<input id="fm-end" type="date" class="fm-input" value="' + esc(v('end')) + '">';
-  return '<div class="fm-section-label">Basic Info</div>' +
-    '<div class="fm-grid">' +
+  const dpChecked = p && p.is_data_program;
+
+  return fmSec('Essentials', '<div class="fm-grid">' +
       fmField('Title', fmInput('fm-title-val', v('title'), 'Project title…'), true, true) +
       fmField('Status', fmSelect('fm-status', FM_PROJ_STATUSES, v('status'), 'Select status…', false)) +
       fmField('Priority', fmSelect('fm-priority', FM_PROJ_PRIORITIES, v('priority'), 'Select priority…', false)) +
       fmProjectSizeField(v('project_size')) +
       fmField('Project Lead', fmSelect('fm-contact', FM_ACTIVE_MEMBERS || FM_TASK_ASSIGNEES, v('contact'), 'Select lead…', false)) +
-      fmField('Team Members', '<div id="fm-team-avail-list"></div>' +
-        '<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">Select team members for this project. Availability' + calcInfoIcon('earliestStart') + ' is based on the project size selected above.</div>',
-        false, true) +
-    '</div>' +
-    '<div class="fm-section-label">Classification</div>' +
-    '<div class="fm-grid">' +
+    '</div>') +
+  fmSec('Team', '<div id="fm-team-avail-list"></div>' +
+      '<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">Select team members for this project. Availability' + calcInfoIcon('earliestStart') + ' is based on the project size selected above.</div>') +
+  fmSec('Timeline', '<div class="fm-grid">' +
+      fmField('Start Date', fmInput('fm-start', v('start'), '', 'date')) +
+      fmField('Original End Date', endDateField) +
+      fmField('Working Due Date', fmInput('fm-working-due', v('working_due'), '', 'date')) +
+      (p && p.status === 'Complete' ? fmField('Completion Date', fmInput('fm-actual-end', v('actual_end'), '', 'date'), false, false, 'When this project was actually completed') : '') +
+    '</div>') +
+  fmSec('Classification', '<div class="fm-grid">' +
       fmCategoryField(v('category'), true) +
       fmField('Partner Department', fmSelect('fm-partner-dept', FM_PARTNER_DEPTS, v('partner_dept'), 'Select department…')) +
       fmField('ITD Team', fmSelect('fm-itd-team', FM_ITD_TEAMS, v('itd_team'), 'Select team…')) +
-      fmField('Data Program', '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 0;">' +
-        '<input type="checkbox" id="fm-data-program" ' + (p && p.is_data_program ? 'checked' : '') +
-        ' style="width:16px;height:16px;accent-color:var(--navy);cursor:pointer;">' +
-        '<span style="font-size:13px;">Data Program project</span></label>' +
-        '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Reviewed by the full data team — Snowflake, DBAs, data architects, and data intelligence</div>') +
     '</div>' +
-    '<div class="fm-section-label">Strategic Alignment</div>' +
-    '<div class="fm-grid">' +
+    '<div style="margin-top:12px;">' +
+      '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 12px;background:#FFF7ED;border-radius:8px;border:1px solid #FED7AA;">' +
+        '<input type="checkbox" id="fm-data-program" ' + (dpChecked ? 'checked' : '') +
+        ' onchange="fmToggleDP(this.checked)" style="width:16px;height:16px;accent-color:var(--navy);cursor:pointer;">' +
+        '<span style="font-size:13px;font-weight:600;color:#9A3412;">Data Program project</span></label>' +
+      '<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Reviewed by the full data team — Snowflake, DBAs, data architects, and data intelligence</div>' +
+    '</div>') +
+  '<div id="fm-strategic-alignment" style="' + (dpChecked ? '' : 'display:none;') + '">' +
+  fmSec('Strategic Alignment', '<div class="fm-grid">' +
       fmField('IT Initiative', fmCheckboxGroup('fm-it-initiative', FM_IT_INITIATIVES, v('it_initiative')), false, true) +
       fmField('City Initiative', fmCheckboxGroup('fm-city-initiative', FM_CITY_INITIATIVES, v('city_initiative')), false, true) +
       fmField('IT Priority Project', fmCheckboxGroup('fm-it-priority', FM_IT_PRIORITY_PROJECTS, v('it_priority_project')), false, true) +
@@ -8726,25 +8769,67 @@ function buildProjectForm(p) {
         'Which Data Program goals does this project advance?') +
       fmField('WWC Foundational Practice', fmCheckboxGroup('fm-wwc-practice', FM_WWC_PRACTICES, v('wwc_practice')), false, true,
         'What Works Cities foundational practice areas') +
-      fmField('WWC Criteria', fmCheckboxGroup('fm-wwc-criteria', FM_WWC_CRITERIA, v('wwc_criteria')), false, true,
-        'Specific What Works Cities certification criteria') +
     '</div>' +
-    '<div class="fm-section-label">Timeline</div>' +
-    '<div class="fm-grid">' +
-      fmField('Start Date', fmInput('fm-start', v('start'), '', 'date')) +
-      fmField('Original End Date', endDateField) +
-      fmField('Working Due Date', fmInput('fm-working-due', v('working_due'), '', 'date')) +
-      (p && p.status === 'Complete' ? fmField('Completion Date', fmInput('fm-actual-end', v('actual_end'), '', 'date'), false, false, 'When this project was actually completed') : '') +
-    '</div>' +
-    '<div class="fm-section-label">Details</div>' +
-    '<div class="fm-grid">' +
+    fmField('WWC Criteria', fmWwcCriteriaGrouped(v('wwc_criteria')), false, false,
+        'Specific What Works Cities certification criteria — grouped by practice area'), '', 'fm-sec-cond') +
+  '</div>' +
+  fmSec('Details', '<div class="fm-grid">' +
       fmField('Problem Statement', fmMdTextarea('fm-problem', v('problem_statement'), 'Describe the problem this project solves…', 3, 4000), false, true) +
       fmField('Description', fmMdTextarea('fm-description', v('description'), 'Project description…', 3, 4000), false, true) +
       fmField('Deliverables', fmDeliverables('fm-deliverables', v('deliverables')), false, true,
         'What will this project produce?') +
       fmField('Data Sources', fmMdTextarea('fm-data-sources', v('data_sources'), 'e.g. Hansen, Accela, ArcGIS Enterprise, CSV from partner dept…', 2, 2000), false, true) +
       fmField('Technical Requirements', fmMdTextarea('fm-tech-reqs', v('technical_requirements'), 'e.g. Must integrate with existing system, ADA compliant, real-time updates…', 2, 4000), false, true) +
-    '</div>';
+    '</div>', isEdit);
+}
+
+function fmSec(label, bodyHtml, startCollapsed, extraClass) {
+  var cls = 'fm-sec' + (startCollapsed ? ' collapsed' : '') + (extraClass ? ' ' + extraClass : '');
+  return '<div class="' + cls + '">' +
+    '<div class="fm-sec-hd" onclick="this.parentElement.classList.toggle(\'collapsed\')">' +
+      '<span class="fm-sec-hd-label">' + label + '</span>' +
+      '<span class="fm-sec-chev">&#9662;</span>' +
+    '</div>' +
+    '<div class="fm-sec-body">' + bodyHtml + '</div>' +
+  '</div>';
+}
+
+function fmToggleDP(checked) {
+  var el = document.getElementById('fm-strategic-alignment');
+  if (el) el.style.display = checked ? '' : 'none';
+}
+
+var WWC_CRITERIA_GROUPS = [
+  { prefix: 'CI', label: 'Community impact', items: FM_WWC_CRITERIA.filter(function(c) { return c.indexOf('CI') === 0; }) },
+  { prefix: 'DM', label: 'Data management', items: FM_WWC_CRITERIA.filter(function(c) { return c.indexOf('DM') === 0; }) },
+  { prefix: 'BF', label: 'Budget and finance', items: FM_WWC_CRITERIA.filter(function(c) { return c.indexOf('BF') === 0; }) },
+  { prefix: 'EVAL', label: 'Evaluations', items: FM_WWC_CRITERIA.filter(function(c) { return c.indexOf('EVAL') === 0; }) },
+  { prefix: 'LC', label: 'Leadership and capacity', items: FM_WWC_CRITERIA.filter(function(c) { return c.indexOf('LC') === 0; }) },
+  { prefix: 'OD', label: 'Open data', items: FM_WWC_CRITERIA.filter(function(c) { return c.indexOf('OD') === 0; }) },
+  { prefix: 'PA', label: 'Performance and analytics', items: FM_WWC_CRITERIA.filter(function(c) { return c.indexOf('PA') === 0; }) },
+  { prefix: 'RDC', label: 'Results-driven contracting', items: FM_WWC_CRITERIA.filter(function(c) { return c.indexOf('RDC') === 0; }) }
+];
+
+function fmWwcCriteriaGrouped(currentVal) {
+  var selected = (currentVal || '').split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+  var html = '';
+  WWC_CRITERIA_GROUPS.forEach(function(grp) {
+    var grpSelected = grp.items.filter(function(c) { return selected.includes(c); }).length;
+    var startOpen = grpSelected > 0;
+    html += '<div class="wwc-group' + (startOpen ? '' : ' collapsed') + '">';
+    html += '<div class="wwc-group-hd" onclick="this.parentElement.classList.toggle(\'collapsed\')">';
+    html += '<span class="wwc-chev">&#9662;</span>';
+    html += esc(grp.label) + ' (' + grp.prefix + ')';
+    html += '<span class="wwc-group-count">' + grp.items.length + ' criteria' + (grpSelected ? ' · ' + grpSelected + ' selected' : '') + '</span>';
+    html += '</div>';
+    html += '<div class="wwc-group-body"><div class="fm-deliverables-grid">';
+    grp.items.forEach(function(opt) {
+      var checked = selected.includes(opt) ? ' checked' : '';
+      html += '<label class="fm-deliv-check"><input type="checkbox" name="fm-wwc-criteria" value="' + esc(opt) + '"' + checked + '>' + esc(opt) + '</label>';
+    });
+    html += '</div></div></div>';
+  });
+  return html;
 }
 
 function buildTaskForm(t) {

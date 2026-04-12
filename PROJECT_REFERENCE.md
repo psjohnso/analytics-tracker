@@ -5,7 +5,7 @@
 > **Update Rule:** This document MUST be updated after every application change. When working on this application, always check if this document needs updating.
 >
 > **Last Updated:** April 2026
-> **Current Version:** 0.11.0.0027 (see Version History at bottom)
+> **Current Version:** 0.11.0.0029 (see Version History at bottom)
 
 ---
 
@@ -1420,6 +1420,8 @@ Each requirement has a unique ID like `P3_DEMOS` (Phase 3, Demos conducted). Ful
 | 0.11.0.0025 | Search by project number (P-001) and task number (P-001-001) |
 | 0.11.0.0026 | Data Program project flag: boolean field, checkbox on form, badge on cards/detail/list, sidebar toggle filter, copy summary support |
 | 0.11.0.0027 | Strategic Alignment fields: IT Initiative, City Initiative, IT Priority Project, Data Program Goal, WWC Foundational Practice, WWC Criteria — multi-select checkbox groups on form, chip display on detail, hero badges for City Initiative and IT Priority Project |
+| 0.11.0.0028 | WWC Criteria expanded to full 43-criteria standard: added EVAL1–4, LC1–7, OD1–4, PA1–5, RDC1–8; fixed DM3/DM4 typo |
+| 0.11.0.0029 | Project form UX redesign: collapsible sections (fmSec), conditional Strategic Alignment visibility (shown only when Data Program checked), WWC Criteria grouped by 8 practice areas with collapsible sub-headers, Details section starts collapsed on edit |
 
 ---
 
