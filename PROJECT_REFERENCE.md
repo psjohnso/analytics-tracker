@@ -5,7 +5,7 @@
 > **Update Rule:** This document MUST be updated after every application change. When working on this application, always check if this document needs updating.
 >
 > **Last Updated:** April 2026
-> **Current Version:** 0.11.0.0032 (see Version History at bottom)
+> **Current Version:** 0.11.0.0033 (see Version History at bottom)
 
 ---
 
@@ -1425,6 +1425,7 @@ Each requirement has a unique ID like `P3_DEMOS` (Phase 3, Demos conducted). Ful
 | 0.11.0.0030 | Fix Strategic Alignment toggle: add scrollIntoView and visual flash when Data Program checkbox is checked |
 | 0.11.0.0031 | Strategic Alignment always visible (not conditional on Data Program); removed fmToggleDP wrapper |
 | 0.11.0.0032 | AI-powered Strategic Alignment suggestions: "Suggest" button analyzes project details and recommends IT Initiative, City Initiative, IT Priority Project, DP Goal, WWC Practice, and WWC Criteria with rationale; reviewable checklist with apply/dismiss |
+| 0.11.0.0033 | IT Initiative labels expanded with descriptions (3.3.1–3.3.5); AI prompt enriched with full strategic plan context and don't-force-fit instruction; IT Initiative badges added to project detail hero |
 
 ---
 

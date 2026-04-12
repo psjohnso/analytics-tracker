@@ -3347,7 +3347,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0032';
+const APP_VERSION = '0.11.0.0033';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -8073,7 +8073,13 @@ const FM_DELIVERABLE_OPTIONS = [
 ];
 
 // ── Strategic Alignment Options ──────────────────────────────────────
-const FM_IT_INITIATIVES = ['3.3.1', '3.3.2', '3.3.3', '3.3.4', '3.3.5'];
+const FM_IT_INITIATIVES = [
+  '3.3.1 — Assess current state of data management',
+  '3.3.2 — Data governance framework',
+  '3.3.3 — Evaluate data analytics tools & platforms',
+  '3.3.4 — Data controls for retention & destruction',
+  '3.3.5 — Pilot data analytics solutions'
+];
 const FM_CITY_INITIATIVES = ['Asset Scorecard', 'CMO Dashboard', 'Prosperity Initiative', 'Safe City Initiative'];
 const FM_IT_PRIORITY_PROJECTS = ['AI Deployment and Responsible Use', 'BISC', 'Dashboard Standards', 'Developer and Coding Standards'];
 const FM_DP_GOALS = [
@@ -8858,20 +8864,6 @@ async function suggestAlignment() {
     '<div style="font-size:11px;color:#92400E;opacity:0.7;margin-top:4px;">This may take 10-15 seconds.</div></div>';
   panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-  var allFields = {
-    it_initiative: { label: 'IT Initiative', options: FM_IT_INITIATIVES },
-    city_initiative: { label: 'City Initiative', options: FM_CITY_INITIATIVES },
-    it_priority_project: { label: 'IT Priority Project', options: FM_IT_PRIORITY_PROJECTS },
-    dp_goal: { label: 'Data Program Goal', options: FM_DP_GOALS },
-    wwc_practice: { label: 'WWC Foundational Practice', options: FM_WWC_PRACTICES },
-    wwc_criteria: { label: 'WWC Criteria', options: FM_WWC_CRITERIA }
-  };
-
-  var optionsDesc = Object.keys(allFields).map(function(key) {
-    var f = allFields[key];
-    return f.label + ':\n' + f.options.map(function(o) { return '  - ' + o; }).join('\n');
-  }).join('\n\n');
-
   var prompt = 'You are a strategic alignment advisor for the City of Tucson\'s Data Team. ' +
     'Analyze the following project and recommend which strategic alignment checkboxes should be checked.\n\n' +
     'PROJECT DETAILS:\n' +
@@ -8883,20 +8875,40 @@ async function suggestAlignment() {
     'Deliverables: ' + (deliverables || 'Not specified') + '\n' +
     'Data Sources: ' + (dataSources || 'Not specified') + '\n' +
     'Technical Requirements: ' + (techReqs || 'Not specified') + '\n\n' +
-    'AVAILABLE ALIGNMENT OPTIONS:\n' + optionsDesc + '\n\n' +
-    'For each field, recommend ONLY the options that clearly apply to this project. Be selective — do not check everything. ' +
-    'For WWC Criteria, consider the specific work involved and only recommend criteria the project directly advances. ' +
-    'For IT Initiative, the options are numbered sections from the City\'s IT strategic plan (3.3.1 through 3.3.5). Only recommend if the project clearly falls under that section.\n\n' +
+    'AVAILABLE ALIGNMENT OPTIONS:\n\n' +
+    'IT Initiative (these are sub-objectives under Goal 3.3: "Enhance Data Management and Analytics Capabilities" from the City IT Strategic Plan):\n' +
+    '  - 3.3.1 — Assess current state of data management: Conduct a comprehensive assessment of the current state of data management, identifying data silos, quality issues, and unmet analytics needs\n' +
+    '  - 3.3.2 — Data governance framework: Develop a data governance framework, including policies and procedures for data collection, storage, security, access, and sharing\n' +
+    '  - 3.3.3 — Evaluate data analytics tools & platforms: Identify and evaluate potential data analytics tools and platforms to meet the City\'s needs\n' +
+    '  - 3.3.4 — Data controls for retention & destruction: Begin implementing data controls for retention and destruction for Level 2 & 3 data\n' +
+    '  - 3.3.5 — Pilot data analytics solutions: Pilot the implementation of a data analytics solution focused on a key area (e.g., citizen services or infrastructure management)\n\n' +
+    'City Initiative (major cross-departmental City priorities):\n' +
+    FM_CITY_INITIATIVES.map(function(o) { return '  - ' + o; }).join('\n') + '\n\n' +
+    'IT Priority Project (top IT department priority projects):\n' +
+    FM_IT_PRIORITY_PROJECTS.map(function(o) { return '  - ' + o; }).join('\n') + '\n\n' +
+    'Data Program Goal (goals of the City\'s Data Program — the overarching multi-year effort to build data maturity):\n' +
+    FM_DP_GOALS.map(function(o) { return '  - ' + o; }).join('\n') + '\n\n' +
+    'WWC Foundational Practice (What Works Cities certification practice areas — broad categories of data-driven governance):\n' +
+    FM_WWC_PRACTICES.map(function(o) { return '  - ' + o; }).join('\n') + '\n\n' +
+    'WWC Criteria (specific What Works Cities certification criteria — only recommend ones the project directly advances):\n' +
+    FM_WWC_CRITERIA.map(function(o) { return '  - ' + o; }).join('\n') + '\n\n' +
+    'IMPORTANT RULES:\n' +
+    '- Be SELECTIVE. Only recommend options that clearly and directly apply to this project.\n' +
+    '- Do NOT force-fit. If a project does not align with any options in a field, return an empty array for that field. It is perfectly fine — and expected — for many fields to be empty.\n' +
+    '- A typical project will only match 2-5 items total across all fields. Very few projects touch all fields.\n' +
+    '- For IT Initiative, only recommend if the project directly advances that specific sub-objective of the IT strategic plan.\n' +
+    '- For WWC Criteria, only recommend criteria where the project\'s deliverables or outcomes directly contribute to meeting that criterion.\n' +
+    '- Provide a brief, specific reason for each recommendation explaining HOW this project advances that item.\n\n' +
     'Respond ONLY with a JSON object (no markdown, no backticks). Format:\n' +
     '{\n' +
-    '  "it_initiative": [{"value": "3.3.1", "reason": "brief reason"}],\n' +
-    '  "city_initiative": [{"value": "CMO Dashboard", "reason": "brief reason"}],\n' +
+    '  "it_initiative": [{"value": "3.3.1 — Assess current state of data management", "reason": "brief reason"}],\n' +
+    '  "city_initiative": [],\n' +
     '  "it_priority_project": [],\n' +
     '  "dp_goal": [{"value": "Establish Data Governance", "reason": "brief reason"}],\n' +
-    '  "wwc_practice": [{"value": "Data Management", "reason": "brief reason"}],\n' +
-    '  "wwc_criteria": [{"value": "DM1 Implementing Data Strategy and Governance", "reason": "brief reason"}]\n' +
+    '  "wwc_practice": [],\n' +
+    '  "wwc_criteria": []\n' +
     '}\n\n' +
-    'Empty arrays mean nothing applies for that field. Every "value" must EXACTLY match one of the available options listed above.';
+    'Empty arrays mean nothing applies for that field — this is expected and correct for most fields. Every "value" must EXACTLY match one of the available options listed above.';
 
   try {
     if (AI_PROXY_URL.includes('YOUR_SUBDOMAIN')) {
@@ -9827,6 +9839,7 @@ function renderProjectDetail(id) {
         ${p.project_size ? `<span class="detail-hero-chip">Size: ${esc(p.project_size)}</span>` : ''}
         ${p.itd_team ? `<span class="detail-hero-chip">${esc(p.itd_team)}</span>` : ''}
         ${p.is_data_program ? '<span class="detail-hero-chip" style="background:rgba(255,165,0,0.25);border:1px solid rgba(255,165,0,0.4);">Data Program</span>' : ''}
+        ${p.it_initiative ? p.it_initiative.split(',').map(function(s) { return '<span class="detail-hero-chip" style="background:rgba(255,255,255,0.15);">' + esc(s.trim().length > 30 ? s.trim().slice(0,30) + '…' : s.trim()) + '</span>'; }).join('') : ''}
         ${p.city_initiative ? p.city_initiative.split(',').map(function(s) { return '<span class="detail-hero-chip" style="background:rgba(255,165,0,0.25);border:1px solid rgba(255,165,0,0.4);">' + esc(s.trim()) + '</span>'; }).join('') : ''}
         ${p.it_priority_project ? p.it_priority_project.split(',').map(function(s) { return '<span class="detail-hero-chip" style="background:rgba(34,197,94,0.2);border:1px solid rgba(34,197,94,0.4);">' + esc(s.trim()) + '</span>'; }).join('') : ''}
         ${projTotalHrs > 0 ? `<span class="detail-hero-chip">⏱ ${hoursLabel(projTotalHrs, projMyHrs)}</span>` : ''}
