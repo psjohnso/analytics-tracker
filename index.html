@@ -3323,7 +3323,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0026';
+const APP_VERSION = '0.11.0.0027';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -4751,6 +4751,7 @@ function projectCard(p) {
         ${p.category ? `<span class="meta-tag">${esc(p.category)}</span>` : ''}
         ${p.project_size ? `<span class="meta-tag" style="background:#F3E8FF;border-color:#D8B4FE;color:#6B21A8;">${esc(p.project_size)}</span>` : ''}
         ${p.is_data_program ? '<span class="meta-tag" style="background:#FFF7ED;border-color:#FED7AA;color:#9A3412;">Data Program</span>' : ''}
+        ${p.city_initiative ? p.city_initiative.split(',').map(function(s) { return '<span class="meta-tag" style="background:#FFF7ED;border-color:#FED7AA;color:#9A3412;">' + esc(s.trim()) + '</span>'; }).join('') : ''}
         ${p.partner_dept ? `<span class="meta-tag">${esc(p.partner_dept.length > 22 ? p.partner_dept.slice(0,22)+'…' : p.partner_dept)}</span>` : ''}
       </div>
       ${p.description ? `<div class="project-desc">${esc(p.description)}</div>` : '<div class="project-desc" style="color:#E1E2DD;font-style:italic;">No description available</div>'}
@@ -6688,7 +6689,8 @@ async function agolApplyEdits(serviceUrl, edits) {
 //    ObjectId, id, pid, title, status, priority, contact,
 //    other_members, partner_dept, category, start, end_ (alias: end),
 //    actual_end, description, problem_statement, itd_team, project_number,
-//    is_data_program
+//    is_data_program, it_initiative, city_initiative, it_priority_project,
+//    dp_goal, wwc_practice, wwc_criteria
 //
 //  Tasks layer fields (ArcGIS):
 //    ObjectId, idx, id, title, status, priority, assignee,
@@ -8046,6 +8048,42 @@ const FM_DELIVERABLE_OPTIONS = [
   'Mobile App', 'Script / Automation', 'Data Model', 'Integration'
 ];
 
+// ── Strategic Alignment Options ──────────────────────────────────────
+const FM_IT_INITIATIVES = ['3.3.1', '3.3.2', '3.3.3', '3.3.4', '3.3.5'];
+const FM_CITY_INITIATIVES = ['Asset Scorecard', 'CMO Dashboard', 'Prosperity Initiative', 'Safe City Initiative'];
+const FM_IT_PRIORITY_PROJECTS = ['AI Deployment and Responsible Use', 'BISC', 'Dashboard Standards', 'Developer and Coding Standards'];
+const FM_DP_GOALS = [
+  'Gather Business Needs', 'Establish Data Governance', 'Enhance Data Quality and Accessibility',
+  'Strengthen Data Security', 'Build Data Literacy and Culture', 'Implementing Scalable Architecture and Technology'
+];
+const FM_WWC_PRACTICES = [
+  'Community Impact', 'Data Management', 'Data-Driven Budget and Finance', 'Evaluations',
+  'Leadership and Capacity', 'Open Data', 'Performance and Analytics', 'Results-Driven Contracting'
+];
+const FM_WWC_CRITERIA = [
+  'CI1 Community Data Training and Collaboration', 'CI2 Analytics Service Delivery', 'CI3 Promotion of Data and Evidence',
+  'DM1 Implementing Data Strategy and Governance', 'DM2 Maintaining a Comprehensive Data Inventory', 'DM3 Sharing Data',
+  'DM4 Improving Data Quality', 'DM5 Protecting Data Privacy and Confidentiality', 'DM6 Managing Data Security',
+  'DM7 Qualitative Data Practices', 'DM8 Disaggregated Data Decision-Making', 'DM9 Data Service Standard',
+  'BF1 Data-Driven Budget and Financial Processes', 'BF2 Data-Driven Budget and Financial Decisions', 'BF3 Leveraging Funds for Outcomes'
+];
+
+function fmCheckboxGroup(name, options, currentVal) {
+  var selected = (currentVal || '').split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+  var html = '<div class="fm-deliverables-grid" id="' + name + '-wrap">';
+  options.forEach(function(opt) {
+    var checked = selected.includes(opt) ? ' checked' : '';
+    html += '<label class="fm-deliv-check"><input type="checkbox" name="' + name + '" value="' + esc(opt) + '"' + checked + '>' + esc(opt) + '</label>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function collectCheckboxGroup(name) {
+  var boxes = document.querySelectorAll('input[name="' + name + '"]:checked');
+  return [...boxes].map(function(cb) { return cb.value; }).join(', ') || null;
+}
+
 function fmDeliverables(id, currentVal) {
   var selected = (currentVal || '').split(',').map(function(s) { return s.trim(); }).filter(Boolean);
   var html = '<div class="fm-deliverables-grid" id="' + id + '-wrap">';
@@ -8679,6 +8717,18 @@ function buildProjectForm(p) {
         '<span style="font-size:13px;">Data Program project</span></label>' +
         '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Reviewed by the full data team — Snowflake, DBAs, data architects, and data intelligence</div>') +
     '</div>' +
+    '<div class="fm-section-label">Strategic Alignment</div>' +
+    '<div class="fm-grid">' +
+      fmField('IT Initiative', fmCheckboxGroup('fm-it-initiative', FM_IT_INITIATIVES, v('it_initiative')), false, true) +
+      fmField('City Initiative', fmCheckboxGroup('fm-city-initiative', FM_CITY_INITIATIVES, v('city_initiative')), false, true) +
+      fmField('IT Priority Project', fmCheckboxGroup('fm-it-priority', FM_IT_PRIORITY_PROJECTS, v('it_priority_project')), false, true) +
+      fmField('Data Program Goal', fmCheckboxGroup('fm-dp-goal', FM_DP_GOALS, v('dp_goal')), false, true,
+        'Which Data Program goals does this project advance?') +
+      fmField('WWC Foundational Practice', fmCheckboxGroup('fm-wwc-practice', FM_WWC_PRACTICES, v('wwc_practice')), false, true,
+        'What Works Cities foundational practice areas') +
+      fmField('WWC Criteria', fmCheckboxGroup('fm-wwc-criteria', FM_WWC_CRITERIA, v('wwc_criteria')), false, true,
+        'Specific What Works Cities certification criteria') +
+    '</div>' +
     '<div class="fm-section-label">Timeline</div>' +
     '<div class="fm-grid">' +
       fmField('Start Date', fmInput('fm-start', v('start'), '', 'date')) +
@@ -8851,6 +8901,12 @@ function collectProjectFields() {
     technical_requirements: getVal('fm-tech-reqs') || null,
     actual_end:        getVal('fm-actual-end')   || null,
     is_data_program:   document.getElementById('fm-data-program') && document.getElementById('fm-data-program').checked ? 1 : 0,
+    it_initiative:     collectCheckboxGroup('fm-it-initiative'),
+    city_initiative:   collectCheckboxGroup('fm-city-initiative'),
+    it_priority_project: collectCheckboxGroup('fm-it-priority'),
+    dp_goal:           collectCheckboxGroup('fm-dp-goal'),
+    wwc_practice:      collectCheckboxGroup('fm-wwc-practice'),
+    wwc_criteria:      collectCheckboxGroup('fm-wwc-criteria'),
   };
 }
 
@@ -9064,6 +9120,12 @@ function copyProjectSummary(objectId) {
   if (p.partner_dept) md += '**Partner:** ' + p.partner_dept + '\n';
   if (p.itd_team) md += '**ITD Team:** ' + p.itd_team + '\n';
   if (p.is_data_program) md += '**Data Program:** Yes\n';
+  if (p.it_initiative) md += '**IT Initiative:** ' + p.it_initiative + '\n';
+  if (p.city_initiative) md += '**City Initiative:** ' + p.city_initiative + '\n';
+  if (p.it_priority_project) md += '**IT Priority Project:** ' + p.it_priority_project + '\n';
+  if (p.dp_goal) md += '**Data Program Goal:** ' + p.dp_goal + '\n';
+  if (p.wwc_practice) md += '**WWC Practice:** ' + p.wwc_practice + '\n';
+  if (p.wwc_criteria) md += '**WWC Criteria:** ' + p.wwc_criteria + '\n';
   if (team.length) md += '**Team:** ' + team.join(', ') + '\n';
 
   // Dates
@@ -9286,6 +9348,26 @@ async function batchDeleteTasks() {
 
 
 // ─── PROJECT DETAIL PAGE ──────────────────────────────────────────────
+function buildStrategicAlignmentSection(p) {
+  var rows = [];
+  var chipStyle = 'display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:6px;margin:2px;';
+  function addRow(label, val, bg, color) {
+    if (!val) return;
+    var chips = val.split(',').map(function(s) { return s.trim(); }).filter(Boolean).map(function(v) {
+      return '<span style="' + chipStyle + 'background:' + bg + ';color:' + color + ';">' + esc(v) + '</span>';
+    }).join('');
+    rows.push('<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">' + label + '</div><div style="display:flex;flex-wrap:wrap;gap:0;">' + chips + '</div></div>');
+  }
+  addRow('IT Initiative', p.it_initiative, '#EEF2FF', '#002669');
+  addRow('City Initiative', p.city_initiative, '#FFF7ED', '#9A3412');
+  addRow('IT Priority Project', p.it_priority_project, '#F0FDF4', '#166534');
+  addRow('Data Program Goal', p.dp_goal, '#FDF4FF', '#86198F');
+  addRow('WWC Foundational Practice', p.wwc_practice, '#FFFBEB', '#92400E');
+  addRow('WWC Criteria', p.wwc_criteria, '#F0F9FF', '#0C4A6E');
+  if (!rows.length) return '';
+  return '<div class="detail-section"><div class="detail-section-label">Strategic Alignment</div>' + rows.join('') + '</div>';
+}
+
 function buildProjectTimeline(p) {
         // Project timeline — full-width bar with status history phases
         const projStart = p.start || null;
@@ -9479,6 +9561,8 @@ function renderProjectDetail(id) {
         ${p.project_size ? `<span class="detail-hero-chip">Size: ${esc(p.project_size)}</span>` : ''}
         ${p.itd_team ? `<span class="detail-hero-chip">${esc(p.itd_team)}</span>` : ''}
         ${p.is_data_program ? '<span class="detail-hero-chip" style="background:rgba(255,165,0,0.25);border:1px solid rgba(255,165,0,0.4);">Data Program</span>' : ''}
+        ${p.city_initiative ? p.city_initiative.split(',').map(function(s) { return '<span class="detail-hero-chip" style="background:rgba(255,165,0,0.25);border:1px solid rgba(255,165,0,0.4);">' + esc(s.trim()) + '</span>'; }).join('') : ''}
+        ${p.it_priority_project ? p.it_priority_project.split(',').map(function(s) { return '<span class="detail-hero-chip" style="background:rgba(34,197,94,0.2);border:1px solid rgba(34,197,94,0.4);">' + esc(s.trim()) + '</span>'; }).join('') : ''}
         ${projTotalHrs > 0 ? `<span class="detail-hero-chip">⏱ ${hoursLabel(projTotalHrs, projMyHrs)}</span>` : ''}
         ${p.actual_end ? `<span class="detail-hero-chip">✓ Completed ${p.actual_end}</span>` : ''}
       </div>
@@ -9500,6 +9584,8 @@ function renderProjectDetail(id) {
           ${p.actual_end ? `<div class="detail-meta-item"><label>Actual End</label><p>${p.actual_end}</p></div>` : ''}
         </div>
       </div>
+
+      ${buildStrategicAlignmentSection(p)}
 
       ${buildProjectTimeline(p)}
 
