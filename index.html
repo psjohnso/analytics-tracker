@@ -3347,7 +3347,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0033';
+const APP_VERSION = '0.11.0.0034';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -9629,20 +9629,25 @@ async function batchDeleteTasks() {
 function buildStrategicAlignmentSection(p) {
   var rows = [];
   var chipStyle = 'display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:6px;margin:2px;';
-  function addRow(label, val, bg, color) {
-    if (!val) return;
-    var chips = val.split(',').map(function(s) { return s.trim(); }).filter(Boolean).map(function(v) {
-      return '<span style="' + chipStyle + 'background:' + bg + ';color:' + color + ';">' + esc(v) + '</span>';
-    }).join('');
-    rows.push('<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">' + label + '</div><div style="display:flex;flex-wrap:wrap;gap:0;">' + chips + '</div></div>');
+  var noneStyle = 'font-size:12px;color:var(--text-muted);font-style:italic;';
+  function addRow(label, val, bg, color, alwaysShow) {
+    if (!val && !alwaysShow) return;
+    var content;
+    if (!val) {
+      content = '<span style="' + noneStyle + '">Does not apply</span>';
+    } else {
+      content = val.split(',').map(function(s) { return s.trim(); }).filter(Boolean).map(function(v) {
+        return '<span style="' + chipStyle + 'background:' + bg + ';color:' + color + ';">' + esc(v) + '</span>';
+      }).join('');
+    }
+    rows.push('<div style="margin-bottom:10px;"><div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">' + label + '</div><div style="display:flex;flex-wrap:wrap;gap:0;">' + content + '</div></div>');
   }
-  addRow('IT Initiative', p.it_initiative, '#EEF2FF', '#002669');
-  addRow('City Initiative', p.city_initiative, '#FFF7ED', '#9A3412');
+  addRow('IT Initiative', p.it_initiative, '#EEF2FF', '#002669', true);
+  addRow('City Initiative', p.city_initiative, '#FFF7ED', '#9A3412', true);
   addRow('IT Priority Project', p.it_priority_project, '#F0FDF4', '#166534');
   addRow('Data Program Goal', p.dp_goal, '#FDF4FF', '#86198F');
   addRow('WWC Foundational Practice', p.wwc_practice, '#FFFBEB', '#92400E');
   addRow('WWC Criteria', p.wwc_criteria, '#F0F9FF', '#0C4A6E');
-  if (!rows.length) return '';
   return '<div class="detail-section"><div class="detail-section-label">Strategic Alignment</div>' + rows.join('') + '</div>';
 }
 
@@ -9835,7 +9840,6 @@ function renderProjectDetail(id) {
           <span style="width:7px;height:7px;border-radius:50%;background:${statusColor};display:inline-block;"></span>${p.status||'—'}
         </span>
         <span class="priority-badge priority-${p.priority||'null'}">${p.priority||'—'}</span>
-        ${p.category ? `<span class="detail-hero-chip">${esc(p.category)}</span>` : ''}
         ${p.project_size ? `<span class="detail-hero-chip">Size: ${esc(p.project_size)}</span>` : ''}
         ${p.itd_team ? `<span class="detail-hero-chip">${esc(p.itd_team)}</span>` : ''}
         ${p.is_data_program ? '<span class="detail-hero-chip" style="background:rgba(255,165,0,0.25);border:1px solid rgba(255,165,0,0.4);">Data Program</span>' : ''}
