@@ -3347,7 +3347,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0036';
+const APP_VERSION = '0.11.0.0037';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -9643,16 +9643,12 @@ function buildStrategicAlignmentSection(p) {
   var row = function(cells) { return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:12px;">' + cells + '</div>'; };
 
   var html = '<div class="detail-section"><div class="detail-section-label">Strategic Alignment</div>';
-  // Row 1: IT Initiative | City Initiative (always shown)
+  // Row 1: IT Initiative | City Initiative
   html += row(cell('IT Initiative', p.it_initiative, '#EEF2FF', '#002669') + cell('City Initiative', p.city_initiative, '#FFF7ED', '#9A3412'));
-  // Row 2: IT Priority Project | Data Program Goal (only if either set)
-  if (p.it_priority_project || p.dp_goal) {
-    html += row(cell('IT Priority Project', p.it_priority_project, '#F0FDF4', '#166534') + cell('Data Program Goal', p.dp_goal, '#FDF4FF', '#86198F'));
-  }
-  // Row 3: WWC Practice | WWC Criteria (together, only if either set)
-  if (p.wwc_practice || p.wwc_criteria) {
-    html += row(cell('WWC Foundational Practice', p.wwc_practice, '#FFFBEB', '#92400E') + cell('WWC Criteria', p.wwc_criteria, '#F0F9FF', '#0C4A6E'));
-  }
+  // Row 2: IT Priority Project | Data Program Goal
+  html += row(cell('IT Priority Project', p.it_priority_project, '#F0FDF4', '#166534') + cell('Data Program Goal', p.dp_goal, '#FDF4FF', '#86198F'));
+  // Row 3: WWC Practice | WWC Criteria
+  html += row(cell('WWC Foundational Practice', p.wwc_practice, '#FFFBEB', '#92400E') + cell('WWC Criteria', p.wwc_criteria, '#F0F9FF', '#0C4A6E'));
   html += '</div>';
   return html;
 }
