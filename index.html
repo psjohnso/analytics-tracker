@@ -3347,7 +3347,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0029';
+const APP_VERSION = '0.11.0.0031';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -8756,11 +8756,10 @@ function buildProjectForm(p) {
     '<div style="margin-top:12px;">' +
       '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 12px;background:#FFF7ED;border-radius:8px;border:1px solid #FED7AA;">' +
         '<input type="checkbox" id="fm-data-program" ' + (dpChecked ? 'checked' : '') +
-        ' onchange="fmToggleDP(this.checked)" style="width:16px;height:16px;accent-color:var(--navy);cursor:pointer;">' +
+        ' style="width:16px;height:16px;accent-color:var(--navy);cursor:pointer;">' +
         '<span style="font-size:13px;font-weight:600;color:#9A3412;">Data Program project</span></label>' +
       '<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Reviewed by the full data team — Snowflake, DBAs, data architects, and data intelligence</div>' +
     '</div>') +
-  '<div id="fm-strategic-alignment" style="' + (dpChecked ? '' : 'display:none;') + '">' +
   fmSec('Strategic Alignment', '<div class="fm-grid">' +
       fmField('IT Initiative', fmCheckboxGroup('fm-it-initiative', FM_IT_INITIATIVES, v('it_initiative')), false, true) +
       fmField('City Initiative', fmCheckboxGroup('fm-city-initiative', FM_CITY_INITIATIVES, v('city_initiative')), false, true) +
@@ -8771,8 +8770,7 @@ function buildProjectForm(p) {
         'What Works Cities foundational practice areas') +
     '</div>' +
     fmField('WWC Criteria', fmWwcCriteriaGrouped(v('wwc_criteria')), false, false,
-        'Specific What Works Cities certification criteria — grouped by practice area'), '', 'fm-sec-cond') +
-  '</div>' +
+        'Specific What Works Cities certification criteria — grouped by practice area')) +
   fmSec('Details', '<div class="fm-grid">' +
       fmField('Problem Statement', fmMdTextarea('fm-problem', v('problem_statement'), 'Describe the problem this project solves…', 3, 4000), false, true) +
       fmField('Description', fmMdTextarea('fm-description', v('description'), 'Project description…', 3, 4000), false, true) +
@@ -8792,11 +8790,6 @@ function fmSec(label, bodyHtml, startCollapsed, extraClass) {
     '</div>' +
     '<div class="fm-sec-body">' + bodyHtml + '</div>' +
   '</div>';
-}
-
-function fmToggleDP(checked) {
-  var el = document.getElementById('fm-strategic-alignment');
-  if (el) el.style.display = checked ? '' : 'none';
 }
 
 var WWC_CRITERIA_GROUPS = [
