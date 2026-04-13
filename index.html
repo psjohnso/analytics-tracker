@@ -3347,7 +3347,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0038';
+const APP_VERSION = '0.11.0.0039';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -13678,7 +13678,7 @@ function renderSettingsPage(area) {
       '<td>' + esc(schedLabel) + '</td>' +
       '<td style="text-align:center;"><input type="checkbox"' + ttChecked + ' onchange="toggleTimeTracking(\'' + name.replace(/'/g, "\\'") + '\', this.checked)" style="width:16px;height:16px;cursor:pointer;"></td>' +
       '<td style="text-align:center;cursor:pointer;" onclick="toggleMemberActive(\'' + name.replace(/'/g, "\\'") + '\')" title="Click to toggle">' + activeLabel + '</td>' +
-      '<td style="text-align:right;">' +
+      '<td style="text-align:right;white-space:nowrap;">' +
         '<button class="settings-btn settings-btn-secondary" style="margin-right:4px;" onclick="openAbsenceEditor(\'' + name.replace(/'/g, "\\'") + '\')">📅 Absences</button>' +
         '<button class="settings-btn settings-btn-secondary" style="margin-right:4px;" onclick="openMemberForm(\'edit\',\'' + name.replace(/'/g, "\\'") + '\')">✏️ Edit</button>' +
         '<button class="settings-btn settings-btn-danger" onclick="deleteMember(\'' + name.replace(/'/g, "\\'") + '\')">🗑</button>' +
