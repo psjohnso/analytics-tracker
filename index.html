@@ -2603,6 +2603,12 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   <div class="app-body-inner">
   <!-- SIDEBAR -->
   <aside class="sidebar tab-hidden">
+    <div id="sidebar-active-indicator" style="display:none;padding:8px 12px;margin-bottom:8px;background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span id="active-filter-count" style="font-size:11px;font-weight:700;color:#9A3412;"></span>
+        <button onclick="clearAllFilters()" style="font-size:10px;font-weight:700;font-family:Lato,sans-serif;padding:3px 10px;border-radius:4px;border:1px solid #FED7AA;background:#fff;color:#9A3412;cursor:pointer;white-space:nowrap;">Clear all</button>
+      </div>
+    </div>
     <div class="sidebar-section">
       <div class="sidebar-label">Search</div>
       <div class="search-box">
@@ -3347,7 +3353,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0044';
+const APP_VERSION = '0.11.0.0045';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -4412,6 +4418,7 @@ function setFilter(type, val) {
   currentPage = 1;
   buildSidebarFilters();
   render();
+  updateFilterIndicator();
 }
 
 // ─── SEARCH ───────────────────────────────────────────────────────────
@@ -4421,7 +4428,60 @@ function onSearch() {
     activeFilters.search = document.getElementById('search-input').value.toLowerCase();
     currentPage = 1;
     render();
+    updateFilterIndicator();
   }, 200);
+}
+
+function clearAllFilters() {
+  activeFilters.status = [];
+  activeFilters.priority = [];
+  activeFilters.category = [];
+  activeFilters.member = [];
+  activeFilters.taskStatus = [];
+  activeFilters.taskCategory = [];
+  activeFilters.taskTool = [];
+  activeFilters.partnerDept = [];
+  activeFilters.itdTeam = [];
+  activeFilters.dataProgram = false;
+  activeFilters.search = '';
+  var searchEl = document.getElementById('search-input');
+  if (searchEl) searchEl.value = '';
+  var dpCb = document.getElementById('dp-filter-cb');
+  if (dpCb) dpCb.checked = false;
+  resetQuickFilterBtn('weekly-filter-btn', 'var(--navy)');
+  resetQuickFilterBtn('open-projects-btn', '#83AC16');
+  resetQuickFilterBtn('open-tasks-btn', '#C24200');
+  buildSidebarFilters();
+  currentPage = 1;
+  render();
+  updateFilterIndicator();
+  showToast('All filters cleared.', 'success');
+}
+
+function getActiveFilterCount() {
+  var count = 0;
+  if (activeFilters.status.length) count += activeFilters.status.length;
+  if (activeFilters.priority.length) count += activeFilters.priority.length;
+  if (activeFilters.category.length) count += activeFilters.category.length;
+  if (activeFilters.member.length) count += activeFilters.member.length;
+  if (activeFilters.taskStatus.length) count += activeFilters.taskStatus.length;
+  if (activeFilters.taskCategory.length) count += activeFilters.taskCategory.length;
+  if (activeFilters.taskTool.length) count += activeFilters.taskTool.length;
+  if (activeFilters.partnerDept.length) count += activeFilters.partnerDept.length;
+  if (activeFilters.itdTeam.length) count += activeFilters.itdTeam.length;
+  if (activeFilters.dataProgram) count++;
+  if (activeFilters.search) count++;
+  return count;
+}
+
+function updateFilterIndicator() {
+  var count = getActiveFilterCount();
+  var indicator = document.getElementById('sidebar-active-indicator');
+  var countEl = document.getElementById('active-filter-count');
+  if (indicator) {
+    indicator.style.display = count > 0 ? '' : 'none';
+    if (countEl) countEl.textContent = count + ' filter' + (count !== 1 ? 's' : '') + ' active';
+  }
 }
 
 // ─── TAB SWITCH ───────────────────────────────────────────────────────
@@ -4590,6 +4650,7 @@ function render() {
 
   // ── Tab counts: always update (cheap, depends on active filters) ──
   updateTabCounts();
+  updateFilterIndicator();
 
   // ── Detail page mode ──────────────────────────────────────────────
   if (currentDetail) {
