@@ -5,7 +5,7 @@
 > **Update Rule:** This document MUST be updated after every application change. When working on this application, always check if this document needs updating.
 >
 > **Last Updated:** April 2026
-> **Current Version:** 0.11.0.0045 (see Version History at bottom)
+> **Current Version:** 0.11.0.0046 (see Version History at bottom)
 
 ---
 
@@ -1438,6 +1438,7 @@ Each requirement has a unique ID like `P3_DEMOS` (Phase 3, Demos conducted). Ful
 | 0.11.0.0043 | Light tracking for broader Data Team collaborators: tracking_level field (full/light), isFullMember() helper; light members in forms but excluded from Forecast, Capacity Planner, Resources, Time Tracking, Absences; settings table Tracking column; team availability "Collaborator" badge; member form hides workload fields when Light |
 | 0.11.0.0044 | Fix tracking_level not being read from ArcGIS Online into people data model |
 | 0.11.0.0045 | Filter persistence confirmed; "Clear all" button with active filter count banner in sidebar; updateFilterIndicator() called from render/setFilter/onSearch |
+| 0.11.0.0046 | Fix filters resetting on back navigation: switchTab(tab, preserveFilters) flag, goBackFromDetail passes true; add "Clear Filters" button in toolbar with active count badge |
 
 ---
 

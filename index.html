@@ -2586,6 +2586,9 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
     <button id="open-tasks-btn" onclick="toggleOpenTasksFilter()" style="display: none; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; border: 1.5px solid #C24200; background: transparent; cursor: pointer; font-family: Lato, sans-serif; font-size: 12px; font-weight: 700; color: #C24200; letter-spacing: 0.04em; transition: background 0.15s, color 0.15s;">
       ✅ Open Tasks
     </button>
+    <button id="clear-filters-btn" onclick="clearAllFilters()" style="display: none; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; border: 1.5px solid #EF4444; background: #FEF2F2; cursor: pointer; font-family: Lato, sans-serif; font-size: 12px; font-weight: 700; color: #991B1B; letter-spacing: 0.04em;">
+      ✕ Clear Filters <span id="clear-filters-count" style="background:#EF4444;color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:2px;"></span>
+    </button>
     <div style="flex:1"></div>
     <select class="sort-select" id="sort-select" onchange="render()">
       <option value="title">Sort: Title A–Z</option>
@@ -3353,7 +3356,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0045';
+const APP_VERSION = '0.11.0.0046';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -4476,16 +4479,24 @@ function getActiveFilterCount() {
 
 function updateFilterIndicator() {
   var count = getActiveFilterCount();
+  // Sidebar banner
   var indicator = document.getElementById('sidebar-active-indicator');
   var countEl = document.getElementById('active-filter-count');
   if (indicator) {
     indicator.style.display = count > 0 ? '' : 'none';
     if (countEl) countEl.textContent = count + ' filter' + (count !== 1 ? 's' : '') + ' active';
   }
+  // Toolbar clear button
+  var clearBtn = document.getElementById('clear-filters-btn');
+  var clearCount = document.getElementById('clear-filters-count');
+  if (clearBtn) {
+    clearBtn.style.display = count > 0 ? 'flex' : 'none';
+    if (clearCount) clearCount.textContent = count;
+  }
 }
 
 // ─── TAB SWITCH ───────────────────────────────────────────────────────
-function switchTab(tab) {
+function switchTab(tab, preserveFilters) {
   currentDetail = null;
   currentTab = tab;
   currentPage = 1;
@@ -4533,14 +4544,16 @@ function switchTab(tab) {
   }
   const isTask = tab === 'tasks';
   reorderSidebarFilters(tab);
-  // Reset all quick filter buttons and clear filters on tab switch
-  resetQuickFilterBtn('weekly-filter-btn', 'var(--navy)');
-  resetQuickFilterBtn('open-projects-btn', '#83AC16');
-  resetQuickFilterBtn('open-tasks-btn', '#C24200');
-  activeFilters.status = [];
-  activeFilters.taskStatus = [];
-  activeFilters.taskCategory = [];
-  activeFilters.taskTool = [];
+  // Reset filters on normal tab switch, but preserve them when navigating back from detail
+  if (!preserveFilters) {
+    resetQuickFilterBtn('weekly-filter-btn', 'var(--navy)');
+    resetQuickFilterBtn('open-projects-btn', '#83AC16');
+    resetQuickFilterBtn('open-tasks-btn', '#C24200');
+    activeFilters.status = [];
+    activeFilters.taskStatus = [];
+    activeFilters.taskCategory = [];
+    activeFilters.taskTool = [];
+  }
   buildSidebarFilters();
   render();
 }
@@ -10223,10 +10236,10 @@ function goBackFromDetail() {
     render();
     return;
   }
-  // Return to the tab we came from (default: projects or tasks based on type)
+  // Return to the tab we came from — preserve filters since we're just going "back"
   const tab = (prevDetail && prevDetail._returnTab) ? prevDetail._returnTab
     : (prevDetail && prevDetail.type === 'task') ? 'tasks' : 'projects';
-  switchTab(tab);
+  switchTab(tab, true);
 }
 
 
