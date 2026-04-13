@@ -3347,7 +3347,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0037';
+const APP_VERSION = '0.11.0.0038';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -14208,6 +14208,7 @@ async function saveMemberForm() {
   }
 
   try {
+    var result;
     if (isEdit) {
       // Find existing OID using original name
       const existing = await agolQuery(ARCGIS_CONFIG.teamMembersUrl, "name='" + origName.replace(/'/g, "''") + "'");
@@ -14215,7 +14216,7 @@ async function saveMemberForm() {
       const oid = existing[0].attributes.OBJECTID || existing[0].attributes.ObjectId || existing[0].attributes.objectid || existing[0].attributes.FID;
       memberAttrs.OBJECTID = oid;
       console.log('[Settings] Saving member update:', JSON.stringify(memberAttrs));
-      const result = await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, {
+      result = await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, {
         updates: [{ attributes: memberAttrs }]
       });
       console.log('[Settings] Updated member:', name, result);
@@ -14227,7 +14228,7 @@ async function saveMemberForm() {
       }
     } else {
       console.log('[Settings] Saving new member:', JSON.stringify(memberAttrs));
-      const result = await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, {
+      result = await agolApplyEdits(ARCGIS_CONFIG.teamMembersUrl, {
         adds: [{ attributes: memberAttrs }]
       });
       console.log('[Settings] Added member:', name, result);
