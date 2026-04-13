@@ -3347,7 +3347,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0043';
+const APP_VERSION = '0.11.0.0044';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -6939,6 +6939,7 @@ async function loadResourcesData() {
       wk2_thu: dailyHours.wk2_thu, wk2_fri: dailyHours.wk2_fri,
       time_tracking:    (ci('time_tracking') === 'true' || ci('time_tracking') === true) ? true : false,
       active:           (ci('active') === 'false' || ci('active') === false) ? false : true,
+      tracking_level:   ci('tracking_level') || 'full',
       proj_cap:         new Array(N).fill(0),
       absences:         new Array(N).fill(0),
       allocations:      [],
