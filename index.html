@@ -3347,7 +3347,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0039';
+const APP_VERSION = '0.11.0.0040';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -8766,6 +8766,14 @@ function buildProjectForm(p) {
         '<span style="font-size:13px;font-weight:600;color:#9A3412;">Data Program project</span></label>' +
       '<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Reviewed by the full data team — Snowflake, DBAs, data architects, and data intelligence</div>' +
     '</div>') +
+  fmSec('Details', '<div class="fm-grid">' +
+      fmField('Problem Statement', fmMdTextarea('fm-problem', v('problem_statement'), 'Describe the problem this project solves…', 3, 4000), false, true) +
+      fmField('Description', fmMdTextarea('fm-description', v('description'), 'Project description…', 3, 4000), false, true) +
+      fmField('Deliverables', fmDeliverables('fm-deliverables', v('deliverables')), false, true,
+        'What will this project produce?') +
+      fmField('Data Sources', fmMdTextarea('fm-data-sources', v('data_sources'), 'e.g. Hansen, Accela, ArcGIS Enterprise, CSV from partner dept…', 2, 2000), false, true) +
+      fmField('Technical Requirements', fmMdTextarea('fm-tech-reqs', v('technical_requirements'), 'e.g. Must integrate with existing system, ADA compliant, real-time updates…', 2, 4000), false, true) +
+    '</div>', isEdit) +
   fmSec('Strategic Alignment',
     '<div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">' +
       '<div style="font-size:11px;color:var(--text-muted);">Tag this project with the strategic initiatives, goals, and criteria it supports.</div>' +
@@ -8782,15 +8790,7 @@ function buildProjectForm(p) {
         'What Works Cities foundational practice areas') +
     '</div>' +
     fmField('WWC Criteria', fmWwcCriteriaGrouped(v('wwc_criteria')), false, false,
-        'Specific What Works Cities certification criteria — grouped by practice area')) +
-  fmSec('Details', '<div class="fm-grid">' +
-      fmField('Problem Statement', fmMdTextarea('fm-problem', v('problem_statement'), 'Describe the problem this project solves…', 3, 4000), false, true) +
-      fmField('Description', fmMdTextarea('fm-description', v('description'), 'Project description…', 3, 4000), false, true) +
-      fmField('Deliverables', fmDeliverables('fm-deliverables', v('deliverables')), false, true,
-        'What will this project produce?') +
-      fmField('Data Sources', fmMdTextarea('fm-data-sources', v('data_sources'), 'e.g. Hansen, Accela, ArcGIS Enterprise, CSV from partner dept…', 2, 2000), false, true) +
-      fmField('Technical Requirements', fmMdTextarea('fm-tech-reqs', v('technical_requirements'), 'e.g. Must integrate with existing system, ADA compliant, real-time updates…', 2, 4000), false, true) +
-    '</div>', isEdit);
+        'Specific What Works Cities certification criteria — grouped by practice area'));
 }
 
 function fmSec(label, bodyHtml, startCollapsed, extraClass) {
