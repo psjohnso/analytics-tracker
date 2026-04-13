@@ -1227,6 +1227,12 @@ td.ae-wk-td.ae-cur { background:#F0F4FF; }
 tr.ae-total-row td { background:#F0F4FF; border-top:2px solid #C7D2FE; padding:6px 4px; }
 tr.ae-total-row td.ae-proj-td { font-size:11px; font-weight:800; color:var(--navy); padding:8px 14px 8px 16px; background:#E8EDFF; }
 tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
+tfoot.ae-sticky-total { position:sticky; bottom:0; z-index:2; }
+/* Role group headers */
+tr.ae-group-hdr td { padding:8px 16px; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; border-bottom:2px solid #E8E6DF; }
+tr.ae-group-lead td { background:#E6F1FB; color:#0C447C; }
+tr.ae-group-contrib td { background:#F1EFE8; color:#5F5E5A; cursor:pointer; user-select:none; }
+tr.ae-group-contrib td:hover { background:#E8E6DF; }
 .ae-tot-chip {
   display:inline-block; padding:3px 8px; border-radius:5px;
   font-size:12px; font-weight:800;
@@ -3356,7 +3362,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0046';
+const APP_VERSION = '0.11.0.0047';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -5857,6 +5863,13 @@ function aeMonLabel(wi) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+var aeContribCollapsed = false;
+
+function aeToggleContrib() {
+  aeContribCollapsed = !aeContribCollapsed;
+  aeRenderGrid();
+}
+
 function aeRenderGrid() {
   const weeks  = RESOURCES_DATA.weeks;
   const allocs = Editor.draft[Editor.person];
@@ -5882,16 +5895,28 @@ function aeRenderGrid() {
   thead += '</tr>';
   document.getElementById('ae-thead').innerHTML = thead;
 
+  // Split allocs into Lead vs Contributing groups
+  const leadAllocs = [];
+  const contribAllocs = [];
+  allocs.forEach(function(a, ai) {
+    a._origIdx = ai;
+    if (a.role === 'Lead') leadAllocs.push(a);
+    else contribAllocs.push(a);
+  });
+
   // Project rows
   let tbody = '';
   if (!allocs.length) {
     tbody = '<tr><td colspan="' + (AE_COLS + 1) + '" style="text-align:center;color:var(--text-muted);padding:40px;font-size:13px;">No active projects for this person.</td></tr>';
     document.getElementById('ae-tbody').innerHTML = tbody;
+    document.getElementById('ae-tfoot').innerHTML = '';
     return;
   }
 
   const numRows = allocs.length;
-  allocs.forEach(function(a, ai) {
+
+  function renderAllocRow(a) {
+    const ai = a._origIdx;
     const statusCol = STATUS_COLOR(a.status) || '#9CA3AF';
     const chipBg = statusCol + '22';
     const dates  = aeProjectDates[a.project] || {};
@@ -5907,7 +5932,6 @@ function aeRenderGrid() {
         '<option value="Contributor"' + (a.role === 'Contributor' ? ' selected' : '') + '>Contributor</option>' +
         '<option value="Reviewer"' + (a.role === 'Reviewer' ? ' selected' : '') + '>Reviewer</option>' +
       '</select>';
-    // Only show auto-fill if there are empty weeks within the project date range
     var hasEmptyWeeks = false;
     for (var ew = 0; ew < weeks.length; ew++) {
       if ((a.fracs[ew] || 0) > 0) continue;
@@ -5917,7 +5941,7 @@ function aeRenderGrid() {
       if (afterStart2 && beforeEnd2) { hasEmptyWeeks = true; break; }
     }
     if (hasEmptyWeeks) {
-      row += '<span class="ae-autofill-btn" onclick="aeAutofillProject(' + ai + ')" title="Fill empty weeks with default % based on project size and role">⚡ Auto-fill</span>';
+      row += '<span class="ae-autofill-btn" onclick="aeAutofillProject(' + ai + ')" title="Fill empty weeks with default % based on project size and role">&#9889; Auto-fill</span>';
     }
     if (pStart || pEnd) {
       row += '<span class="ae-date-range">';
@@ -5941,7 +5965,6 @@ function aeRenderGrid() {
         rangeClass = (afterStart && beforeEnd) ? ' ae-in-range' : ' ae-out-range';
       }
       let cls = 'ae-pct-input' + (hasVal ? ' has-val' : '') + (isCur ? ' cur-wk' : '');
-      // tabindex: column-major order so Tab goes down a column, then to next column
       const tabIdx = ci * numRows + ai + 1;
       row += '<td class="ae-wk-td' + (isCur ? ' ae-cur' : '') + rangeClass + '">' +
         '<input type="number" min="0" max="100" value="' + pct + '" class="' + cls + '" ' +
@@ -5951,10 +5974,30 @@ function aeRenderGrid() {
         '</td>';
     }
     row += '</tr>';
-    tbody += row;
-  });
+    return row;
+  }
 
-  // Total row
+  // Leading section
+  if (leadAllocs.length > 0) {
+    tbody += '<tr class="ae-group-hdr ae-group-lead"><td colspan="' + (wIdxs.length + 1) + '">Leading (' + leadAllocs.length + ')</td></tr>';
+    leadAllocs.forEach(function(a) { tbody += renderAllocRow(a); });
+  }
+
+  // Contributing section (collapsible)
+  if (contribAllocs.length > 0) {
+    const chevron = aeContribCollapsed ? '&#9654;' : '&#9660;';
+    tbody += '<tr class="ae-group-hdr ae-group-contrib" onclick="aeToggleContrib()"><td colspan="' + (wIdxs.length + 1) + '">' +
+      '<span style="margin-right:6px;font-size:10px;">' + chevron + '</span>Contributing (' + contribAllocs.length + ')' +
+      (aeContribCollapsed ? '<span style="font-weight:400;font-size:10px;margin-left:8px;text-transform:none;letter-spacing:0;">click to expand</span>' : '') +
+      '</td></tr>';
+    if (!aeContribCollapsed) {
+      contribAllocs.forEach(function(a) { tbody += renderAllocRow(a); });
+    }
+  }
+
+  document.getElementById('ae-tbody').innerHTML = tbody;
+
+  // Sticky total row (in tfoot)
   let totRow = '<tr class="ae-total-row"><td class="ae-proj-td">Total allocated' + calcInfoIcon('allocTotal') + '</td>';
   for (const wi of wIdxs) {
     const total = allocs.reduce(function(s, a) { return s + Math.round((a.fracs[wi] || 0) * 100); }, 0);
@@ -5964,7 +6007,7 @@ function aeRenderGrid() {
       '<span class="ae-tot-chip ' + cls + '">' + total + '%</span></td>';
   }
   totRow += '</tr>';
-  document.getElementById('ae-tbody').innerHTML = tbody + totRow;
+  document.getElementById('ae-tfoot').innerHTML = totRow;
 }
 
 function aeCellChange(ai, wi, input) {
@@ -5978,6 +6021,7 @@ function aeCellChange(ai, wi, input) {
 
 function aeRoleChange(ai, role) {
   Editor.draft[Editor.person][ai].role = role;
+  aeRenderGrid();
 }
 
 function aeAutofillProject(ai) {
@@ -14606,6 +14650,7 @@ async function absValueChanged(input) {
         <table class="ae-grid" id="ae-grid-table">
           <thead id="ae-thead"></thead>
           <tbody id="ae-tbody"></tbody>
+          <tfoot id="ae-tfoot" class="ae-sticky-total"></tfoot>
         </table>
       </div>
     </div>
