@@ -5,7 +5,7 @@
 > **Update Rule:** This document MUST be updated after every application change. When working on this application, always check if this document needs updating.
 >
 > **Last Updated:** April 2026
-> **Current Version:** 0.11.0.0046 (see Version History at bottom)
+> **Current Version:** 0.11.0.0048 (see Version History at bottom)
 
 ---
 
@@ -1439,6 +1439,8 @@ Each requirement has a unique ID like `P3_DEMOS` (Phase 3, Demos conducted). Ful
 | 0.11.0.0044 | Fix tracking_level not being read from ArcGIS Online into people data model |
 | 0.11.0.0045 | Filter persistence confirmed; "Clear all" button with active filter count banner in sidebar; updateFilterIndicator() called from render/setFilter/onSearch |
 | 0.11.0.0046 | Fix filters resetting on back navigation: switchTab(tab, preserveFilters) flag, goBackFromDetail passes true; add "Clear Filters" button in toolbar with active count badge |
+| 0.11.0.0047 | Allocation editor redesign: projects grouped by role (Lead first, then Contributing), Contributing section is collapsible, total row moved to sticky tfoot so it's always visible, role change re-renders grid to move project between groups |
+| 0.11.0.0048 | Move allocation totals bar outside scroll container as a fixed bar between grid and footer; sync horizontal scroll between grid and totals bar |
 
 ---
 

@@ -1227,7 +1227,21 @@ td.ae-wk-td.ae-cur { background:#F0F4FF; }
 tr.ae-total-row td { background:#F0F4FF; border-top:2px solid #C7D2FE; padding:6px 4px; }
 tr.ae-total-row td.ae-proj-td { font-size:11px; font-weight:800; color:var(--navy); padding:8px 14px 8px 16px; background:#E8EDFF; }
 tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
-tfoot.ae-sticky-total { position:sticky; bottom:0; z-index:2; }
+/* Totals bar (outside scroll) */
+.ae-totals-bar {
+  display:flex; align-items:center; border-top:2px solid #C7D2FE;
+  background:#F0F4FF; flex-shrink:0; padding:0; overflow-x:auto;
+}
+.ae-totals-label {
+  min-width:260px; width:260px; flex-shrink:0; padding:10px 14px 10px 16px;
+  font-size:11px; font-weight:800; color:var(--navy); background:#E8EDFF;
+  border-right:2px solid #E8E6DF; box-sizing:border-box;
+}
+.ae-totals-cells { display:flex; flex:1; }
+.ae-totals-cell {
+  width:90px; min-width:90px; flex-shrink:0; text-align:center; padding:8px 4px;
+}
+.ae-totals-cell.ae-cur { background:#E0E8FF; }
 /* Role group headers */
 tr.ae-group-hdr td { padding:8px 16px; font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; border-bottom:2px solid #E8E6DF; }
 tr.ae-group-lead td { background:#E6F1FB; color:#0C447C; }
@@ -3362,7 +3376,7 @@ tr.ae-group-contrib td:hover { background:#E8E6DF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0047';
+const APP_VERSION = '0.11.0.0048';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -5767,6 +5781,13 @@ function openAllocEditor(name) {
     document.getElementById('alloc-editor-backdrop').addEventListener('click', function(e) {
       if (e.target === this) closeAllocEditor();
     });
+    // Sync horizontal scroll between grid and totals bar
+    var gridWrap = document.querySelector('.ae-grid-wrap');
+    var totalsBar = document.getElementById('ae-totals-bar');
+    if (gridWrap && totalsBar) {
+      gridWrap.addEventListener('scroll', function() { totalsBar.scrollLeft = gridWrap.scrollLeft; });
+      totalsBar.addEventListener('scroll', function() { gridWrap.scrollLeft = totalsBar.scrollLeft; });
+    }
     Editor.aeListenerAdded = true;
   }
 
@@ -5909,7 +5930,7 @@ function aeRenderGrid() {
   if (!allocs.length) {
     tbody = '<tr><td colspan="' + (AE_COLS + 1) + '" style="text-align:center;color:var(--text-muted);padding:40px;font-size:13px;">No active projects for this person.</td></tr>';
     document.getElementById('ae-tbody').innerHTML = tbody;
-    document.getElementById('ae-tfoot').innerHTML = '';
+    document.getElementById('ae-totals-bar').innerHTML = '';
     return;
   }
 
@@ -5997,17 +6018,17 @@ function aeRenderGrid() {
 
   document.getElementById('ae-tbody').innerHTML = tbody;
 
-  // Sticky total row (in tfoot)
-  let totRow = '<tr class="ae-total-row"><td class="ae-proj-td">Total allocated' + calcInfoIcon('allocTotal') + '</td>';
+  // Totals bar (outside scroll area)
+  let totHtml = '<div class="ae-totals-label">Total allocated' + calcInfoIcon('allocTotal') + '</div><div class="ae-totals-cells">';
   for (const wi of wIdxs) {
     const total = allocs.reduce(function(s, a) { return s + Math.round((a.fracs[wi] || 0) * 100); }, 0);
     const cls   = total === 0 ? 'zero' : total > 100 ? 'over' : 'ok';
     const isCur = wi === window.currentWeekIdx;
-    totRow += '<td class="ae-wk-td' + (isCur ? ' ae-cur' : '') + '" id="ae-tot-' + wi + '">' +
-      '<span class="ae-tot-chip ' + cls + '">' + total + '%</span></td>';
+    totHtml += '<div class="ae-totals-cell' + (isCur ? ' ae-cur' : '') + '" id="ae-tot-' + wi + '">' +
+      '<span class="ae-tot-chip ' + cls + '">' + total + '%</span></div>';
   }
-  totRow += '</tr>';
-  document.getElementById('ae-tfoot').innerHTML = totRow;
+  totHtml += '</div>';
+  document.getElementById('ae-totals-bar').innerHTML = totHtml;
 }
 
 function aeCellChange(ai, wi, input) {
@@ -14650,10 +14671,10 @@ async function absValueChanged(input) {
         <table class="ae-grid" id="ae-grid-table">
           <thead id="ae-thead"></thead>
           <tbody id="ae-tbody"></tbody>
-          <tfoot id="ae-tfoot" class="ae-sticky-total"></tfoot>
         </table>
       </div>
     </div>
+    <div id="ae-totals-bar" class="ae-totals-bar"></div>
     <div class="ae-footer">
       <span class="text-muted-sm">Totals show combined % per week. Apply updates the live view.</span>
       <div style="display:flex;gap:8px;">
