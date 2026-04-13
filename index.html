@@ -3347,7 +3347,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0040';
+const APP_VERSION = '0.11.0.0041';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -8893,11 +8893,14 @@ async function suggestAlignment() {
     'WWC Criteria (specific What Works Cities certification criteria — only recommend ones the project directly advances):\n' +
     FM_WWC_CRITERIA.map(function(o) { return '  - ' + o; }).join('\n') + '\n\n' +
     'IMPORTANT RULES:\n' +
-    '- Be SELECTIVE. Only recommend options that clearly and directly apply to this project.\n' +
-    '- Do NOT force-fit. If a project does not align with any options in a field, return an empty array for that field. It is perfectly fine — and expected — for many fields to be empty.\n' +
-    '- A typical project will only match 2-5 items total across all fields. Very few projects touch all fields.\n' +
-    '- For IT Initiative, only recommend if the project directly advances that specific sub-objective of the IT strategic plan.\n' +
-    '- For WWC Criteria, only recommend criteria where the project\'s deliverables or outcomes directly contribute to meeting that criterion.\n' +
+    '- Be HIGHLY SELECTIVE. Only recommend options where there is a clear, direct, and obvious connection to this specific project\'s work. If you have to stretch to make a connection, do not recommend it.\n' +
+    '- Do NOT force-fit. Most projects will only match 1-3 items total across all fields. Many fields should be empty arrays. An empty array is the correct answer when nothing clearly applies.\n' +
+    '- For IT Initiative, only recommend if the project\'s primary deliverable directly advances that specific sub-objective.\n' +
+    '- For City Initiative, only recommend if the project is explicitly part of or directly supports that named initiative.\n' +
+    '- For IT Priority Project, only recommend if the project is part of or directly contributes to that named priority effort.\n' +
+    '- For Data Program Goal, only recommend goals where the project\'s outcomes materially advance that goal — not merely tangentially related.\n' +
+    '- WWC PAIRING RULE (MANDATORY): If you recommend any WWC Foundational Practice, you MUST also recommend at least one corresponding WWC Criteria from that same practice area. If you recommend any WWC Criteria, the parent practice area MUST appear in wwc_practice. They must always be paired. If you cannot identify a specific criterion, do not recommend the practice area either.\n' +
+    '- For WWC Criteria, only recommend criteria where the project\'s deliverables or outcomes directly and specifically contribute to meeting that criterion — not just broadly related.\n' +
     '- Provide a brief, specific reason for each recommendation explaining HOW this project advances that item.\n\n' +
     'Respond ONLY with a JSON object (no markdown, no backticks). Format:\n' +
     '{\n' +
@@ -8928,6 +8931,38 @@ async function suggestAlignment() {
     var objEnd = clean.lastIndexOf('}');
     if (objStart === -1 || objEnd === -1) throw new Error('Could not find JSON in response.');
     _alignmentSuggestions = JSON.parse(clean.substring(objStart, objEnd + 1));
+
+    // Validate WWC pairing: practices and criteria must correspond
+    if (_alignmentSuggestions.wwc_practice && _alignmentSuggestions.wwc_criteria) {
+      var practiceAreas = (_alignmentSuggestions.wwc_practice || []).map(function(p) { return p.value; });
+      var criteriaItems = (_alignmentSuggestions.wwc_criteria || []).map(function(c) { return c.value; });
+      // Map criteria prefixes to practice area names
+      var prefixToArea = { CI: 'Community Impact', DM: 'Data Management', BF: 'Data-Driven Budget and Finance',
+        EVAL: 'Evaluations', LC: 'Leadership and Capacity', OD: 'Open Data',
+        PA: 'Performance and Analytics', RDC: 'Results-Driven Contracting' };
+      // Ensure every criteria has its parent practice
+      criteriaItems.forEach(function(c) {
+        var prefix = c.match(/^([A-Z]+)\d/);
+        if (prefix && prefixToArea[prefix[1]]) {
+          var area = prefixToArea[prefix[1]];
+          if (!practiceAreas.includes(area)) {
+            _alignmentSuggestions.wwc_practice.push({ value: area, reason: 'Required — paired with ' + c.split(' ')[0] });
+            practiceAreas.push(area);
+          }
+        }
+      });
+      // Remove practices that have no corresponding criteria
+      if (_alignmentSuggestions.wwc_practice.length > 0) {
+        var areaPrefixes = {};
+        Object.keys(prefixToArea).forEach(function(k) { areaPrefixes[prefixToArea[k]] = k; });
+        _alignmentSuggestions.wwc_practice = _alignmentSuggestions.wwc_practice.filter(function(p) {
+          var prefix = areaPrefixes[p.value];
+          if (!prefix) return true;
+          return criteriaItems.some(function(c) { return c.indexOf(prefix) === 0; });
+        });
+      }
+    }
+
     renderAlignmentSuggestions();
   } catch (err) {
     console.error('[AlignSuggest] Failed:', err);

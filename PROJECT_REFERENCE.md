@@ -5,7 +5,7 @@
 > **Update Rule:** This document MUST be updated after every application change. When working on this application, always check if this document needs updating.
 >
 > **Last Updated:** April 2026
-> **Current Version:** 0.11.0.0035 (see Version History at bottom)
+> **Current Version:** 0.11.0.0041 (see Version History at bottom)
 
 ---
 
@@ -1428,6 +1428,12 @@ Each requirement has a unique ID like `P3_DEMOS` (Phase 3, Demos conducted). Ful
 | 0.11.0.0033 | IT Initiative labels expanded with descriptions (3.3.1–3.3.5); AI prompt enriched with full strategic plan context and don't-force-fit instruction; IT Initiative badges added to project detail hero |
 | 0.11.0.0034 | Remove category from project detail hero; IT Initiative and City Initiative always shown in Strategic Alignment section ("Does not apply" when empty) |
 | 0.11.0.0035 | Strategic Alignment section multi-column grid layout: IT Initiative and City Initiative side-by-side, mid-tier fields in adaptive 1–3 column grid, WWC Criteria full-width |
+| 0.11.0.0036 | Strategic Alignment 2-column paired layout: IT Init/City Init, IT Priority/DP Goal, WWC Practice/WWC Criteria |
+| 0.11.0.0037 | Always show all 6 strategic alignment items with "Does not apply" fallback |
+| 0.11.0.0038 | Fix "Result not defined" error when saving team members (variable scoping bug) |
+| 0.11.0.0039 | Fix team member actions buttons wrapping to next line (white-space:nowrap) |
+| 0.11.0.0040 | Move Strategic Alignment section to end of project form |
+| 0.11.0.0041 | Tighten AI alignment prompt: highly selective recommendations, mandatory WWC practice/criteria pairing rule, client-side pairing validation |
 
 ---
 
