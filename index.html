@@ -3347,7 +3347,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0041';
+const APP_VERSION = '0.11.0.0042';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -9877,12 +9877,7 @@ function renderProjectDetail(id) {
           <span style="width:7px;height:7px;border-radius:50%;background:${statusColor};display:inline-block;"></span>${p.status||'—'}
         </span>
         <span class="priority-badge priority-${p.priority||'null'}">${p.priority||'—'}</span>
-        ${p.project_size ? `<span class="detail-hero-chip">Size: ${esc(p.project_size)}</span>` : ''}
-        ${p.itd_team ? `<span class="detail-hero-chip">${esc(p.itd_team)}</span>` : ''}
         ${p.is_data_program ? '<span class="detail-hero-chip" style="background:rgba(255,165,0,0.25);border:1px solid rgba(255,165,0,0.4);">Data Program</span>' : ''}
-        ${p.it_initiative ? p.it_initiative.split(',').map(function(s) { return '<span class="detail-hero-chip" style="background:rgba(255,255,255,0.15);">' + esc(s.trim().length > 30 ? s.trim().slice(0,30) + '…' : s.trim()) + '</span>'; }).join('') : ''}
-        ${p.city_initiative ? p.city_initiative.split(',').map(function(s) { return '<span class="detail-hero-chip" style="background:rgba(255,165,0,0.25);border:1px solid rgba(255,165,0,0.4);">' + esc(s.trim()) + '</span>'; }).join('') : ''}
-        ${p.it_priority_project ? p.it_priority_project.split(',').map(function(s) { return '<span class="detail-hero-chip" style="background:rgba(34,197,94,0.2);border:1px solid rgba(34,197,94,0.4);">' + esc(s.trim()) + '</span>'; }).join('') : ''}
         ${projTotalHrs > 0 ? `<span class="detail-hero-chip">⏱ ${hoursLabel(projTotalHrs, projMyHrs)}</span>` : ''}
         ${p.actual_end ? `<span class="detail-hero-chip">✓ Completed ${p.actual_end}</span>` : ''}
       </div>
