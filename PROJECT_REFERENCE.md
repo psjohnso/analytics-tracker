@@ -5,7 +5,7 @@
 > **Update Rule:** This document MUST be updated after every application change. When working on this application, always check if this document needs updating.
 >
 > **Last Updated:** April 2026
-> **Current Version:** 0.11.0.0041 (see Version History at bottom)
+> **Current Version:** 0.11.0.0043 (see Version History at bottom)
 
 ---
 
@@ -1434,6 +1434,8 @@ Each requirement has a unique ID like `P3_DEMOS` (Phase 3, Demos conducted). Ful
 | 0.11.0.0039 | Fix team member actions buttons wrapping to next line (white-space:nowrap) |
 | 0.11.0.0040 | Move Strategic Alignment section to end of project form |
 | 0.11.0.0041 | Tighten AI alignment prompt: highly selective recommendations, mandatory WWC practice/criteria pairing rule, client-side pairing validation |
+| 0.11.0.0042 | Declutter project hero: remove duplicated badges, keep status/priority/Data Program/hours/completed |
+| 0.11.0.0043 | Light tracking for broader Data Team collaborators: tracking_level field (full/light), isFullMember() helper; light members in forms but excluded from Forecast, Capacity Planner, Resources, Time Tracking, Absences; settings table Tracking column; team availability "Collaborator" badge; member form hides workload fields when Light |
 
 ---
 

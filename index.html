@@ -3347,7 +3347,7 @@ tr.ae-total-row td.ae-wk-td.ae-cur { background:#E0E8FF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0042';
+const APP_VERSION = '0.11.0.0043';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -3609,7 +3609,7 @@ function renderPhaseGroupedTasks(projectTitle, relTasks) {
         html += '</select></div>';
         html += '<div class="detail-task-cell"><span class="priority-badge priority-' + (t.priority||'null') + '">' + (t.priority||'—') + '</span></div>';
         html += '<div onclick="event.stopPropagation()"><select class="dt-inline-select" data-task-id="' + t.objectId + '" onchange="inlineTaskAssignee(this)" style="font-size:11px;padding:2px 4px;border-radius:6px;border:1px solid #E8E6DF;color:' + (t.assignee ? '#374151' : '#9CA3AF') + ';font-family:Lato,sans-serif;cursor:pointer;width:100%;background:#fff;"><option value=""' + (!t.assignee ? ' selected' : '') + '>Unassigned</option>';
-        var _members = RESOURCES_DATA ? Object.keys(RESOURCES_DATA.people).filter(function(n) { return RESOURCES_DATA.people[n].active !== false; }).sort() : [];
+        var _members = RESOURCES_DATA ? Object.keys(RESOURCES_DATA.people).filter(function(n) { return isFullMember(n); }).sort() : [];
         _members.forEach(function(n) { html += '<option value="' + esc(n) + '"' + (t.assignee === n ? ' selected' : '') + '>' + esc(n) + '</option>'; });
         html += '</select></div>';
         html += '<div onclick="event.stopPropagation()"><input type="date" class="dt-inline-date" data-task-id="' + t.objectId + '" data-has-due="' + (t.due ? '1' : '') + '" onchange="inlineTaskDueDate(this)" value="' + (t.working_due||t.due||'') + '" style="font-size:11px;padding:2px 4px;border-radius:6px;border:1px solid #E8E6DF;color:' + ((t.working_due||t.due) ? '#374151' : '#9CA3AF') + ';font-family:Lato,sans-serif;cursor:pointer;width:100%;"></div>';
@@ -3642,7 +3642,7 @@ function renderPhaseGroupedTasks(projectTitle, relTasks) {
       html += '</select></div>';
       html += '<div class="detail-task-cell"><span class="priority-badge priority-' + (t.priority||'null') + '">' + (t.priority||'—') + '</span></div>';
       html += '<div onclick="event.stopPropagation()"><select class="dt-inline-select" data-task-id="' + t.objectId + '" onchange="inlineTaskAssignee(this)" style="font-size:11px;padding:2px 4px;border-radius:6px;border:1px solid #E8E6DF;color:' + (t.assignee ? '#374151' : '#9CA3AF') + ';font-family:Lato,sans-serif;cursor:pointer;width:100%;background:#fff;"><option value=""' + (!t.assignee ? ' selected' : '') + '>Unassigned</option>';
-      var _members2 = RESOURCES_DATA ? Object.keys(RESOURCES_DATA.people).filter(function(n) { return RESOURCES_DATA.people[n].active !== false; }).sort() : [];
+      var _members2 = RESOURCES_DATA ? Object.keys(RESOURCES_DATA.people).filter(function(n) { return isFullMember(n); }).sort() : [];
       _members2.forEach(function(n) { html += '<option value="' + esc(n) + '"' + (t.assignee === n ? ' selected' : '') + '>' + esc(n) + '</option>'; });
       html += '</select></div>';
       html += '<div onclick="event.stopPropagation()"><input type="date" class="dt-inline-date" data-task-id="' + t.objectId + '" data-has-due="' + (t.due ? '1' : '') + '" onchange="inlineTaskDueDate(this)" value="' + (t.working_due||t.due||'') + '" style="font-size:11px;padding:2px 4px;border-radius:6px;border:1px solid #E8E6DF;color:' + ((t.working_due||t.due) ? '#374151' : '#9CA3AF') + ';font-family:Lato,sans-serif;cursor:pointer;width:100%;"></div>';
@@ -5333,7 +5333,7 @@ function initResourcesWeekIndices() {
   window.dataWeekIdx = dwi;
   // Default selected person to first active person if current selection not in data or inactive
   if (!people[selectedPerson] || people[selectedPerson].active === false) {
-    const activeNames = Object.keys(people).filter(function(n) { return people[n].active !== false; });
+    const activeNames = Object.keys(people).filter(function(n) { return isFullMember(n); });
     if (activeNames.length > 0) selectedPerson = activeNames[0];
     else {
       const names = Object.keys(people);
@@ -5343,7 +5343,7 @@ function initResourcesWeekIndices() {
 }
 
 function buildResourcePersonCards(people, currentWeekIdx) {
-  return Object.entries(people).filter(([name, p]) => p.active !== false).map(([name, p]) => {
+  return Object.entries(people).filter(([name, p]) => isFullMember(name)).map(([name, p]) => {
     const curUtil = (p.utilization[currentWeekIdx] || 0) * 100;
     const utilColor = curUtil > 90 ? '#EF4444' : curUtil > 70 ? '#F59E0B' : '#83AC16';
     const initials = name.split(' ').map(w => w[0]).join('').slice(0,2);
@@ -7496,7 +7496,7 @@ function getEnums() {
     ['High','Medium','Low'],
     TASKS.map(t => t.priority)
   );
-  const activeMembers = RESOURCES_DATA ? Object.keys(RESOURCES_DATA.people).filter(function(n) { return RESOURCES_DATA.people[n].active !== false; }).sort() : [];
+  const activeMembers = RESOURCES_DATA ? Object.keys(RESOURCES_DATA.people).filter(function(n) { return isFullMember(n); }).sort() : [];
   const taskAssignees  = mergeEnums(
     activeMembers,
     []
@@ -7526,8 +7526,16 @@ function getEnums() {
 // any new values created since the page loaded.
 let FM_PROJ_STATUSES, FM_PROJ_PRIORITIES, FM_PROJ_CATEGORIES,
     FM_TASK_STATUSES, FM_TASK_PRIORITIES, FM_TASK_ASSIGNEES, FM_TASK_TOOLS, FM_TASK_TOOLS_ACTIVE, FM_TASK_CATEGORIES,
-    FM_ACTIVE_MEMBERS,
+    FM_ACTIVE_MEMBERS, FM_FULL_MEMBERS,
     FM_PARTNER_DEPTS, FM_ITD_TEAMS;
+
+// Helper: returns true for active members with full workload tracking (excludes light-tracking collaborators)
+function isFullMember(name) {
+  if (!RESOURCES_DATA || !RESOURCES_DATA.people[name]) return false;
+  var p = RESOURCES_DATA.people[name];
+  return p.active !== false && p.tracking_level !== 'light';
+}
+
 function refreshEnums() {
   const e = getEnums();
   FM_PROJ_STATUSES   = e.projStatuses;
@@ -7539,6 +7547,7 @@ function refreshEnums() {
   FM_TASK_TOOLS      = e.taskTools;
   FM_TASK_TOOLS_ACTIVE = _customTaskTools.filter(function(t) { return t.active !== false; }).map(function(t) { return t.name; }).sort();
   FM_ACTIVE_MEMBERS = RESOURCES_DATA ? Object.keys(RESOURCES_DATA.people).filter(function(n) { return RESOURCES_DATA.people[n].active !== false; }).sort() : [];
+  FM_FULL_MEMBERS = RESOURCES_DATA ? Object.keys(RESOURCES_DATA.people).filter(function(n) { return isFullMember(n); }).sort() : [];
   FM_TASK_CATEGORIES = e.taskCategories;
   FM_PARTNER_DEPTS   = e.partnerDepts;
   FM_ITD_TEAMS       = e.itdTeams;
@@ -8607,8 +8616,10 @@ function renderTeamAvailList(currentOtherMembers, currentContact) {
     var checked = selected.includes(name);
     var isContact = name === contact;
     var jobRole = '';
+    var isLight = false;
     if (RESOURCES_DATA && RESOURCES_DATA.people && RESOURCES_DATA.people[name]) {
       jobRole = RESOURCES_DATA.people[name].role || '';
+      isLight = RESOURCES_DATA.people[name].tracking_level === 'light';
     }
 
     // Get selected project role for this member
@@ -8616,7 +8627,9 @@ function renderTeamAvailList(currentOtherMembers, currentContact) {
 
     // Determine availability badge based on selected role
     var badgeHtml = '';
-    if (avData && avData[name]) {
+    if (isLight) {
+      badgeHtml = '<span class="fm-ta-badge" style="background:#FFF7ED;color:#9A3412;">Collaborator</span>';
+    } else if (avData && avData[name]) {
       var result = findEarliestStart(avData, name, size, memberRole);
       if (result.startWeek === -1) {
         badgeHtml = '<span class="fm-ta-badge fm-ta-full">At capacity</span>';
@@ -8627,9 +8640,9 @@ function renderTeamAvailList(currentOtherMembers, currentContact) {
       }
     }
 
-    // Role dropdown for non-lead members
+    // Role dropdown for non-lead, non-light members
     var roleHtml = '';
-    if (!isContact) {
+    if (!isContact && !isLight) {
       var safeId = 'fm-role-' + name.replace(/\s/g, '_');
       var contribSel = memberRole === 'Contributor' ? ' selected' : '';
       var reviewerSel = memberRole === 'Reviewer' ? ' selected' : '';
@@ -13304,7 +13317,7 @@ function renderMyWork(area) {
 
   // Admin user selector
   if (Auth.isTeamLead && RESOURCES_DATA && RESOURCES_DATA.people) {
-    const memberNames = Object.keys(RESOURCES_DATA.people).filter(function(n) { return RESOURCES_DATA.people[n].active !== false; }).sort();
+    const memberNames = Object.keys(RESOURCES_DATA.people).filter(function(n) { return isFullMember(n); }).sort();
     html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:0;">';
     html += '<div class="mywork-subtitle" style="margin-bottom:0;">' + today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) + '</div>';
     html += '<select onchange="switchMyWorkUser(this)" style="font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--navy);font-weight:600;cursor:pointer;">';
@@ -13694,19 +13707,24 @@ function renderSettingsPage(area) {
   // Team Members table
   let memberRows = names.map(function(name) {
     const p = people[name];
-    let schedLabel = p.schedule_type || '5/8';
-    if (p.rdo_day) schedLabel += ' · ' + p.rdo_day + ' off';
+    const isLight = p.tracking_level === 'light';
+    let schedLabel = isLight ? '—' : (p.schedule_type || '5/8');
+    if (!isLight && p.rdo_day) schedLabel += ' · ' + p.rdo_day + ' off';
     const ttChecked = p.time_tracking ? ' checked' : '';
     const isInactive = p.active === false;
     const rowStyle = isInactive ? ' style="opacity:0.5;"' : '';
     const activeLabel = isInactive ? '<span style="color:#EF4444;font-weight:700;font-size:10px;">Inactive</span>' : '<span style="color:#83AC16;font-weight:700;font-size:10px;">Active</span>';
+    const trackingLabel = isLight
+      ? '<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:#FFF7ED;color:#9A3412;">Light</span>'
+      : '<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:#EEF2FF;color:#002669;">Full</span>';
     return '<tr' + rowStyle + '>' +
       '<td style="font-weight:700;color:var(--navy);">' + esc(name) + '</td>' +
       '<td>' + esc(p.role) + '</td>' +
       '<td>' + esc(p.team) + '</td>' +
-      '<td>' + Math.round(p.proj_pct * 100) + '%</td>' +
+      '<td style="text-align:center;">' + trackingLabel + '</td>' +
+      '<td>' + (isLight ? '—' : Math.round(p.proj_pct * 100) + '%') + '</td>' +
       '<td>' + esc(schedLabel) + '</td>' +
-      '<td style="text-align:center;"><input type="checkbox"' + ttChecked + ' onchange="toggleTimeTracking(\'' + name.replace(/'/g, "\\'") + '\', this.checked)" style="width:16px;height:16px;cursor:pointer;"></td>' +
+      '<td style="text-align:center;">' + (isLight ? '—' : '<input type="checkbox"' + ttChecked + ' onchange="toggleTimeTracking(\'' + name.replace(/'/g, "\\'") + '\', this.checked)" style="width:16px;height:16px;cursor:pointer;">') + '</td>' +
       '<td style="text-align:center;cursor:pointer;" onclick="toggleMemberActive(\'' + name.replace(/'/g, "\\'") + '\')" title="Click to toggle">' + activeLabel + '</td>' +
       '<td style="text-align:right;white-space:nowrap;">' +
         '<button class="settings-btn settings-btn-secondary" style="margin-right:4px;" onclick="openAbsenceEditor(\'' + name.replace(/'/g, "\\'") + '\')">📅 Absences</button>' +
@@ -13729,7 +13747,7 @@ function renderSettingsPage(area) {
         '</div>' +
       '</div>' +
       '<table class="member-table">' +
-        '<thead><tr><th>Name</th><th>Role</th><th>Team</th><th>Project %</th><th>Schedule</th><th style="text-align:center;">⏱️</th><th style="text-align:center;">Status</th><th style="text-align:right;">Actions</th></tr></thead>' +
+        '<thead><tr><th>Name</th><th>Role</th><th>Team</th><th>Tracking</th><th>Project %</th><th>Schedule</th><th style="text-align:center;">⏱️</th><th style="text-align:center;">Status</th><th style="text-align:right;">Actions</th></tr></thead>' +
         '<tbody>' + memberRows + '</tbody>' +
       '</table>' +
     '</div>';
@@ -13767,7 +13785,7 @@ function renderSettingsPage(area) {
   '</div>';
 
   // ── Time Tracking Dashboard ─────────────────────────────
-  var activeNames = allNames.filter(function(n) { return people[n].active !== false; });
+  var activeNames = allNames.filter(function(n) { return isFullMember(n); });
   var ttEnabled = activeNames.filter(function(n) { return people[n].time_tracking === true; });
   var ttWithEntries = ttEnabled.filter(function(n) { return TEAM_TIME_STATS[n] && TEAM_TIME_STATS[n].entryCount > 0; });
 
@@ -13899,6 +13917,7 @@ function openMemberForm(mode, name) {
     document.getElementById('mf-team').value = p.team;
     document.getElementById('mf-skill').value = p.skill;
     document.getElementById('mf-proj-pct').value = Math.round(p.proj_pct * 100);
+    document.getElementById('mf-tracking-level').value = p.tracking_level || 'full';
     document.getElementById('mf-schedule-type').value = p.schedule_type || '5/8';
     document.getElementById('mf-rdo-day').value = p.rdo_day || '';
     document.getElementById('mf-lunch').value = String(p.lunch_minutes != null ? p.lunch_minutes : 60);
@@ -13923,6 +13942,7 @@ function openMemberForm(mode, name) {
     document.getElementById('mf-team').value = '';
     document.getElementById('mf-skill').value = '';
     document.getElementById('mf-proj-pct').value = '';
+    document.getElementById('mf-tracking-level').value = 'full';
     document.getElementById('mf-schedule-type').value = '5/8';
     document.getElementById('mf-rdo-day').value = '';
     document.getElementById('mf-lunch').value = '60';
@@ -13941,6 +13961,15 @@ function openMemberForm(mode, name) {
     document.getElementById('mf-name').style.background = '';
   }
   document.getElementById('member-form-backdrop').classList.add('open');
+  onTrackingLevelChange();
+}
+
+function onTrackingLevelChange() {
+  var level = document.getElementById('mf-tracking-level').value;
+  var fullFields = document.getElementById('mf-full-fields');
+  var hint = document.getElementById('mf-light-hint');
+  if (fullFields) fullFields.style.display = level === 'light' ? 'none' : '';
+  if (hint) hint.style.display = level === 'light' ? '' : 'none';
 }
 
 // Auto-fill start/end times when schedule type changes
@@ -14172,6 +14201,7 @@ async function saveMemberForm() {
   const team = document.getElementById('mf-team').value.trim();
   const skill = document.getElementById('mf-skill').value.trim();
   const projPct = parseFloat(document.getElementById('mf-proj-pct').value) || 0;
+  const trackingLevel = document.getElementById('mf-tracking-level').value || 'full';
   const scheduleType = document.getElementById('mf-schedule-type').value || '5/8';
   const rdoDay = document.getElementById('mf-rdo-day').value || null;
   const lunchMinutes = parseInt(document.getElementById('mf-lunch').value) || 60;
@@ -14203,6 +14233,7 @@ async function saveMemberForm() {
     team: team,
     skill: skill,
     proj_pct: projPct / 100,
+    tracking_level: trackingLevel,
   };
 
   // Only include schedule fields if the service supports them
@@ -14527,8 +14558,15 @@ async function absValueChanged(input) {
     <input class="mf-input" id="mf-role" placeholder="e.g. GIS Analyst II">
     <label class="mf-label">Team</label>
     <input class="mf-input" id="mf-team" placeholder="e.g. GIS, Analytics, AI, Server, Management">
+    <label class="mf-label">Tracking Level</label>
+    <select class="mf-input" id="mf-tracking-level" onchange="onTrackingLevelChange()">
+      <option value="full">Full — allocations, time tracking, capacity planning</option>
+      <option value="light">Light — project collaborator only (no workload tracking)</option>
+    </select>
+    <div id="mf-light-hint" style="display:none;font-size:11px;color:var(--text-muted);margin:-8px 0 12px;padding:0 4px;">Light-tracked members can be assigned as project leads or contributors but are excluded from allocations, forecasting, time tracking, and the My Work tab.</div>
     <label class="mf-label">Skill</label>
     <input class="mf-input" id="mf-skill" placeholder="e.g. Data Analysis, GIS Application Building">
+    <div id="mf-full-fields">
     <label class="mf-label">Project Time Allocation (%)</label>
     <input class="mf-input" id="mf-proj-pct" type="number" min="0" max="100" step="1" placeholder="e.g. 70">
     <label class="mf-label">Work Schedule</label>
@@ -14608,6 +14646,7 @@ async function absValueChanged(input) {
         </tr>
       </tbody>
     </table>
+    </div>
     <div class="mf-actions">
       <button class="settings-btn settings-btn-secondary" onclick="closeMemberForm()">Cancel</button>
       <button class="settings-btn settings-btn-primary" onclick="saveMemberForm()">Save</button>
