@@ -3376,7 +3376,7 @@ tr.ae-group-contrib td:hover { background:#E8E6DF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0049';
+const APP_VERSION = '0.11.0.0050';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -5792,7 +5792,7 @@ function openAllocEditor(name) {
   }
 
   // Filter to only projects in the main PROJECTS list, deduplicate, then keep
-  // only Active / On Hold rows (same logic as the main Resources view).
+  // only Active and On Hold rows.
   const projTitleSet2 = new Set(PROJECTS.map(proj => proj.title));
   function canonicalAllocTitle2(raw) {
     if (projTitleSet2.has(raw)) return raw;
@@ -5805,7 +5805,7 @@ function openAllocEditor(name) {
     // Look up the CURRENT project status (not the stale status from allocation records)
     const proj = PROJECTS.find(function(px) { return px.title === key; });
     const currentStatus = proj ? proj.status : a.status;
-    if (currentStatus !== 'Active') return;
+    if (currentStatus !== 'Active' && currentStatus !== 'On Hold') return;
     if (!draftByName[key]) {
       // If no role stored, infer from project contact
       var existingRole = a.role || '';
@@ -5821,7 +5821,7 @@ function openAllocEditor(name) {
   // Inject projects where this person is contact or other_members but has no allocation yet
   const N2 = RESOURCES_DATA.weeks.length;
   PROJECTS.forEach(function(proj) {
-    if (proj.status !== 'Active') return;
+    if (proj.status !== 'Active' && proj.status !== 'On Hold') return;
     if (draftByName[proj.title]) return;
     const members = (proj.other_members || '').split(',').map(s => s.trim()).filter(Boolean);
     if (proj.contact !== name && !members.includes(name)) return;

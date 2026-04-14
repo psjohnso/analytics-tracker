@@ -5,7 +5,7 @@
 > **Update Rule:** This document MUST be updated after every application change. When working on this application, always check if this document needs updating.
 >
 > **Last Updated:** April 2026
-> **Current Version:** 0.11.0.0049 (see Version History at bottom)
+> **Current Version:** 0.11.0.0050 (see Version History at bottom)
 
 ---
 
@@ -1442,6 +1442,7 @@ Each requirement has a unique ID like `P3_DEMOS` (Phase 3, Demos conducted). Ful
 | 0.11.0.0047 | Allocation editor redesign: projects grouped by role (Lead first, then Contributing), Contributing section is collapsible, total row moved to sticky tfoot so it's always visible, role change re-renders grid to move project between groups |
 | 0.11.0.0048 | Move allocation totals bar outside scroll container as a fixed bar between grid and footer; sync horizontal scroll between grid and totals bar |
 | 0.11.0.0049 | Cascade project title rename to allocations, time entries, and status history in ArcGIS Online; reload resources data after rename; loading overlay during cascade |
+| 0.11.0.0050 | Include On Hold projects in allocation editor (previously only Active were shown) |
 
 ---
 
