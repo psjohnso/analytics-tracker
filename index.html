@@ -3376,7 +3376,7 @@ tr.ae-group-contrib td:hover { background:#E8E6DF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0048';
+const APP_VERSION = '0.11.0.0049';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -7374,6 +7374,7 @@ const DataStore = {
           updates: [{ attributes: attrs }]
         });
         if (newTitle && newTitle !== oldTitle) {
+          showLoadingOverlay('Renaming project across all records…');
           const linkedTasks = TASKS.filter(function(t) { return t.project === newTitle && t.objectId; });
           for (const t of linkedTasks) {
             const taskAttrs = localToAgolTask({ project: newTitle });
@@ -7382,6 +7383,62 @@ const DataStore = {
               updates: [{ attributes: taskAttrs }]
             });
           }
+
+          // Cascade rename to allocations
+          const escapedOldTitle = oldTitle.replace(/'/g, "''");
+          try {
+            const allocFeatures = await agolQuery(ARCGIS_CONFIG.allocationsUrl, "project='" + escapedOldTitle + "'");
+            if (allocFeatures.length > 0) {
+              const allocUpdates = allocFeatures.map(function(f) {
+                const oid = f.attributes.OBJECTID || f.attributes.ObjectId || f.attributes.objectid;
+                return { attributes: { OBJECTID: oid, project: newTitle } };
+              });
+              for (var ab = 0; ab < allocUpdates.length; ab += 100) {
+                await agolApplyEdits(ARCGIS_CONFIG.allocationsUrl, { updates: allocUpdates.slice(ab, ab + 100) });
+              }
+              console.log('[Cascade] Renamed', allocFeatures.length, 'allocation records:', oldTitle, '→', newTitle);
+            }
+          } catch (err) { console.error('[Cascade] Failed to rename allocations:', err); }
+
+          // Cascade rename to time entries
+          try {
+            const timeFeatures = await agolQuery(ARCGIS_CONFIG.timeEntriesUrl, "project='" + escapedOldTitle + "'");
+            if (timeFeatures.length > 0) {
+              const timeUpdates = timeFeatures.map(function(f) {
+                const oid = f.attributes.OBJECTID || f.attributes.ObjectId || f.attributes.objectid;
+                return { attributes: { OBJECTID: oid, project: newTitle } };
+              });
+              for (var tb = 0; tb < timeUpdates.length; tb += 100) {
+                await agolApplyEdits(ARCGIS_CONFIG.timeEntriesUrl, { updates: timeUpdates.slice(tb, tb + 100) });
+              }
+              console.log('[Cascade] Renamed', timeFeatures.length, 'time entries:', oldTitle, '→', newTitle);
+            }
+          } catch (err) { console.error('[Cascade] Failed to rename time entries:', err); }
+
+          // Cascade rename to status history
+          try {
+            const histFeatures = await agolQuery(ARCGIS_CONFIG.statusHistoryUrl, "project_title='" + escapedOldTitle + "'");
+            if (histFeatures.length > 0) {
+              const histUpdates = histFeatures.map(function(f) {
+                const oid = f.attributes.OBJECTID || f.attributes.ObjectId || f.attributes.objectid;
+                return { attributes: { OBJECTID: oid, project_title: newTitle } };
+              });
+              for (var hb = 0; hb < histUpdates.length; hb += 100) {
+                await agolApplyEdits(ARCGIS_CONFIG.statusHistoryUrl, { updates: histUpdates.slice(hb, hb + 100) });
+              }
+              console.log('[Cascade] Renamed', histFeatures.length, 'status history records:', oldTitle, '→', newTitle);
+            }
+          } catch (err) { console.error('[Cascade] Failed to rename status history:', err); }
+
+          // Update local time entries and status history arrays
+          if (typeof TIME_ENTRIES !== 'undefined') {
+            TIME_ENTRIES.forEach(function(e) { if (e.project === oldTitle) e.project = newTitle; });
+          }
+          STATUS_HISTORY.forEach(function(h) { if (h.project_title === oldTitle) h.project_title = newTitle; });
+
+          // Reload resources data so allocations reflect new name
+          try { await loadResourcesData(); initResourcesWeekIndices(); } catch(e) {}
+          hideLoadingOverlay();
         }
         markSynced('Project updated');
         // Log status change to history
@@ -7416,6 +7473,7 @@ const DataStore = {
           }
         }
       } catch (err) {
+        hideLoadingOverlay();
         console.error('ArcGIS updateProject failed:', err);
         // Rollback local state
         Object.assign(PROJECTS[i], snapshot);
