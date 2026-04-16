@@ -3376,7 +3376,7 @@ tr.ae-group-contrib td:hover { background:#E8E6DF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0051';
+const APP_VERSION = '0.11.0.0052';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -4134,23 +4134,52 @@ async function suggestTasksForProject(projectObjectId) {
   panel.style.display = '';
   panel.innerHTML = '<div class="suggest-header"><span class="suggest-title">✨ AI Task Suggestions</span>' +
     '<button class="suggest-close" onclick="closeSuggestPanel()">✕</button></div>' +
-    '<div class="suggest-loading"><div style="font-size:24px;margin-bottom:8px;">🤔</div>Generating ' + _suggestDetail + '-detail task breakdown…<br><span style="font-size:11px;opacity:0.7;">This may take 10-15 seconds for complex projects.</span></div>';
+    '<div class="suggest-loading"><div style="font-size:24px;margin-bottom:8px;">🤔</div>Generating ' + _suggestDetail + '-detail task breakdown for ' + sizeLabel + ' project…<br><span style="font-size:11px;opacity:0.7;">Expecting ' + range + ' tasks. This may take 10-15 seconds.</span></div>';
 
   // Scroll to the panel
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-  // Detail-level-specific prompt instructions
+  // Detail-level-specific prompt instructions scaled by project size
+  var size = (p.project_size || 'M').charAt(0).toUpperCase(); // S, M, L, X
+  var taskRanges = {
+    S: { low: '3–5',  medium: '5–8',   high: '8–12' },
+    M: { low: '4–8',  medium: '8–15',  high: '15–25' },
+    L: { low: '6–10', medium: '12–20', high: '20–35' },
+    X: { low: '8–12', medium: '15–25', high: '25–50' },
+  };
+  var range = (taskRanges[size] || taskRanges['M'])[_suggestDetail] || '8–15';
+  var sizeLabel = { S: 'Small', M: 'Medium', L: 'Large', X: 'XL' }[size] || 'Medium';
+
+  // Multi-phase guidance: smaller projects at lower detail should combine phases
+  var multiPhaseGuidance = '';
+  if (_suggestDetail === 'low') {
+    multiPhaseGuidance = 'IMPORTANT: Since this is a ' + _suggestDetail + '-detail breakdown, you should COMBINE multiple lifecycle phases into single tasks where it makes sense. ' +
+      'For example, a single task like "Plan and scope project" can satisfy requirements from phases 1, 2, and 3 simultaneously. ' +
+      'A "Build and test" task can cover phases 5 and 6. A "Review, document, and close" task can cover phases 8, 9, and 10. ' +
+      'Each task\'s phase_requirements array should include ALL the requirement IDs it satisfies, even across multiple phases. ' +
+      'The goal is to have fewer, broader tasks — not one task per phase.\n\n';
+    if (size === 'S') {
+      multiPhaseGuidance += 'This is a SMALL project — many phases can be collapsed together. ' +
+        'It is completely acceptable to have 3–5 tasks that collectively cover all 10 phases. ' +
+        'Do not create a separate task for every phase — that would be over-engineering for a small effort.\n\n';
+    }
+  } else if (_suggestDetail === 'medium' && (size === 'S' || size === 'M')) {
+    multiPhaseGuidance = 'For this ' + sizeLabel + ' project at medium detail, adjacent lifecycle phases can be combined into single tasks where the work naturally overlaps. ' +
+      'For example, early planning phases (1–3) might be covered by 1–2 tasks, and closing phases (8–10) by 1–2 tasks. ' +
+      'Each task\'s phase_requirements array should include ALL requirement IDs it satisfies across phases.\n\n';
+  }
+
   var detailInstructions = {
-    low: 'Suggest the major phases or milestones needed to complete this project. ' +
-      'Each task should represent a significant chunk of work (1-3 days / 8-24 hours). ' +
-      'Aim for 4-8 high-level tasks that capture the overall project lifecycle. ' +
+    low: 'Suggest the major phases or milestones needed to complete this ' + sizeLabel + ' project. ' +
+      'Each task should represent a significant chunk of work (1–3 days). ' +
+      'Aim for ' + range + ' high-level tasks that capture the overall project lifecycle. ' +
       'Order them so prerequisite phases come first.',
-    medium: 'Suggest the key activities needed to complete this project. ' +
-      'Each task should represent a meaningful work activity (4-16 hours). ' +
-      'Aim for 8-15 tasks that break the project into manageable pieces without being overly granular. ' +
+    medium: 'Suggest the key activities needed to complete this ' + sizeLabel + ' project. ' +
+      'Each task should represent a meaningful work activity (4–16 hours). ' +
+      'Aim for ' + range + ' tasks that break the project into manageable pieces without being overly granular. ' +
       'Order them so tasks with prerequisites come after the tasks they depend on.',
-    high: 'Suggest ALL the tasks needed to complete this project — as many as make sense for the scope and size. Do not artificially limit the count. ' +
-      'Each task should be atomic — small enough that one person could complete it in a single focused work session (roughly 1-8 hours). Break larger activities into their component steps. ' +
+    high: 'Suggest ALL the tasks needed to complete this ' + sizeLabel + ' project — as many as make sense for the scope and size (' + range + ' is a reasonable range). ' +
+      'Each task should be atomic — small enough that one person could complete it in a single focused work session (roughly 1–8 hours). Break larger activities into their component steps. ' +
       'Order tasks so that prerequisite tasks come first. If Task B depends on Task A being done, Task A must appear earlier in the list. Group related tasks together within that dependency order.'
   };
 
@@ -4162,13 +4191,14 @@ async function suggestTasksForProject(projectObjectId) {
 
   var prompt = 'You are a project management assistant for a City of Tucson government GIS/Data Analytics team. ' +
     detailInstructions[_suggestDetail] + '\n\n' +
+    multiPhaseGuidance +
     'IMPORTANT: This project follows a 10-phase lifecycle with formal advancement requirements. ' +
     'Suggest a mix of REQUIRED tasks (linked to phase requirements) and OPTIONAL tasks (practical work that needs to happen but does not map to a formal gate check). ' +
-    'Every requirement across all phases should have at least one task that satisfies it. ' +
+    'Every requirement across all phases should have at least one task that satisfies it — but a single task CAN satisfy requirements from MULTIPLE phases. ' +
     'Additionally, include tasks for hands-on project work that fall outside the formal requirements — things like data processing, building specific features, creating visualizations, writing scripts, etc. ' +
-    'ALL tasks must belong to a phase. For required tasks, set phase_requirements to an array of requirement IDs. ' +
+    'ALL tasks must belong to at least one phase. For required tasks, set phase_requirements to an array of requirement IDs (can span multiple phases). ' +
     'For optional tasks, set phase_requirements to ["Px_TASK"] where x is the phase number the task belongs to (e.g., ["P3_TASK"] for optional work during the build phase). ' +
-    'A task can have BOTH requirement IDs and a phase task tag if needed.\n\n' +
+    'A task can have BOTH requirement IDs and phase task tags from multiple phases if needed.\n\n' +
     'For each task, provide:\n' +
     '- title: a clear, specific task name (not generic like "Research" but specific like "Extract crime incident data from Hansen API")\n' +
     '- description: 1-2 sentences explaining the work\n' +
