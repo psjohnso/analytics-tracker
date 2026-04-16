@@ -3376,7 +3376,7 @@ tr.ae-group-contrib td:hover { background:#E8E6DF; }
   }
 })();
 
-const APP_VERSION = '0.11.0.0050';
+const APP_VERSION = '0.11.0.0051';
 
 // ══════════════════════════════════════════════════════════════════════
 //  ACTIVE PROJECT LIFECYCLE PHASES
@@ -12948,6 +12948,15 @@ function toggleMyWorkProjects() {
   }
 }
 
+function mwNewTask() {
+  openFormModal('add-task');
+  // Pre-fill assignee with the logged-in user
+  var sel = document.getElementById('fm-assignee');
+  if (sel && Auth.fullName) {
+    sel.value = Auth.fullName;
+  }
+}
+
 async function mwQuickStatus(selectEl) {
   var type = selectEl.dataset.type;
   var id = parseInt(selectEl.dataset.id);
@@ -13222,7 +13231,10 @@ function buildMyWorkTasksSection(myTasks, todayStr, viewUserTaskHrsFn) {
   const canceledCount = (tasksByStatus['Canceled'] || []).length;
   const hiddenCount = pendingCount + onHoldCount + completeCount + canceledCount;
 
-  html += '<div class="mywork-section-header">✅ My Tasks <span class="badge-count">' + myTasks.length + '</span></div>';
+  html += '<div class="mywork-section-header" style="display:flex;align-items:center;justify-content:space-between;">'+
+    '<div>✅ My Tasks <span class="badge-count">' + myTasks.length + '</span></div>' +
+    '<button onclick="mwNewTask()" style="display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;border:1.5px solid #C24200;background:transparent;cursor:pointer;font-family:Lato,sans-serif;font-size:12px;font-weight:700;color:#C24200;">＋ New task</button>' +
+    '</div>';
 
   const defaultStatuses = ['Active', 'Waiting for Response'];
   let hasTasks = false;
